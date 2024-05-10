@@ -458,6 +458,7 @@ if (AudioContext) {
           height: 1080,
           pixelRatio: window.devicePixelRatio || 1,
           textureRatio: 1,
+          position: relative;
         });
         nextPreset(0);
         cycleInterval = setInterval(() => nextPreset(2.7), presetCycleLength);
@@ -473,12 +474,13 @@ if (AudioContext) {
 
     canvas {
         display: block; /* To remove the scrollbars */
+	position: relative;    
     }
     /* // Lx */
     canvas {
         height: 100vh;
         width: 100vw;
-        
+        position: relative;
         /*  center */
         /*
         padding-left: 0;
