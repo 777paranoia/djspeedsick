@@ -2,7 +2,7 @@
 
 
 <div id='text'>
-      <div class="text"></div>
+      <div class="text" z-index='high' position='absolute'></div>
   <font size="+2">DJSPEEDSICK.COM</font><br><br>
 <font size="+1">CONTACT</font><br><br>
 	<a href= "mailto:boettke@djspeedsick.com">BOOKING</a><br>
@@ -26,6 +26,7 @@
 .text {
   text-align: center;
   position: absolute;
+  z-index: high;
 }
 </div>
 </style>
@@ -533,7 +534,7 @@ if (AudioContext) {
 <!-- Lx HD-->
 <!--    <canvas id='canvas' width='1280' height='720' style="display:block;">-->
 <!-- Lx FHD-->
-    <canvas id='canvas' width='1920' height='1080' style="display:block;">
+    <canvas id='canvas' width='1920' height='1080' style="display:block;" position="relative">
 <!-- Lx 1440p-->
 <!--    <canvas id='canvas' width='2560' height='1440' style="display:block;">-->
 <!-- Lx 4K-->
