@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shuffling Audio Playlist</title>
+</head>
+<body>
+  <audio id="audioPlayer" controls autoplay></audio>
+  <button id="shuffleButton">Shuffle Play</button>
+
+  <script>
+    // Function to shuffle an array
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // Function to fetch the list of MP3 files from the server
+    async function fetchMp3Files() {
+      const response = await fetch('/list-mp3-files');
+      const files = await response.json();
+      return files.map(file => `/files/aud/${file}`);
+    }
+
+    // Get references to the audio element and shuffle button
+    const audioPlayer = document.getElementById('audioPlayer');
+    const shuffleButton = document.getElementById('shuffleButton');
+
+    let tracks = [];
+    let currentTrackIndex = 0;
+
+    // Function to play the next track in the shuffled playlist
+    function playNextTrack() {
+      if (currentTrackIndex >= tracks.length) {
+        currentTrackIndex = 0;
+      }
+      audioPlayer.src = tracks[currentTrackIndex];
+      audioPlayer.play().catch(error => {
+        console.log('Autoplay was prevented. User interaction is required.');
+      });
+      currentTrackIndex++;
+    }
+
+    // Event listener for the shuffle button
+    shuffleButton.addEventListener('click', () => {
+      shuffleArray(tracks);
+      currentTrackIndex = 0;
+      playNextTrack();
+    });
+
+    // Event listener for when the current track ends
+    audioPlayer.addEventListener('ended', playNextTrack);
+
+    // Automatically shuffle and start playing when the page loads
+    window.addEventListener('load', async () => {
+      tracks = await fetchMp3Files();
+      shuffleArray(tracks);
+      playNextTrack();
+
+      // Check if the audio is paused after an attempt to play
+      setTimeout(() => {
+        if (audioPlayer.paused) {
+          alert('Click the Shuffle Play button to start the audio playlist.');
+        }
+      }, 1000); // Wait 1 second to check if playback was blocked
+    });
+  </script>
+</body>
+</html>
