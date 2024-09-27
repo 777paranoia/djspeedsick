@@ -25,7 +25,7 @@
     canvas {
         height: 100vh;
         width: 100vw;
-        
+
         /*  center */
         /*
         padding-left: 0;
@@ -65,7 +65,7 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-   
+
 
 <!DOCTYPE html>
 <head>
@@ -114,7 +114,7 @@
   <script>
       var backgroundsRequiresAudioCapture = true;
       var backgroundsDidAllowAudioCapture = null;
-      
+
     $(function() {
       var visualizer = null;
       var rendering = false;
@@ -206,7 +206,7 @@
         visualizer.connectAudio(gainNode);
         startRenderer();
       }
-      
+
       function updateTitle() {
           //$("#help").css('visibility', 'visible');
           $("#bgPresetTitle").html("<br>" + $("#presetSelect option:selected").text());
@@ -224,7 +224,7 @@
 
         visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
         $('#presetSelect').val(presetIndex);
-        
+
         updateTitle();
       }
 
@@ -238,7 +238,7 @@
 
         visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
         $('#presetSelect').val(presetIndex);
-        
+
         updateTitle();
       }
 
@@ -264,43 +264,43 @@
         } else if (e.which === 72) {
           //nextPreset(0);
         }
-        
+
         let key = e.key;
         let keyLowercased = key.toLowerCase()
-        
+
         switch (keyLowercased) {
             case 'r':
             presetRandom = !presetRandom; break;
-            
+
             case 'c':
             //presetCycle = !presetCycle;
             document.getElementById("presetCycle").click();
             break;
-            
+
             case 'h':
             toggleHelp(); break;
-            
+
             case 't':
             togglePresetName(); break;
-            
+
             //case "ArrowLeft":
             //prevPreset(); break;
             //case "ArrowRight":
             //nextPreset(); break;
-            
+
             case '9':
             prevPreset(0); break;
             case '0':
             nextPreset(0); break;
-            
+
             default:
             break;
         }
       });
-      
+
       function toggleHelp() {
           var help = document.getElementById("help");
-          
+
           if (help.style.visibility == "hidden") {
               help.style.visibility = 'visible';
               $("#bgPresetTitle").css('visibility', 'visible');
@@ -310,17 +310,17 @@
               updateTitleVisibility();
           }
       }
-      
+
       function updateTitleVisibility() {
           $("#bgPresetTitle").css('visibility', showPresetName ? 'visible' : "hidden");
           //showGUI();
       }
-      
+
       function togglePresetName() {
           showPresetName = !showPresetName;
           updateTitleVisibility();
       }
-      
+
       function showGUI() {
           //$("#bgGUI").css('visibility', 'visible');
       }
@@ -356,12 +356,12 @@
 
         fileSelector.click();
       });
-      
+
       // Lx
       setTimeout(function(){
           document.getElementById("micSelect").click();
       }, 100); // 100 ms
-      
+
       $("#micSelect").click(() => {
         $("#audioSelectWrapper").css('display', 'none');
 
@@ -395,17 +395,17 @@ console.log("start");
         function successCallback(stream) {
           //video.srcObject = stream;
           //video.play();
-          
+
           var micSourceNode = audioContext.createMediaStreamSource(stream);
           console.log("start");
           connectMicAudio(micSourceNode, audioContext);
-          
+
           backgroundsDidAllowAudioCapture = true;
         }
 
         function errorCallback(error) {
             backgroundsDidAllowAudioCapture = false;
-            
+
             /*
              // Lx
              .backgrounds_OUT {
@@ -414,31 +414,19 @@ console.log("start");
                  line-height: 0px;
              }
              */
-            
+
             document.body.style.background = 'black';
             document.body.style.color = 'white';
             document.body.innerHTML = '<div style="padding:25px;">' + // class="backgrounds"
-            '<br><br> <h1>Milkdrop for Backgrounds</h1>' +
-            '<br>Is a microphone or audio input device available? ' +
-            '<br><li>Go to System Settings > Sound > Input and select an input device.</li>' +
-            
-            //'<br><li>Go to System Settings > Sound > Input (⌥ Option + Volume) and select an input device' +
-            //'<br> -  Tip: Press ⌥ Option + Volume to open Sound Settings</li>' +
-            //'<br><br>You can connect your iPhone to your Mac to use it as a microphone' +
-            
-            '<br><br><br><h2>Tips</h2>' +
-            '<br><li style="line-height:0px;">You can connect your iPhone to your Mac to use it as a microphone</li>' +
-            '<br><li> Press ⌥ Option + Volume to open Sound Settings</li>' +
-            
-            //'<br><br>Error:<br>' + error +
-            '</div>';
-            console.log("Lx error", error);
-          console.log("navigator.getUserMedia error: ", error);
-        }
+            '<br><br> <h1>ERRORs</h1>' +
+            '<br ' +
+            '<br><li> </li>' +
 
-        navigator.mediaDevices.getUserMedia(constraints)
-          .then(successCallback)
-          .catch(errorCallback);
+
+            '<br><br><br><h2>Tips</h2>' +
+            '<br><li style="line-height:0px;">' +
+
+            //'<br><br>
       });
 
       function initPlayer() {
@@ -448,7 +436,7 @@ console.log("start");
 console.log('lx');
 var AudioContext = window.AudioContext // Default
     || window.webkitAudioContext // Safari and old versions of Chrome
-    || false; 
+    || false;
 
 if (AudioContext) {
     // Do whatever you want using the Web Audio API
@@ -507,7 +495,7 @@ if (AudioContext) {
     canvas {
         height: 100vh;
         width: 100vw;
-        
+
         /*  center */
         /*
         padding-left: 0;
@@ -543,13 +531,13 @@ if (AudioContext) {
       <div>Random: <input type="checkbox" id="presetRandom" checked></input></div>
     </div>
     </div>
-      
+
       <!-- Lx Help-->
       <!-- Lx Help-->
 <div id="container">
 <div style="position:absolute; width:100%; height:100%; display:flex; align-items:center; text-align: center; justify-content: center;  overflow-y:auto">
 
-<div id="text"> 
+<div id="text">
 <div style="position:relative;">
 <body onresize='document.getElementsByTagName("body")[0].style[ "font-size" ] = document.body.clientWidth*(12/1280) + "px";'>
 
@@ -569,7 +557,7 @@ WWW.DJSPEEDSICK.COM<br>
 		BOOKING</a><br>
 	<a href= "mailto:noreply@djspeedsick.com" style="color:rgb(127, 255, 212)">PRESS</a><br>
 	<a href= "mailto:777paranoia@gmail.com" style="color:rgb(127, 255, 212)">ART COMISSIONS</a><br><br>
-		
+
 	<font size="0vw">
 	<img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/minicdr-small.png?raw=true">
 <br>
@@ -591,9 +579,9 @@ SOLD OUT
 	<a href= "https://www.discogs.com/artist/5782732-DJ-Speedsick" style="color:rgb(127, 255, 212)">DISCOGS</a><br>
 </p>
 </div>
-</div>  
-</div>      
-    
+</div>
+</div>
+
 <!-- Lx HD-->
 <!--    <canvas id='canvas' width='1280' height='720' style="display:block;">-->
 <!-- Lx FHD-->
