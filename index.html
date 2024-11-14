@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
     <style>
+        /* Ensuring the entire viewport for full-screen elements */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
         /* Full-screen splash overlay */
         #splash-screen {
             position: fixed;
@@ -17,7 +26,7 @@
             align-items: center;
             background-color: rgba(0, 0, 0, 0.9);
             color: white;
-            z-index: 10;
+            z-index: 3; /* Ensures the splash screen overlays everything else */
         }
 
         /* Video background styling within splash screen */
@@ -28,7 +37,14 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: -1;
+            z-index: -1; /* Stays behind the button */
+        }
+
+        /* Ensuring the enter button overlays the splash video */
+        #enter-button {
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
         }
 
         /* Hidden audio player */
@@ -36,14 +52,14 @@
             display: none;
         }
 
-        /* Fullscreen visualizer canvas */
+        /* Fullscreen visualizer canvas with precise scaling */
         #canvas {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: -1;
+            z-index: 2; /* Placed behind the splash screen */
         }
     </style>
     <script type="text/javascript" src="lodash.js"></script>
@@ -52,7 +68,7 @@
     <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
 </head>
 <body>
-    <!-- Splash Screen Overlay (includes video background) -->
+    <!-- Splash Screen Overlay with video background -->
     <div id="splash-screen">
         <!-- Background video for splash screen -->
         <video id="background-video" autoplay muted loop>
@@ -60,7 +76,7 @@
             Your browser does not support the video tag.
         </video>
 
-        <!-- Clickable overlay image to enter -->
+        <!-- Enter button image to proceed to visualizer -->
         <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter">
     </div>
 
@@ -73,7 +89,7 @@
     <script>
         // Array of audio track paths
         const audioTracks = [
-                 const audioTracks = [
+                const audioTracks = [
      "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
@@ -228,7 +244,7 @@
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
-        audioPlayer.volume = 1.0; // Set volume to maximum level
+        audioPlayer.volume = 1.0;
 
         // Function to play a random track
         function playRandomTrack() {
@@ -271,17 +287,17 @@
             // Capture the audio without affecting default audio playback
             const mediaStream = audioPlayer.captureStream();
             const source = audioContext.createMediaStreamSource(mediaStream);
-            visualizer.connectAudio(source); // Route to visualizer without affecting default playback
+            visualizer.connectAudio(source);
         }
 
-        // Click event for the overlay image to hide splash and start audio/visualizer
+        // Event listener for splash screen "enter" button to hide splash and start the visualizer
         document.getElementById('enter-button').addEventListener('click', () => {
-            document.getElementById('splash-screen').style.display = 'none'; // Hide splash screen (both video and image)
-            playRandomTrack(); // Start playing a random track
+            document.getElementById('splash-screen').style.display = 'none';
+            playRandomTrack(); // Start a random track
             initVisualizer();  // Initialize the visualizer
         });
 
-        // Automatically play a new random track when the current one ends
+        // Automatically play a new track when the current one ends
         audioPlayer.addEventListener('ended', playRandomTrack);
     </script>
 </body>
