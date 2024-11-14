@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DJSPEEDSICK.COM</title>
+    <title>Audio Player with Visualizer</title>
     <style>
         /* Ensuring the entire viewport for full-screen elements */
         html, body {
@@ -45,6 +45,9 @@
             position: relative;
             z-index: 1;
             cursor: pointer;
+            display: block;
+            width: auto;
+            height: auto;
         }
 
         /* Hidden audio player */
@@ -77,7 +80,7 @@
         </video>
 
         <!-- Enter button image to proceed to visualizer -->
-        <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter">
+        <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
     </div>
 
     <!-- Hidden audio element -->
@@ -89,7 +92,6 @@
     <script>
         // Array of audio track paths
         const audioTracks = [
-                const audioTracks = [
      "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
@@ -241,7 +243,7 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-        ];
+          ];
 
         const audioPlayer = document.getElementById('audioPlayer');
         audioPlayer.volume = 1.0;
@@ -290,12 +292,12 @@
             visualizer.connectAudio(source);
         }
 
-        // Event listener for splash screen "enter" button to hide splash and start the visualizer
-        document.getElementById('enter-button').addEventListener('click', () => {
+        // Handle click event for the enter button to start the visualizer
+        function handleEnterClick() {
             document.getElementById('splash-screen').style.display = 'none';
             playRandomTrack(); // Start a random track
             initVisualizer();  // Initialize the visualizer
-        });
+        }
 
         // Automatically play a new track when the current one ends
         audioPlayer.addEventListener('ended', playRandomTrack);
