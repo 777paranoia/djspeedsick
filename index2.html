@@ -36,14 +36,11 @@
             display: none;
         }
 
-        /* Fullscreen visualizer canvas */
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
+        /* Fullscreen visualizer canvas with exact dimensions */
+        canvas {
+            display: block;
             height: 100vh;
-            z-index: -1;
+            width: 100vw;
         }
     </style>
     <script type="text/javascript" src="lodash.js"></script>
@@ -70,7 +67,6 @@
     <!-- Visualizer Canvas -->
     <canvas id="canvas" width="1920" height="1080"></canvas>
 
- 
     <script>
         // Array of audio track paths
         const audioTracks = [

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJSPEEDSICK.COM</title>
+    <meta name="description" content="DJSPEEDSICK.COM">
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/normalize.css/normalize.css" />
+
+    <style>
+        * { margin:0; padding:0; } /* to remove the top and left whitespace */
+
+    html, body { width:100%; height:100%; } /* just to be sure these are full screen*/
+
+    canvas {
+        display: block; /* To remove the scrollbars */
+    }
+
+
+    /* // Lx */
+    canvas {
+        height: 100vh;
+        width: 100vw;
+        
+        /*  center */
+        /*
+        padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+         */
+    }
+    /*
+    // box-sizing: border-box; // Is this needed? // you might want to add box-sizing: border-box to your #canvas element too or it will render slightly off the screen
+     */
+    canvasOUT {
+        height: 100%;
+        width: 100%;
+    }
+
+    </style>
+</head>
+
+<body style="width:100%; height:100%;">
+
+    <div id="mainWrapper">
+        <!-- Settings and Controls (hidden) -->
+        <div id="LxSettings" style="display:none;">
+            <div id="audioSelectWrapper">
+                <div id="localFileBut"><span>Load local files</span></div>
+                <div id="micSelect"><span>Use Mic</span></div>
+            </div>
+            <div id="presetControls">
+                <div>Preset: <select id="presetSelect"></select></div>
+                <div>Cycle: <input type="checkbox" id="presetCycle" checked />
+                            <input type="number" id="presetCycleLength" step="1" value="15" min="1" /></div>
+                <div>Random: <input type="checkbox" id="presetRandom" checked /></div>
+            </div>
+        </div>
+
+        <!-- The rest of your content and scripts -->
+        <div id="container">
+            <div style="position:absolute; width:100%; height:100%; display:flex; align-items:center; text-align: center; justify-content: center; overflow-y:auto">
+                <div id="text">
+                    <div style="position:relative;">
+                        <body onresize='document.getElementsByTagName("body")[0].style["font-size"] = document.body.clientWidth * (12 / 1280) + "px";'>
+                            <p>
+                                <font color="#FFFFF0">
+                                    <marquee behavior="scroll" scrollamount="10">WWW.DJSPEEDSICK.COM</marquee>
+                                    <br><br><br>
+                                    <font color="#FFFFF0">
+                                        CONTACT:<br>
+                                        <a href="mailto:boettke@djspeedsick.com" style="color:rgb(127, 255, 212)">BOOKING</a><br>
+                                        <a href="mailto:noreply@djspeedsick.com" style="color:rgb(127, 255, 212)">PRESS</a><br>
+                                        <a href="mailto:777paranoia@gmail.com" style="color:rgb(127, 255, 212)">ART COMMISSIONS</a><br><br>
+                                        <img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/minicdr-small.png?raw=true" alt="Untitled 3" Business Card CD-R">
+                                        <br>Untitled 3" Business Card CD-R<br>SOLD OUT<br><br>
+                                        <a href="https://www.djspeedsick.com/gallery.html" style="color:rgb(127, 255, 212)">ART GALLERY</a><br><br>
+                                        <a href="https://www.soundcloud.com/speedsick" style="color:rgb(127, 255, 212)">SOUNDCLOUD</a><br>
+                                        <a href="https://djspeedsick.bandcamp.com" style="color:rgb(127, 255, 212)">BANDCAMP</a><br>
+                                </font>
+                            </p>
+                        </body>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Your JavaScript -->
+        <script src="lodash.js"></script>
+        <script src="butterchurn.js"></script>
+        <script src="butterchurnPresets.min.js"></script>
+        <script src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
+        <script src="jquery-3.1.1.min.js"></script>
+
+        <script>
+            $(function() {
+                var visualizer, audioContext, sourceNode, delayedAudible, cycleInterval, presets = {}, presetKeys = [], presetIndexHist = [], presetIndex = 0, presetCycle = true, presetCycleLength = 15000, presetRandom = true, canvas = document.getElementById('canvas');
+                var showPresetName = false;
+
+                function connectToAudioAnalyzer(sourceNode) {
+                    if (delayedAudible) delayedAudible.disconnect();
+                    delayedAudible = audioContext.createDelay();
+                    delayedAudible.delayTime.value = 0.26;
+                    sourceNode.connect(delayedAudible);
+                    delayedAudible.connect(audioContext.destination);
+                    visualizer.connectAudio(delayedAudible);
+                }
+
+                function startRenderer() {
+                    requestAnimationFrame(startRenderer);
+                    visualizer.render();
+                }
+
+                function playBufferSource(buffer) {
+                    if (!rendering) {
+                        rendering = true;
+                        startRenderer();
+                    }
+                    if (sourceNode) sourceNode.disconnect();
+                    sourceNode = audioContext.createBufferSource();
+                    sourceNode.buffer = buffer;
+                    connectToAudioAnalyzer(sourceNode);
+                    sourceNode.start(0);
+                }
+
+                function loadLocalFiles(files, index = 0) {
+                    audioContext.resume();
+                    var reader = new FileReader();
+                    reader.onload = (event) => {
+                        audioContext.decodeAudioData(event.target.result, (buf) => {
+                            playBufferSource(buf);
+                            setTimeout(() => {
+                                if (files.length > index + 1) {
+                                    loadLocalFiles(files, index + 1);
+                                } else {
+                                    sourceNode.disconnect();
+                                    sourceNode = null;
+                                    $("#audioSelectWrapper").css('display', 'block');
+                                }
+                            }, buf.duration * 1000);
+                        });
+                    };
+                    reader.readAsArrayBuffer(files[index]);
+                }
+
+                function connectMicAudio(sourceNode) {
+                    audioContext.resume();
+                    var gainNode = audioContext.createGain();
+                    gainNode.gain.value = 1.25;
+                    sourceNode.connect(gainNode);
+                    visualizer.connectAudio(gainNode);
+                    startRenderer();
+                }
+
+                function nextPreset(blendTime = 5.7) {
+                    presetIndexHist.push(presetIndex);
+                    presetIndex = presetRandom ? Math.floor(Math.random() * presetKeys.length) : (presetIndex + 1) % presetKeys.length;
+                    visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
+                    $('#presetSelect').val(presetIndex);
+                    updateTitle();
+                }
+
+                function prevPreset(blendTime = 5.7) {
+                    presetIndex = presetIndexHist.length > 0 ? presetIndexHist.pop() : ((presetIndex - 1) + presetKeys.length) % presetKeys.length;
+                    visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
+                    $('#presetSelect').val(presetIndex);
+                    updateTitle();
+                }
+
+                function restartCycleInterval() {
+                    if (cycleInterval) clearInterval(cycleInterval);
+                    if (presetCycle) cycleInterval = setInterval(() => nextPreset(2.7), presetCycleLength);
+                }
+
+                $('#presetSelect').change(() => {
+                    presetIndexHist.push(presetIndex);
+                    presetIndex = parseInt($('#presetSelect').val());
+                    visualizer.loadPreset(presets[presetKeys[presetIndex]], 5.7);
+                });
+
+                $('#presetCycle').change(() => {
+                    presetCycle = $('#presetCycle').is(':checked');
+                    restartCycleInterval();
+                });
+
+                $('#presetCycleLength').change(() => {
+                    presetCycleLength = parseInt($('#presetCycleLength').val() * 1000);
+                    restartCycleInterval();
+                });
+
+                $('#presetRandom').change(() => {
+                    presetRandom = $('#presetRandom').is(':checked');
+                });
+
+                $("#localFileBut").click(() => {
+                    $("#audioSelectWrapper").css('display', 'none');
+                    var fileSelector = $('<input type="file" accept="audio/*" multiple />');
+                    fileSelector[0].onchange = (event) => {
+                        loadLocalFiles(fileSelector[0].files);
+                    };
+                    fileSelector[0].click();
+                });
+
+                $("#micSelect").click(() => {
+                    $("#audioSelectWrapper").css('display', 'none');
+                    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then((stream) => {
+                        connectMicAudio(audioContext.createMediaStreamSource(stream));
+                    });
+                });
+
+                $('#container').dblclick((e) => {
+                    var fs = document.getElementById('canvass');
+                    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if (document.webkitExitFullscreen) {
+                            document.webkitExitFullscreen();
+                        } else if (document.mozCancelFullScreen) {
+                            document.mozCancelFullScreen();
+                        } else if (document.msExitFullscreen) {
+                            document.msExitFullscreen();
+                        }
+                    } else {
+                        if (fs.requestFullscreen) {
+                            fs.requestFullscreen();
+                        } else if (fs.webkitRequestFullscreen) {
+                            fs.webkitRequestFullscreen();
+                        } else if (fs.mozRequestFullScreen) {
+                            fs.mozRequestFullScreen();
+                        } else if (fs.msRequestFullscreen) {
+                            fs.msRequestFullscreen();
+                        }
+                    }
+                });
+
+                visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    pixelRatio: window.devicePixelRatio || 1
+                });
+
+                window.onresize = function() {
+                    visualizer.setRendererSize(window.innerWidth, window.innerHeight);
+                };
+
+                butterchurn.loadPresets().then(p => {
+                    presets = Object.assign({}, p);
+                    presetKeys = Object.keys(presets);
+                    nextPreset(0);
+                    restartCycleInterval();
+                    presetKeys.forEach((key, index) => $('#presetSelect').append(`<option value='${index}'>${key}</option>`));
+                });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                loadLocalFiles([]);
+            });
+        </script>
+    </div>
+
+</body>
+
+</html>
