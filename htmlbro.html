@@ -1,0 +1,610 @@
+
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>DJSPEEDSICK.COM</title>
+  <meta name="description" content="DJSPEEDSICK.COM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJSPEEEDSICK.COM</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+<style>
+    * { margin:0; padding:0; } /* to remove the top and left whitespace */
+
+    html, body { width:100%; height:100%; } /* just to be sure these are full screen*/
+
+    canvas {
+        display: block; /* To remove the scrollbars */
+    }
+
+
+    /* // Lx */
+    canvas {
+        height: 100vh;
+        width: 100vw;
+        
+        /*  center */
+        /*
+        padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+         */
+    }
+    /*
+    // box-sizing: border-box; // Is this needed? // you might want to add box-sizing: border-box to your #canvas element too or it will render slightly off the screen
+     */
+    canvasOUT {
+        height: 100%;
+        width: 100%;
+    }
+</style>
+</head>
+<body style="width:100%; height:100%;">
+  <div id="mainWrapper">
+      <div id="LxSettings" style="display:none;">
+    <div id="audioSelectWrapper">
+      <div id="localFileBut">
+        <span>Load local files</span>
+      </div>
+      <div id="micSelect">
+        <span>Use Mic</span>
+      </div>
+    </div>
+    <div id="presetControls">
+      <div>Preset: <select id="presetSelect"></select></div>
+      <div>Cycle: <input type="checkbox" id="presetCycle" checked></input>
+                  <input type="number" id="presetCycleLength"step="1" value="15" min="1"></input></div>
+      <div>Random: <input type="checkbox" id="presetRandom" checked></input></div>
+    </div>
+    </div>
+
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+   
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>DJSPEEDSICK.COM</title>
+  <meta name="description" content="DJSPEEDSICK.COM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- <script type="text/javascript" src="lib/butterchurn.js"></script> -->
+  <script type="text/javascript" src="lodash.js"></script>
+  <script type="text/javascript" src="butterchurn.js"></script>
+  <script type="text/javascript" src="butterchurnPresets.min.js"></script>
+  <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
+  <script
+    src="jquery-3.1.1.min.js"></script>
+
+  <style>
+    #canvass:-moz-full-screen {
+      width: 100%;
+      height: 100%;
+    }
+    #canvass:-webkit-full-screen {
+      width: 100%;
+      height: 100%;
+    }
+    #canvass:-ms-fullscreen {
+      width: 100%;
+      height: 100%;
+    }
+    #canvass:fullscreen {
+      width: 100%;
+      height: 100%;
+    }
+
+    #presetSelect {
+      max-width: 300px;
+    }
+
+    #presetCycleLength {
+      width: 25px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/normalize.css/normalize.css" />
+
+  <script>
+      var backgroundsRequiresAudioCapture = true;
+      var backgroundsDidAllowAudioCapture = null;
+      
+    $(function() {
+      var visualizer = null;
+      var rendering = false;
+      var audioContext = null;
+      var sourceNode = null;
+      var delayedAudible = null;
+      var cycleInterval = null;
+      var presets = {};
+      var presetKeys = [];
+      var presetIndexHist = [];
+      var presetIndex = 0;
+      var presetCycle = true;
+      var presetCycleLength = 15000;
+      var presetRandom = true;
+      var canvas = document.getElementById('canvas');
+      // Lx
+      var showPresetName = false;
+
+      function connectToAudioAnalyzer(sourceNode) {
+        if(delayedAudible) {
+          delayedAudible.disconnect();
+        }
+
+        delayedAudible = audioContext.createDelay();
+        delayedAudible.delayTime.value = 0.26;
+
+        sourceNode.connect(delayedAudible)
+        delayedAudible.connect(audioContext.destination);
+
+        visualizer.connectAudio(delayedAudible);
+      }
+
+      function startRenderer() {
+        requestAnimationFrame(() => startRenderer());
+        visualizer.render();
+      }
+
+      function playBufferSource(buffer) {
+        if (!rendering) {
+          rendering = true;
+          startRenderer();
+        }
+
+        if (sourceNode) {
+          sourceNode.disconnect();
+        }
+
+        sourceNode = audioContext.createBufferSource();
+        sourceNode.buffer = buffer;
+        connectToAudioAnalyzer(sourceNode);
+
+        sourceNode.start(0);
+      }
+
+      function loadLocalFiles(files, index = 0) {
+        audioContext.resume();
+
+        var reader = new FileReader();
+        reader.onload = (event) => {
+          audioContext.decodeAudioData(
+            event.target.result,
+            (buf) => {
+              playBufferSource(buf);
+
+              setTimeout(() => {
+                if (files.length > index + 1) {
+                  loadLocalFiles(files, index + 1);
+                } else {
+                  sourceNode.disconnect();
+                  sourceNode = null;
+                  $("#audioSelectWrapper").css('display', 'block');
+                }
+              }, buf.duration * 1000);
+            }
+          );
+        };
+
+        var file = files[index];
+        reader.readAsArrayBuffer(file);
+      }
+
+      function connectMicAudio(sourceNode, audioContext) {
+        audioContext.resume();
+
+        var gainNode = audioContext.createGain();
+        gainNode.gain.value = 1.25;
+        sourceNode.connect(gainNode);
+
+        visualizer.connectAudio(gainNode);
+        startRenderer();
+      }
+      
+      function updateTitle() {
+          //$("#help").css('visibility', 'visible');
+          $("#bgPresetTitle").html("<br>" + $("#presetSelect option:selected").text());
+      }
+
+      function nextPreset(blendTime = 5.7) {
+        presetIndexHist.push(presetIndex);
+
+        var numPresets = presetKeys.length;
+        if (presetRandom) {
+          presetIndex = Math.floor(Math.random() * presetKeys.length);
+        } else {
+          presetIndex = (presetIndex + 1) % numPresets;
+        }
+
+        visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
+        $('#presetSelect').val(presetIndex);
+        
+        updateTitle();
+      }
+
+      function prevPreset(blendTime = 5.7) {
+        var numPresets = presetKeys.length;
+        if (presetIndexHist.length > 0) {
+          presetIndex = presetIndexHist.pop();
+        } else {
+          presetIndex = ((presetIndex - 1) + numPresets) % numPresets;
+        }
+
+        visualizer.loadPreset(presets[presetKeys[presetIndex]], blendTime);
+        $('#presetSelect').val(presetIndex);
+        
+        updateTitle();
+      }
+
+      function restartCycleInterval() {
+        if (cycleInterval) {
+          clearInterval(cycleInterval);
+          cycleInterval = null;
+        }
+
+        if (presetCycle) {
+          cycleInterval = setInterval(() => nextPreset(2.7), presetCycleLength);
+        }
+      }
+
+      $(document).keydown((e) => {
+          // Space bar, Right arrow
+        if (e.which === 32 || e.which === 39) {
+          nextPreset();
+          // Backspace, Left arrow
+        } else if (e.which === 8 || e.which === 37) {
+          prevPreset();
+          // H key
+        } else if (e.which === 72) {
+          //nextPreset(0);
+        }
+        
+        let key = e.key;
+        let keyLowercased = key.toLowerCase()
+        
+        switch (keyLowercased) {
+            case 'r':
+            presetRandom = !presetRandom; break;
+            
+            case 'c':
+            //presetCycle = !presetCycle;
+            document.getElementById("presetCycle").click();
+            break;
+            
+            case 'h':
+            toggleHelp(); break;
+            
+            case 't':
+            togglePresetName(); break;
+            
+            //case "ArrowLeft":
+            //prevPreset(); break;
+            //case "ArrowRight":
+            //nextPreset(); break;
+            
+            case '9':
+            prevPreset(0); break;
+            case '0':
+            nextPreset(0); break;
+            
+            default:
+            break;
+        }
+      });
+      
+      function toggleHelp() {
+          var help = document.getElementById("help");
+          
+          if (help.style.visibility == "hidden") {
+              help.style.visibility = 'visible';
+              $("#bgPresetTitle").css('visibility', 'visible');
+              //showGUI();
+          } else {
+              help.style.visibility = "hidden";
+              updateTitleVisibility();
+          }
+      }
+      
+      function updateTitleVisibility() {
+          $("#bgPresetTitle").css('visibility', showPresetName ? 'visible' : "hidden");
+          //showGUI();
+      }
+      
+      function togglePresetName() {
+          showPresetName = !showPresetName;
+          updateTitleVisibility();
+      }
+      
+      function showGUI() {
+          //$("#bgGUI").css('visibility', 'visible');
+      }
+
+      $('#presetSelect').change((evt) => {
+        presetIndexHist.push(presetIndex);
+        presetIndex = parseInt($('#presetSelect').val());
+        visualizer.loadPreset(presets[presetKeys[presetIndex]], 5.7);
+      });
+
+      $('#presetCycle').change(() => {
+        presetCycle = $('#presetCycle').is(':checked');
+        restartCycleInterval();
+      });
+
+      $('#presetCycleLength').change((evt) => {
+        presetCycleLength = parseInt($('#presetCycleLength').val() * 1000);
+        restartCycleInterval();
+      });
+
+      $('#presetRandom').change(() => {
+        presetRandom = $('#presetRandom').is(':checked');
+      });
+
+      $("#localFileBut").click(function() {
+        $("#audioSelectWrapper").css('display', 'none');
+
+        var fileSelector = $('<input type="file" accept="audio/*" multiple />');
+
+        fileSelector[0].onchange = function(event) {
+          loadLocalFiles(fileSelector[0].files);
+        }
+
+        fileSelector.click();
+      });
+      
+      // Lx
+      setTimeout(function(){
+         document.getElementById('audioFileInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const audioContext = new AudioContext();
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            audioContext.decodeAudioData(ev.target.result, function(buffer) {
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                console.log("start");
+                connectMicAudio(source, audioContext);
+                source.start(0);
+            }, function(error) {
+                console.error('Error decoding audio data', error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+});
+
+// Commented out the original microphone input code
+/*
+navigator.mediaDevices.getUserMedia(
+    { audio: true }, (stream) => {
+        var micSourceNode = audioContext.createMediaStreamSource(stream);
+        console.log("start");
+        connectMicAudio(micSourceNode, audioContext);
+    },
+    (error) => {
+        console.log('Error getting audio stream from getUserMedia');
+        console.log(error.name)
+    }
+);
+var constraints = {audio: true, video: false};
+//var video = document.querySelector("video");
+
+function successCallback(stream) {
+  //video.srcObject = stream;
+  //video.play();
+  
+  var micSourceNode = audioContext.createMediaStreamSource(stream);
+  console.log("start");
+  connectMicAudio(micSourceNode, audioContext);
+}
+
+        function errorCallback(error) {
+            backgroundsDidAllowAudioCapture = false;
+            
+            /*
+             // Lx
+             .backgrounds_OUT {
+                 display: block;
+                 height:0px;
+                 line-height: 0px;
+             }
+             */
+            
+            document.body.style.background = 'black';
+            document.body.style.color = 'white';
+            document.body.innerHTML = '<div style="padding:25px;">' + // class="backgrounds"
+            '<br><br> <h1>Milkdrop for Backgrounds</h1>' +
+            '<br>Is a microphone or audio input device available? ' +
+            '<br><li>Go to System Settings > Sound > Input and select an input device.</li>' +
+            
+            //'<br><li>Go to System Settings > Sound > Input (⌥ Option + Volume) and select an input device' +
+            //'<br> -  Tip: Press ⌥ Option + Volume to open Sound Settings</li>' +
+            //'<br><br>You can connect your iPhone to your Mac to use it as a microphone' +
+            
+            '<br><br><br><h2>Tips</h2>' +
+            '<br><li style="line-height:0px;">You can connect your iPhone to your Mac to use it as a microphone</li>' +
+            '<br><li> Press ⌥ Option + Volume to open Sound Settings</li>' +
+            
+            //'<br><br>Error:<br>' + error +
+            '</div>';
+            console.log("Lx error", error);
+          console.log("navigator.getUserMedia error: ", error);
+        }
+
+        navigator.mediaDevices.getUserMedia(constraints)
+          .then(successCallback)
+          .catch(errorCallback);
+      });
+
+      function initPlayer() {
+        //audioContext = new AudioContext();
+
+//lx
+console.log('lx');
+var AudioContext = window.AudioContext // Default
+    || window.webkitAudioContext // Safari and old versions of Chrome
+    || false; 
+
+if (AudioContext) {
+    // Do whatever you want using the Web Audio API
+    var ctx = new AudioContext;
+    audioContext = ctx;
+    // ...
+} else {
+    // Web Audio API is not supported
+    // Alert the user
+    alert("Sorry, but the Web Audio API is not supported by your browser. Please, consider upgrading to the latest version or downloading Google Chrome or Mozilla Firefox");
+}
+//audioContext = AudioContext;
+//lx
+
+        presets = {};
+        if (window.butterchurnPresets) {
+          Object.assign(presets, butterchurnPresets.getPresets());
+        }
+        if (window.butterchurnPresetsExtra) {
+          Object.assign(presets, butterchurnPresetsExtra.getPresets());
+        }
+        presets = _(presets).toPairs().sortBy(([k, v]) => k.toLowerCase()).fromPairs().value();
+        presetKeys = _.keys(presets);
+        presetIndex = Math.floor(Math.random() * presetKeys.length);
+
+        var presetSelect = document.getElementById('presetSelect');
+        for(var i = 0; i < presetKeys.length; i++) {
+            var opt = document.createElement('option');
+            opt.innerHTML = presetKeys[i].substring(0,60) + (presetKeys[i].length > 60 ? '...' : '');
+            opt.value = i;
+            presetSelect.appendChild(opt);
+        }
+
+        visualizer = butterchurn.createVisualizer(audioContext, canvas , {
+          width: 1920,
+          height: 1080,
+          pixelRatio: window.devicePixelRatio || 1,
+          textureRatio: 1,
+        });
+        nextPreset(0);
+        cycleInterval = setInterval(() => nextPreset(2.7), presetCycleLength);
+      }
+
+      initPlayer();
+    });
+  </script>
+<style>
+    * { margin:0; padding:0; } /* to remove the top and left whitespace */
+
+    html, body { width:100%; height:100%; } /* just to be sure these are full screen*/
+
+    canvas {
+        display: block; /* To remove the scrollbars */
+    }
+    /* // Lx */
+    canvas {
+        height: 100vh;
+        width: 100vw;
+        
+        /*  center */
+        /*
+        padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+         */
+    }
+    /*
+    // box-sizing: border-box; // Is this needed? // you might want to add box-sizing: border-box to your #canvas element too or it will render slightly off the screen
+     */
+    canvasOUT {
+        height: 100%;
+        width: 100%;
+    }
+</style>
+</head>
+<body style="width:100%; height:100%;">
+  <div id="mainWrapper">
+      <div id="LxSettings" style="display:none;">
+    <div id="audioSelectWrapper">
+      <div id="localFileBut">
+        <span>Load local files</span>
+      </div>
+      <div id="micSelect">
+        <span>Use Mic</span>
+      </div>
+    </div>
+    <div id="presetControls">
+      <div>Preset: <select id="presetSelect"></select></div>
+      <div>Cycle: <input type="checkbox" id="presetCycle" checked></input>
+                  <input type="number" id="presetCycleLength"step="1" value="15" min="1"></input></div>
+      <div>Random: <input type="checkbox" id="presetRandom" checked></input></div>
+    </div>
+    </div>
+      
+      <!-- Lx Help-->
+      <!-- Lx Help-->
+<div id="container">
+<div style="position:absolute; width:100%; height:100%; display:flex; align-items:center; text-align: center; justify-content: center;  overflow-y:auto">
+
+<div id="text"> 
+<div style="position:relative;">
+<body onresize='document.getElementsByTagName("body")[0].style[ "font-size" ] = document.body.clientWidth*(12/1280) + "px";'>
+
+<p>
+  <font size="0vw">
+  <font color="#FFFFF0"> <marquee behavior="scroll" scrollamount="10" >
+
+WWW.DJSPEEDSICK.COM<br>
+</marquee></b>
+	<br>
+	<br>
+	<br>
+	<font color="#FFFFF0">
+	<font size="0vw" >
+		CONTACT:<br><font size="-2vw">
+	<a href= "mailto:boettke@djspeedsick.com" style="color:rgb(127, 255, 212)">
+		BOOKING</a><br>
+	<a href= "mailto:noreply@djspeedsick.com" style="color:rgb(127, 255, 212)">PRESS</a><br>
+	<a href= "mailto:777paranoia@gmail.com" style="color:rgb(127, 255, 212)">ART COMISSIONS</a><br><br>
+		
+	<font size="0vw">
+	<img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/minicdr-small.png?raw=true">
+<br>
+Untitled 3" Business Card CD-R
+<br>
+SOLD OUT
+<br>
+<br><br>
+	<font size="+1vw">
+        <a href= "https://www.djspeedsick.com/gallery.html" style="color:rgb(127, 255, 212)">ART GALLERY</a>
+
+  	<br>
+	<br><font size="-3vw">
+	<a href= "https://www.soundcloud.com/speedsick" style="color:rgb(127, 255, 212)">SOUNDCLOUD</a><br>
+	<a href= "https://djspeedsick.bandcamp.com" style="color:rgb(127, 255, 212)">BANDCAMP</a><br>
+	<a href= "https://www.instagram.com/djspeedsick" style="color:rgb(127, 255, 212)">INSTAGRAM</a><br>
+	<a href= "https://www.x.com/djspeedsick" style="color:rgb(127, 255, 212)">X</a><br>
+	<a href= "https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX" style="color:rgb(127, 255, 212)">SPOTIFY</a><br>
+	<a href= "https://www.discogs.com/artist/5782732-DJ-Speedsick" style="color:rgb(127, 255, 212)">DISCOGS</a><br>
+</p>
+</div>
+</div>  
+</div>      
+    
+<!-- Lx HD-->
+<!--    <canvas id='canvas' width='1280' height='720' style="display:block;">-->
+<!-- Lx FHD-->
+    <canvas id='canvas' width='1920' height='1080' style="display:block;">
+<!-- Lx 1440p-->
+<!--    <canvas id='canvas' width='2560' height='1440' style="display:block;">-->
+<!-- Lx 4K-->
+<!--    <canvas id='canvas' width='3840' height='2160' style="display:block;">-->
+    </canvas>
+  </div>
+</body>
+</html>

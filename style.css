@@ -1,0 +1,29 @@
+/* Position the audio player in the upper right corner */
+.audio-player {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+}
+
+.audio-player audio {
+    background: none;
+    border: none;
+    margin-right: 10px;
+}
+
+button {
+    margin: 0 5px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
