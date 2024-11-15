@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Player with Visualizer</title>
+    <title>DJSPEEDSICK.COM</title>
     <style>
         /* Ensuring the entire viewport for full-screen elements */
         html, body {
@@ -40,14 +40,17 @@
             z-index: -1; /* Stays behind the button */
         }
 
-        /* Ensuring the enter button overlays the splash video */
+        /* Resize and center the enter button */
         #enter-button {
             position: relative;
             z-index: 1;
             cursor: pointer;
             display: block;
-            width: auto;
-            height: auto;
+            max-width: 80%; /* Button fills 80% of the screen width */
+            height: auto; /* Maintains aspect ratio */
+            margin: 0 auto; /* Centers the button horizontally */
+            padding: 0; /* Ensures no extra padding */
+            border: none; /* Removes any default border */
         }
 
         /* Hidden audio player */
@@ -71,7 +74,7 @@
     <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
 </head>
 <body>
-    <!-- Splash Screen Overlay with video background -->
+    <!-- Splash Screen Overlay -->
     <div id="splash-screen">
         <!-- Background video for splash screen -->
         <video id="background-video" autoplay muted loop>
@@ -87,12 +90,12 @@
     <audio id="audioPlayer"></audio>
 
     <!-- Visualizer Canvas -->
-    <canvas id="canvas" width="1920" height="1080"></canvas>
+    <canvas id="canvas"></canvas>
 
     <script>
         // Array of audio track paths
         const audioTracks = [
-     "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
+           "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
 "files/aud/0FC3589586CCC0BF1801003DA500D379.mp3", 
@@ -243,72 +246,71 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-          ];
+            // Add other audio files here
+        ];
 
         const audioPlayer = document.getElementById('audioPlayer');
         audioPlayer.volume = 1.0;
+
+        let audioContext;
+        let visualizer;
 
         // Function to play a random track
         function playRandomTrack() {
             const randomIndex = Math.floor(Math.random() * audioTracks.length);
             const randomTrack = audioTracks[randomIndex];
             audioPlayer.src = randomTrack;
-            audioPlayer.play().then(() => {
+            return audioPlayer.play().then(() => {
                 console.log("Playback started successfully");
             }).catch(error => {
                 console.error("Playback failed:", error);
             });
         }
 
-       function initVisualizer() {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const canvas = document.getElementById('canvas');
-    visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        pixelRatio: window.devicePixelRatio || 1,
-        textureRatio: 1,
-    });
+        // Initialize the visualizer
+        function initVisualizer() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const canvas = document.getElementById('canvas');
+            visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                pixelRatio: window.devicePixelRatio || 1,
+                textureRatio: 1,
+            });
 
-    const presets = butterchurnPresets.getPresets();
-    const presetKeys = Object.keys(presets);
-    if (presetKeys.length > 0) {
-        const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
-        visualizer.loadPreset(randomPreset, 0);
-    } else {
-        console.error("No presets found to load.");
-    }
+            const presets = butterchurnPresets.getPresets();
+            const presetKeys = Object.keys(presets);
+            if (presetKeys.length > 0) {
+                const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
+                visualizer.loadPreset(randomPreset, 0);
+            } else {
+                console.error("No presets found to load.");
+            }
 
-    function startRenderer() {
-        requestAnimationFrame(startRenderer);
-        visualizer.render();
-    }
-    startRenderer();
+            function startRenderer() {
+                requestAnimationFrame(startRenderer);
+                visualizer.render();
+            }
+            startRenderer();
 
-    // Try capturing the stream
-    let mediaStream;
-    try {
-        mediaStream = audioPlayer.captureStream();
-    } catch (error) {
-        console.error("captureStream failed:", error);
-    }
+            // Capture the audio after playback starts
+            const mediaStream = audioPlayer.captureStream();
+            if (!mediaStream || mediaStream.getAudioTracks().length === 0) {
+                console.error("No audio tracks found in media stream!");
+                return;
+            }
 
-    if (mediaStream && mediaStream.getAudioTracks().length > 0) {
-        const source = audioContext.createMediaStreamSource(mediaStream);
-        visualizer.connectAudio(source);
-        console.log("Visualizer audio source connected.");
-    } else {
-        console.warn("Falling back to MediaElementAudioSourceNode.");
-        const fallbackSource = audioContext.createMediaElementSource(audioPlayer);
-        fallbackSource.connect(audioContext.destination); // Ensure playback is heard
-        visualizer.connectAudio(fallbackSource);
+            const source = audioContext.createMediaStreamSource(mediaStream);
+            visualizer.connectAudio(source);
+            console.log("Visualizer audio source connected.");
         }
 
         // Handle click event for the enter button to start the visualizer
         function handleEnterClick() {
             document.getElementById('splash-screen').style.display = 'none';
-            playRandomTrack(); // Start a random track
-            initVisualizer();  // Initialize the visualizer
+            playRandomTrack().then(() => {
+                initVisualizer();  // Initialize the visualizer only after audio starts
+            });
         }
 
         // Automatically play a new track when the current one ends
