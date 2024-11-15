@@ -95,7 +95,7 @@
     <script>
         // Array of audio track paths
         const audioTracks = [
-           "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
+          "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
 "files/aud/0FC3589586CCC0BF1801003DA500D379.mp3", 
@@ -246,7 +246,7 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-            // Add other audio files here
+           // Add other audio files here
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
@@ -271,6 +271,11 @@
         function initVisualizer() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const canvas = document.getElementById('canvas');
+
+            // Adjust canvas dimensions to match the window size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
             visualizer = butterchurn.createVisualizer(audioContext, canvas, {
                 width: window.innerWidth,
                 height: window.innerHeight,
