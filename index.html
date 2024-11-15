@@ -260,36 +260,48 @@
             });
         }
 
-        // Initialize the visualizer
-        function initVisualizer() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const canvas = document.getElementById('canvas');
-            const visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-                width: 1920,
-                height: 1080,
-                pixelRatio: window.devicePixelRatio || 1,
-                textureRatio: 1,
-            });
+       function initVisualizer() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const canvas = document.getElementById('canvas');
+    visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        pixelRatio: window.devicePixelRatio || 1,
+        textureRatio: 1,
+    });
 
-            const presets = butterchurnPresets.getPresets();
-            const presetKeys = Object.keys(presets);
-            if (presetKeys.length > 0) {
-                const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
-                visualizer.loadPreset(randomPreset, 0);
-            } else {
-                console.error("No presets found to load.");
-            }
+    const presets = butterchurnPresets.getPresets();
+    const presetKeys = Object.keys(presets);
+    if (presetKeys.length > 0) {
+        const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
+        visualizer.loadPreset(randomPreset, 0);
+    } else {
+        console.error("No presets found to load.");
+    }
 
-            function startRenderer() {
-                requestAnimationFrame(startRenderer);
-                visualizer.render();
-            }
-            startRenderer();
+    function startRenderer() {
+        requestAnimationFrame(startRenderer);
+        visualizer.render();
+    }
+    startRenderer();
 
-            // Capture the audio without affecting default audio playback
-            const mediaStream = audioPlayer.captureStream();
-            const source = audioContext.createMediaStreamSource(mediaStream);
-            visualizer.connectAudio(source);
+    // Try capturing the stream
+    let mediaStream;
+    try {
+        mediaStream = audioPlayer.captureStream();
+    } catch (error) {
+        console.error("captureStream failed:", error);
+    }
+
+    if (mediaStream && mediaStream.getAudioTracks().length > 0) {
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        visualizer.connectAudio(source);
+        console.log("Visualizer audio source connected.");
+    } else {
+        console.warn("Falling back to MediaElementAudioSourceNode.");
+        const fallbackSource = audioContext.createMediaElementSource(audioPlayer);
+        fallbackSource.connect(audioContext.destination); // Ensure playback is heard
+        visualizer.connectAudio(fallbackSource);
         }
 
         // Handle click event for the enter button to start the visualizer
