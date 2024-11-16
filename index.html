@@ -12,6 +12,7 @@
             overflow: hidden;
             height: 100%;
             width: 100%;
+            position: relative; /* Ensures proper relative stacking */
         }
 
         /* Full-screen splash overlay */
@@ -60,11 +61,11 @@
 
         /* Fullscreen visualizer canvas with precise scaling */
         #canvas {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             z-index: 1; /* Placed behind other elements */
         }
 
@@ -267,7 +268,7 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-         // Add more tracks here
+                // Add more tracks here
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
