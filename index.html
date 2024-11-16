@@ -65,28 +65,24 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 2; /* Placed behind the splash screen */
+            z-index: 1; /* Placed behind other elements */
         }
- 
-<div id="content">
-        <h1>DJSPEEDSICK.COM</h1>
-        <p>the official dj speedsick website</p>
-    </div>
 
-   /* Central content div */
+        /* Central content div */
         #content {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 2; /* Overlays the visualizer */
+            z-index: 2; /* Overlays the visualizer but under splash screen */
             color: white;
             text-align: center;
             padding: 20px;
             background: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
             border-radius: 10px; /* Optional rounded corners */
             font-family: Arial, sans-serif;
-
+            visibility: hidden; /* Initially hidden under splash screen */
+        }
     </style>
     <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="butterchurn.js"></script>
@@ -112,8 +108,13 @@
     <!-- Visualizer Canvas -->
     <canvas id="canvas"></canvas>
 
+    <!-- Central Content Div -->
+    <div id="content">
+        <h1>DJSPEEDSICK.COM</h1>
+        <p>Welcome to the official DJ Speedsick website!</p>
+    </div>
+
     <script>
-        // Array of audio track paths
         const audioTracks = [
           "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
@@ -266,7 +267,7 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-           // Add other audio files here
+         // Add more tracks here
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
@@ -275,7 +276,6 @@
         let audioContext;
         let visualizer;
 
-        // Function to play a random track
         function playRandomTrack() {
             const randomIndex = Math.floor(Math.random() * audioTracks.length);
             const randomTrack = audioTracks[randomIndex];
@@ -287,7 +287,6 @@
             });
         }
 
-        // Initialize the visualizer
         function initVisualizer() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const canvas = document.getElementById('canvas');
@@ -318,7 +317,6 @@
             }
             startRenderer();
 
-            // Capture the audio after playback starts
             const mediaStream = audioPlayer.captureStream();
             if (!mediaStream || mediaStream.getAudioTracks().length === 0) {
                 console.error("No audio tracks found in media stream!");
@@ -330,15 +328,14 @@
             console.log("Visualizer audio source connected.");
         }
 
-        // Handle click event for the enter button to start the visualizer
         function handleEnterClick() {
             document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('content').style.visibility = 'visible'; // Show content div
             playRandomTrack().then(() => {
-                initVisualizer();  // Initialize the visualizer only after audio starts
+                initVisualizer();
             });
         }
 
-        // Automatically play a new track when the current one ends
         audioPlayer.addEventListener('ended', playRandomTrack);
     </script>
 </body>
