@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
     <style>
-        /* Ensuring the entire viewport for full-screen elements */
         html, body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             height: 100%;
             width: 100%;
-            position: relative; /* Ensures proper relative stacking */
+            position: relative;
         }
 
-        /* Full-screen splash overlay */
         #splash-screen {
             position: fixed;
             top: 0;
@@ -26,11 +24,9 @@
             justify-content: center;
             align-items: center;
             background-color: rgba(0, 0, 0, 0.9);
-            color: white;
-            z-index: 3; /* Ensures the splash screen overlays everything else */
+            z-index: 3;
         }
 
-        /* Video background styling within splash screen */
         #background-video {
             position: absolute;
             top: 0;
@@ -38,49 +34,63 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: -1; /* Stays behind the button */
+            z-index: -1;
         }
 
-        /* Resize and center the enter button */
         #enter-button {
             position: relative;
             z-index: 1;
             cursor: pointer;
             display: block;
-            max-width: 80%; /* Button fills 80% of the screen width */
-            height: auto; /* Maintains aspect ratio */
-            margin: 0 auto; /* Centers the button horizontally */
-            padding: 0; /* Ensures no extra padding */
-            border: none; /* Removes any default border */
+            max-width: 80%;
+            height: auto;
+            margin: 0 auto;
         }
 
-        /* Hidden audio player */
         #audioPlayer {
             display: none;
         }
 
-      /* Fullscreen visualizer canvas as the background */
-#canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1; /* Below the content */
-}
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
 
-/* Central content div */
-#content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2; /* Above the visualizer */
-    text-align: center; /* Center-align the content inside */
-    font-family: Arial, sans-serif;
-    color: white; /* Default text color */
-}
+        #container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            color: white;
+            visibility: hidden;
+        }
 
+        #container h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #container p, #container a {
+            font-size: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        #container a {
+            color: rgb(127, 255, 212);
+            text-decoration: none;
+        }
+
+        #container img {
+            margin: 1rem 0;
+            max-width: 300px;
+        }
     </style>
     <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="butterchurn.js"></script>
@@ -88,34 +98,37 @@
     <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
 </head>
 <body>
-    <!-- Splash Screen Overlay -->
     <div id="splash-screen">
-        <!-- Background video for splash screen -->
         <video id="background-video" autoplay muted loop>
             <source src="files/mov/indexvid.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
-
-        <!-- Enter button image to proceed to visualizer -->
         <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
     </div>
 
-    <!-- Hidden audio element -->
     <audio id="audioPlayer"></audio>
-
-    <!-- Visualizer Canvas -->
     <canvas id="canvas"></canvas>
 
-<div id="content">
-    <h1>Welcome to DJSPEEDSICK.com</h1>
-    <p>brought to you by dj speedsick</p>
-    <img src="files/images/minicdr.jpg";">
-</div>
-
+    <div id="container">
+        <marquee behavior="scroll" scrollamount="10">WWW.DJSPEEDSICK.COM</marquee>
+        <br><br>
+        CONTACT:<br>
+        <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
+        <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
+        <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
+        <img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/unix66606.png?raw=true" alt="UNIX666-06">
+        <br>FIREWALL EVENT HORIZION CD-R<br>SOLD OUT<br><br>
+     <a href= "https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
+	<a href= "https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
+	<a href= "https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
+	<a href= "https://www.x.com/djspeedsick">X</a><br>
+	<a href= "https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
+	<a href= "https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
+    </div>
 
     <script>
         const audioTracks = [
-          "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
+         "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
 "files/aud/0FC3589586CCC0BF1801003DA500D379.mp3", 
@@ -265,8 +278,8 @@
 "files/aud/FCF058FAF0C222B57D8284AD3E4B29F5.mp3", 
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
-"files/aud/FFC7E7F97F2936636B268947653D9068.mp3", 
-                // Add more tracks here
+"files/aud/FFC7E7F97F2936636B268947653D9068.mp3",
+            // Add more audio tracks as needed...
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
@@ -279,9 +292,7 @@
             const randomIndex = Math.floor(Math.random() * audioTracks.length);
             const randomTrack = audioTracks[randomIndex];
             audioPlayer.src = randomTrack;
-            return audioPlayer.play().then(() => {
-                console.log("Playback started successfully");
-            }).catch(error => {
+            return audioPlayer.play().catch(error => {
                 console.error("Playback failed:", error);
             });
         }
@@ -289,14 +300,12 @@
         function initVisualizer() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const canvas = document.getElementById('canvas');
-
-            // Adjust canvas dimensions to match the window size
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
             visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-                width: window.innerWidth,
-                height: window.innerHeight,
+                width: canvas.width,
+                height: canvas.height,
                 pixelRatio: window.devicePixelRatio || 1,
                 textureRatio: 1,
             });
@@ -306,8 +315,6 @@
             if (presetKeys.length > 0) {
                 const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
                 visualizer.loadPreset(randomPreset, 0);
-            } else {
-                console.error("No presets found to load.");
             }
 
             function startRenderer() {
@@ -317,19 +324,13 @@
             startRenderer();
 
             const mediaStream = audioPlayer.captureStream();
-            if (!mediaStream || mediaStream.getAudioTracks().length === 0) {
-                console.error("No audio tracks found in media stream!");
-                return;
-            }
-
             const source = audioContext.createMediaStreamSource(mediaStream);
             visualizer.connectAudio(source);
-            console.log("Visualizer audio source connected.");
         }
 
         function handleEnterClick() {
             document.getElementById('splash-screen').style.display = 'none';
-            document.getElementById('content').style.visibility = 'visible'; // Show content div
+            document.getElementById('container').style.visibility = 'visible';
             playRandomTrack().then(() => {
                 initVisualizer();
             });
