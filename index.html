@@ -67,16 +67,25 @@
             height: 100vh;
             z-index: 2; /* Placed behind the splash screen */
         }
-############################################################################################
-# CONTENT BODY
-############################################################################################
  
 <div id="content">
         <h1>DJSPEEDSICK.COM</h1>
         <p>the official dj speedsick website</p>
     </div>
 
-
+   /* Central content div */
+        #content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2; /* Overlays the visualizer */
+            color: white;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+            border-radius: 10px; /* Optional rounded corners */
+            font-family: Arial, sans-serif;
 
     </style>
     <script type="text/javascript" src="lodash.js"></script>
