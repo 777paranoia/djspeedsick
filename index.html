@@ -59,31 +59,28 @@
             display: none;
         }
 
-        /* Fullscreen visualizer canvas with precise scaling */
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1; /* Placed behind other elements */
-        }
+      /* Fullscreen visualizer canvas as the background */
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Below the content */
+}
 
-        /* Central content div */
-        #content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2; /* Overlays the visualizer but under splash screen */
-            color: white;
-            text-align: center;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-            border-radius: 10px; /* Optional rounded corners */
-            font-family: Arial, sans-serif;
-            visibility: hidden; /* Initially hidden under splash screen */
-        }
+/* Central content div */
+#content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2; /* Above the visualizer */
+    text-align: center; /* Center-align the content inside */
+    font-family: Arial, sans-serif;
+    color: white; /* Default text color */
+}
+
     </style>
     <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="butterchurn.js"></script>
@@ -109,11 +106,12 @@
     <!-- Visualizer Canvas -->
     <canvas id="canvas"></canvas>
 
-    <!-- Central Content Div -->
-    <div id="content">
-        <h1>DJSPEEDSICK.COM</h1>
-        <p>Welcome to the official DJ Speedsick website!</p>
-    </div>
+<div id="content">
+    <h1>Welcome to DJSPEEDSICK.com</h1>
+    <p>brought to you by dj speedsick</p>
+    <img src="files/images/minicdr.jpg";">
+</div>
+
 
     <script>
         const audioTracks = [
