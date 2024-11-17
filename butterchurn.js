@@ -1229,8 +1229,8 @@ var Visualizer = function () {
       additivewave: 0,
       wave_dots: 0,
       wave_thick: 0,
-      wave_a: 0.8,
-      wave_scale: 1,
+      wave_a: 2,
+      wave_scale: 2,
       wave_smoothing: 0.75,
       wave_mystery: 0,
       modwavealphabyvolume: 0,
@@ -1646,28 +1646,30 @@ var AudioProcessor = function () {
       this.updateAudio(timeByteArray, timeByteArrayL, timeByteArrayR);
     }
   }, {
-    key: 'updateAudio',
-    value: function updateAudio(timeByteArray, timeByteArrayL, timeByteArrayR) {
-      this.timeArray = [];
-      this.timeArrayL = [];
-      this.timeArrayR = [];
-      var tempTimeL = [];
-      var tempTimeR = [];
-      var lastIdx = 0;
-      for (var i = 0; i < this.numSamps; i++) {
-        this.timeArray.push(timeByteArray[i] - 128);
-        this.timeArrayL.push(timeByteArrayL[i] - 128);
-        this.timeArrayR.push(timeByteArrayR[i] - 128);
+key: 'updateAudio',
+value: function updateAudio(timeByteArray, timeByteArrayL, timeByteArrayR) {
+  this.timeArray = [];
+  this.timeArrayL = [];
+  this.timeArrayR = [];
+  var tempTimeL = [];
+  var tempTimeR = [];
+  var lastIdx = 0;
 
-        tempTimeL[i] = 0.5 * (this.timeArrayL[i] + this.timeArrayL[lastIdx]);
-        tempTimeR[i] = 0.5 * (this.timeArrayR[i] + this.timeArrayR[lastIdx]);
-        lastIdx = i;
-      }
+  for (var i = 0; i < this.numSamps; i++) {
+    this.timeArray.push((timeByteArray[i] - 128) * 2); // Amplify amplitude
+    this.timeArrayL.push(timeByteArrayL[i] - 128);
+    this.timeArrayR.push(timeByteArrayR[i] - 128);
 
-      this.freqArray = this.fft.timeToFrequencyDomain(this.timeArray);
-      this.freqArrayL = this.fft.timeToFrequencyDomain(tempTimeL);
-      this.freqArrayR = this.fft.timeToFrequencyDomain(tempTimeR);
-    }
+    tempTimeL[i] = 0.5 * (this.timeArrayL[i] + this.timeArrayL[lastIdx]);
+    tempTimeR[i] = 0.5 * (this.timeArrayR[i] + this.timeArrayR[lastIdx]);
+    lastIdx = i;
+  }
+
+  // Apply FFT and boost sensitivity by multiplying frequencies
+  this.freqArray = this.fft.timeToFrequencyDomain(this.timeArray).map(val => val * 1.5);
+  this.freqArrayL = this.fft.timeToFrequencyDomain(tempTimeL).map(val => val * 1.5);
+  this.freqArrayR = this.fft.timeToFrequencyDomain(tempTimeR).map(val => val * 1.5);
+}
   }, {
     key: 'connectAudio',
     value: function connectAudio(audionode) {
@@ -1725,7 +1727,7 @@ var FFT = function () {
       this.equalize = new Float32Array(this.samplesOut);
       var invHalfNFREQ = 1.0 / this.samplesOut;
       for (var i = 0; i < this.samplesOut; i++) {
-        this.equalize[i] = -0.02 * Math.log((this.samplesOut - i) * invHalfNFREQ);
+        this.equalize[i] = -0.01 * Math.log((this.samplesOut - i) * invHalfNFREQ);
       }
     }
 
@@ -3513,7 +3515,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       modwavealphaend: 0.95,
       wave_mystery: -0.2,
       decay: 0.9,
-      wave_a: 1.0,
+      wave_a: 0.8,
       wave_b: 0.5,
       rating: 5.0,
       modwavealphastart: 0.75,
