@@ -10,6 +10,14 @@
     <!-------------------------------------------------------------------------->
 
     <style>
+@font-face {
+    font-family: 'GGX88 Book';
+    src: url('fonts/GGX88Bk-Regular.woff2') format('woff2'),
+         url('fonts/GGX88Bk-Regular.woff') format('woff'),
+         url('fonts/GGX88Bk-Regular.ttf') format('truetype'); /* Fallback */
+    font-weight: normal;
+    font-style: normal;
+}
         html, body {
             margin: 0;
             padding: 0;
@@ -74,7 +82,7 @@
     transform: translate(-50%, -50%);
     z-index: 2;
     text-align: center;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
     color: white; /* Default text color */
     visibility: hidden;
     max-height: 80%;
@@ -131,13 +139,13 @@
 .marquee-large {
     font-size: 1.5rem; /* For the first marquee */
     color: white;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
 }
 
 .marquee-medium {
     font-size: 1.25rem; /* For NEW RELEASES and ART GALLERY marquees */
     color: white;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
 }
 
 #artGalleryOverlay {
@@ -190,6 +198,11 @@
     </script>
 </head>
 <body>
+
+body {
+    font-family: 'GGX88 Book', sans-serif; /* Fallback to sans-serif */
+}
+
     <div id="splash-screen">
         <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
         <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
