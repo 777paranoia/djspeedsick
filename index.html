@@ -5,18 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
 
+    <!-- Open Graph Metadata for Preview -->
+    <meta property="og:title" content="DJSPEEDSICK.COM">
+    <meta property="og:description" content="Explore the music, art, and releases of DJ Speedsick.">
+    <meta property="og:image" content="files/img/preview.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://www.djspeedsick.com">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="DJSPEEDSICK.COM">
+    <meta name="twitter:description" content="Explore the music, art, and releases of DJ Speedsick.">
+    <meta name="twitter:image" content="files/img/preview.png">
+
     <!-------------------------------------------------------------------------->
     <!------------------------------STYLES START-------------------------------->
     <!-------------------------------------------------------------------------->
 
     <style>
+
 @font-face {
     font-family: 'GGX88 Book';
-    src: url('fonts/GGX88Bk-Regular.woff2') format('woff2'),
-         url('fonts/GGX88Bk-Regular.woff') format('woff'),
-         url('fonts/GGX88Bk-Regular.ttf') format('truetype'); /* Fallback */
+    src: url('files/fonts/GGX88Bk-Regular.woff2') format('woff2'),
+         url('files/fonts/GGX88Bk-Regular.woff') format('woff'),
+         url('files/fonts/GGX88Bk-Regular.ttf') format('truetype'); /* Fallback */
     font-weight: normal;
     font-style: normal;
+}
+
+body {
+    font-family: 'GGX88 Book', sans-serif; /* Fallback to sans-serif */
 }
         html, body {
             margin: 0;
@@ -75,7 +95,7 @@
 
 /* Container Styles */
 #container {
-    font-size: 0.9rem; /* Adjust as needed (default is 1rem) */
+    font-size: 0.75rem; /* Adjust as needed (default is 1rem) */
     position: absolute;
     top: 50%;
     left: 50%;
@@ -198,10 +218,6 @@
     </script>
 </head>
 <body>
-
-body {
-    font-family: 'GGX88 Book', sans-serif; /* Fallback to sans-serif */
-}
 
     <div id="splash-screen">
         <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
