@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
+
+    <!-------------------------------------------------------------------------->
+    <!------------------------------STYLES START-------------------------------->
+    <!-------------------------------------------------------------------------->
+
     <style>
         html, body {
             margin: 0;
@@ -134,46 +139,41 @@
     color: white;
     font-family: Times New Roman, serif;
 }
-/* Overlay styles */
+
 #artGalleryOverlay {
-    display: none; /* Initially hidden */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9); /* Dark background with transparency */
-    z-index: 9999; /* Ensure it appears above everything */
-    overflow-y: auto; /* Enable scrolling for images if needed */
+    background-color: transparent; /* Fully transparent */
+    display: none;
+    z-index: 1000;
 }
 
-/* Close button styles */
-#artGalleryClose {
+#artGalleryContent {
     position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 2rem;
-    color: white;
-    cursor: pointer;
-    z-index: 10000; /* Ensure it's above images */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
 }
 
-/* Image styles */
 .responsive-image {
-    width: 100%;
-    max-width: 1200px; /* Set a maximum width for images */
+    width: 80%; /* Set image width to 80% */
     height: auto;
     display: block;
-    margin: 20px auto; /* Center images and add spacing */
-}
-
-/* Center the images inside the overlay */
-#artGalleryContent {
-    text-align: center;
-    padding: 20px;
+    margin: 10px auto; /* Center the images */
+    cursor: pointer; /* Make it clear they are clickable */
 }
 
 </style>
+
+    <!-------------------------------------------------------------------------->
+    <!-------------------------------STYLES END--------------------------------->
+    <!-------------------------------------------------------------------------->
 
     <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="butterchurn.js"></script>
@@ -193,7 +193,7 @@
     <canvas id="canvas"></canvas>
 
     <!------------------------------------------------------------------------------>
-    <!----------------------------- CONTENTSECTION --------------------------------->
+    <!----------------------------- CONTAINER START--------------------------------->
     <!------------------------------------------------------------------------------>
 
 <div id="container">
@@ -239,9 +239,10 @@
 
 
 <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
-    <a href="javascript:void(0);" onclick="openGallery()" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
-        CLICK TO VIEW ART GALLERY
-    </a>
+   <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
+    CLICK TO VIEW ART GALLERY
+</a>
+
 </marquee><br>
 
 <br>
@@ -254,10 +255,86 @@
     <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
 </div>
 
+    <!-------------------------------CONTAINER END---------------------------------->
+    <!------------------------------------------------------------------------------>
+    <!-------------------------------GALLERY START---------------------------------->
 
-    <!------------------------------------------------------------------------------>
-    <!------------------------------- CONTENT END ---------------------------------->
-    <!------------------------------------------------------------------------------>
+<div id="artGalleryOverlay" style="display: none;">
+    <div id="artGalleryContent">
+        <!-- Close Button -->
+        <span id="artGalleryClose" style="cursor: pointer; position: fixed; top: 10px; right: 20px; font-size: 2rem; color: white;">✖</span>
+        <!-- Gallery Images -->
+        <div id="image-container">
+            <img src="https://www.djspeedsick.com/files/img/gallery/58DBD800-7CCF-408A-A2BB-D45AD8CF391B.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/76CFBA80-E2B9-4C69-92AE-4C681E946C15.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/ALEXSHOWPREV1.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/BOOTCAMPFIX%20E1.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/BUY.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/CANDYV4.1PREV.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/CD%205.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/DJSS%202.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/DOWN3.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/FC5934BD-87C1-4F45-8606-2275317B23F6.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/FG%203.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/FISTMIXFRONT1.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/FOREVER_V4edit.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/GS.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/IMG_2192.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/IMG_5507.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/IMG_8106.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/NL%203.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/NL%208EDIT.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/NLPOSTER1.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/OCT7-FLYERV1.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/POG%20NEW2.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/SD%200913.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/SD%207.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%201011.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20104.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20107.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20111.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20118.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20120-Recovered.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20133e2.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2014b.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20221.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20226%20copy.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2046e.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%205.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2060.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/XEROX_74%202.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/bsc-1.jpg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/cd%2012e2.JPG" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/cd%209.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/djssgfkpost.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/fodcd.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/main-alt-text.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/mitb2.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/orchadsvf11.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/poster.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/scan%2012.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/scan%207.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/sp-str-back.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-01a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-01b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-02a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-02b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-04a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-04b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-05a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-05b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-06a.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-06b.jpeg" alt="" class="responsive-image">
+            <img src="https://www.djspeedsick.com/files/img/gallery/xxx%205.jpeg" alt="" class="responsive-image">
+        </div>
+    </div>
+</div>
+
+    <!-------------------------------GALLERY END---------------------------------->
+    <!---------------------------------------------------------------------------->
+    <!-------------------------------JAVA  START---------------------------------->
 
     <script>
         const audioTracks = [
@@ -413,97 +490,152 @@
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3",
 ];
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        audioPlayer.volume = 1.0;
-
-        let audioContext;
-        let visualizer;
-
-        function playRandomTrack() {
-            const randomIndex = Math.floor(Math.random() * audioTracks.length);
-            const randomTrack = audioTracks[randomIndex];
-            audioPlayer.src = randomTrack;
-
-            return audioPlayer.play().catch(error => {
-                console.error("Playback failed:", error);
-            });
-        }
-
-        function initVisualizer() {
-            if (typeof butterchurn === 'undefined') {
-                console.error("Butterchurn is not defined. Ensure the library is loaded correctly.");
-                return;
-            }
-
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const canvas = document.getElementById('canvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-                width: canvas.width,
-                height: canvas.height,
-                pixelRatio: window.devicePixelRatio || 1,
-                textureRatio: 1,
-            });
-
-            const presets = butterchurnPresets.getPresets();
-            const presetKeys = Object.keys(presets);
-            if (presetKeys.length > 0) {
-                const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
-                visualizer.loadPreset(randomPreset, 0);
-            } else {
-                console.error("No presets found to load.");
-            }
-
-            function startRenderer() {
-                requestAnimationFrame(startRenderer);
-                visualizer.render();
-            }
-            startRenderer();
-
-            const mediaStream = audioPlayer.captureStream();
-            const source = audioContext.createMediaStreamSource(mediaStream);
-            visualizer.connectAudio(source);
-        }
-
-        function handleEnterClick() {
-            document.getElementById('splash-screen').style.display = 'none';
-            document.getElementById('container').style.visibility = 'visible';
-            playRandomTrack().then(() => {
-                initVisualizer();
-            }).catch(error => {
-                console.error("Error during enter button action:", error);
-            });
-        }
-
-        audioPlayer.addEventListener('ended', playRandomTrack);
-
 document.addEventListener('DOMContentLoaded', () => {
+    // AUDIO PLAYER SETUP
+    const audioPlayer = document.getElementById('audioPlayer');
+    const enterButton = document.getElementById('enter-button');
+    const splashScreen = document.getElementById('splash-screen');
+    const container = document.getElementById('container');
+
+    if (!audioPlayer || !enterButton || !splashScreen || !container) {
+        console.error("Missing critical elements: Check audioPlayer, enterButton, splashScreen, and container IDs.");
+        return;
+    }
+
+    audioPlayer.volume = 1.0;
+
+    let audioContext;
+    let visualizer;
+
+    function playRandomTrack() {
+        const randomIndex = Math.floor(Math.random() * audioTracks.length);
+        const randomTrack = audioTracks[randomIndex];
+        audioPlayer.src = randomTrack;
+
+        return audioPlayer.play().catch(error => {
+            console.error("Playback failed:", error);
+        });
+    }
+
+    function initVisualizer() {
+        if (typeof butterchurn === 'undefined') {
+            console.error("Butterchurn is not defined. Ensure the library is loaded correctly.");
+            return;
+        }
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const canvas = document.getElementById('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+            width: canvas.width,
+            height: canvas.height,
+            pixelRatio: window.devicePixelRatio || 1,
+            textureRatio: 1,
+        });
+
+        const presets = butterchurnPresets.getPresets();
+        const presetKeys = Object.keys(presets);
+        if (presetKeys.length > 0) {
+            const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
+            visualizer.loadPreset(randomPreset, 0);
+        } else {
+            console.error("No presets found to load.");
+        }
+
+        function startRenderer() {
+            requestAnimationFrame(startRenderer);
+            visualizer.render();
+        }
+        startRenderer();
+
+        const mediaStream = audioPlayer.captureStream();
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        visualizer.connectAudio(source);
+    }
+
+    function handleEnterClick() {
+        // Hide splash screen and show main container
+        splashScreen.style.display = 'none';
+        container.style.visibility = 'visible';
+
+        // Start audio playback and initialize visualizer
+        playRandomTrack().then(() => {
+            initVisualizer();
+        }).catch(error => {
+            console.error("Error during enter button action:", error);
+        });
+    }
+
+    // Add event listener for the enter button
+    enterButton.addEventListener('click', handleEnterClick);
+
+    // Automatically play the next track when the current one ends
+    audioPlayer.addEventListener('ended', playRandomTrack);
+});
+
+   document.addEventListener('DOMContentLoaded', () => {
     const galleryOverlay = document.getElementById('artGalleryOverlay');
+    const galleryContent = document.getElementById('artGalleryContent');
     const galleryClose = document.getElementById('artGalleryClose');
+    const galleryLink = document.querySelector('.gallery-link');
 
-    // Open Gallery
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function populateGallery() {
+        const images = Array.from(galleryContent.querySelectorAll('img'));
+        const shuffledImages = shuffle(images);
+
+        // Clear and re-add shuffled images
+        galleryContent.innerHTML = '';
+        shuffledImages.forEach((img) => galleryContent.appendChild(img));
+    }
+
     function openGallery() {
-        galleryOverlay.style.display = 'block';
+        if (galleryOverlay) {
+            populateGallery(); // Randomize image order
+            galleryOverlay.style.display = 'block';
+        }
     }
 
-    // Close Gallery
     function closeGallery() {
-        galleryOverlay.style.display = 'none';
+        if (galleryOverlay) {
+            galleryOverlay.style.display = 'none';
+        }
     }
 
-    // Event Listeners
-    galleryClose.addEventListener('click', closeGallery);
+    if (galleryClose) {
+        galleryClose.addEventListener('click', closeGallery);
+    }
 
-    // Example trigger for gallery link
-    document.querySelector('.gallery-link').addEventListener('click', (event) => {
-        event.preventDefault();
-        openGallery();
+    if (galleryLink) {
+        galleryLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            openGallery();
+        });
+    }
+
+    // Add click event to all images to close the gallery
+    galleryContent.addEventListener('click', (event) => {
+        if (event.target.tagName === 'IMG') {
+            closeGallery();
+        }
     });
 });
 
+
     </script>
+
+    <!-------------------------------JAVA END---------------------------------->
+    <!------------------------------------------------------------------------->
+    <!-------------------------------CODE END---------------------------------->
+
 </body>
 </html>
