@@ -5,11 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
 
+    <!-- Open Graph Metadata for Preview -->
+    <meta property="og:title" content="DJSPEEDSICK.COM">
+    <meta property="og:description" content="Explore the music, art, and releases of DJ Speedsick.">
+    <meta property="og:image" content="files/img/preview.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://www.djspeedsick.com">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="DJSPEEDSICK.COM">
+    <meta name="twitter:description" content="DJSPEEDSICK.COM OFFICIAL PAGE OF DJ MOTHERFUCKING SPEEDSICK WOOOOO">
+    <meta name="twitter:image" content="files/img/preview.png">
+
     <!-------------------------------------------------------------------------->
     <!------------------------------STYLES START-------------------------------->
     <!-------------------------------------------------------------------------->
+<style>
 
-    <style>
+
+    @keyframes fade {
+        0%, 100% { opacity: 1; } /* Fully visible */
+        50% { opacity: 0.3; }   /* Partially faded */
+    }
+
+    .fading-text {
+        display: inline-block;
+        animation: fade 2s infinite; /* 2 seconds, repeating infinitely */
+    }
+
+body {
+    font-family: 'GGX88 Book', sans-serif; /* Fallback to sans-serif */
+}
         html, body {
             margin: 0;
             padding: 0;
@@ -67,14 +96,14 @@
 
 /* Container Styles */
 #container {
-    font-size: 0.9rem; /* Adjust as needed (default is 1rem) */
+    font-size: 0.75rem; /* Adjust as needed (default is 1rem) */
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 2;
     text-align: center;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
     color: white; /* Default text color */
     visibility: hidden;
     max-height: 80%;
@@ -84,6 +113,7 @@
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* Internet Explorer */
 }
+
 
 /* Hide scrollbar in Webkit browsers */
 #container::-webkit-scrollbar {
@@ -131,13 +161,13 @@
 .marquee-large {
     font-size: 1.5rem; /* For the first marquee */
     color: white;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
 }
 
 .marquee-medium {
     font-size: 1.25rem; /* For NEW RELEASES and ART GALLERY marquees */
     color: white;
-    font-family: Times New Roman, serif;
+    font-family: GGX88 Book, sans-serif;
 }
 
 #artGalleryOverlay {
@@ -158,7 +188,13 @@
     transform: translate(-50%, -50%);
     width: 90%;
     max-height: 90%;
-    overflow-y: auto;
+    overflow-y: auto; /* Enable scrolling */
+    scrollbar-width: none; /* Hide scrollbar in Firefox */
+    -ms-overflow-style: none; /* Hide scrollbar in Internet Explorer */
+}
+
+#artGalleryContent::-webkit-scrollbar {
+    display: none; /* Hide scrollbar in WebKit-based browsers (Chrome, Safari) */
 }
 
 .responsive-image {
@@ -184,6 +220,7 @@
     </script>
 </head>
 <body>
+
     <div id="splash-screen">
         <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
         <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
@@ -194,58 +231,62 @@
 
     <!------------------------------------------------------------------------------>
     <!----------------------------- CONTAINER START--------------------------------->
-    <!------------------------------------------------------------------------------>
+<!------------------------------------------------------------------------------>
 
 <div id="container">
     <!-- First marquee -->
-    <marquee behavior="scroll" scrollamount="10" class="marquee-large">
+    <marquee behavior="scroll" direction="right" scrollamount="13" class="marquee-large">
         WWW.DJSPEEDSICK.COM
-    </marquee><br><br>
+    </marquee>
+    <br><br>
 
     <!-- Contact information -->
-    CONTACT:<br>
+    <p>CONTACT:</p>
     <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
     <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
     <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
 
     <!-- NEW RELEASES marquee -->
-    <marquee behavior="scroll" scrollamount="10" class="marquee-medium">
+    <marquee behavior="scroll" direction="left" scrollamount="12" class="marquee-medium">
         NEW RELEASES
-    </marquee><br><br>
+    </marquee>
+    <br><br>
 
-<!-- Release images and descriptions -->
+    <!-- Release images and descriptions -->
+    <img src="files/img/ph008.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">EXECUTION STYLE 12"</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Pure Hate, ph008</p>
+    <a href="https://purehatetrax.bandcamp.com/album/execution-style-ep" 
+       style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">PRE-ORDER</a>
+    <br>
 
-<img src="files/img/ph008.jpg" style="margin: 0 0 5px;">
-<p style="margin: 0; font-size: 1rem; color: white;">EXECUTION STYLE 12"</p>
-<p style="margin: 0; font-size: 10px; color: white;">Pure Hate, ph008</p>
-<a href="https://purehatetrax.bandcamp.com/album/execution-style-ep" 
-   style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">PRE-ORDER</a> <br>
+    <img src="files/img/unix66606.jpeg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">FIREWALL EVENT HORIZON CD-R</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-06</p>
+    <p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p>
+    <br>
 
-<img src="files/img/unix66606.jpeg" style="margin: 0 0 5px;">
-<p style="margin: 0; font-size: 1rem; color: white;">FIREWALL EVENT HORIZION CD-R</p>
-<p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-06</p>
-<p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p><br>
+    <img src="files/img/tb207.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">DEATHAMPHETAMINE II: "BACK IN THE PIT" OST CS</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Total Black, 207</p>
+    <a href="https://www.sentimentalyouth.com/products/dj-speedsick-deathamphetamine-ii-back-in-the-pit-o-s-t-cs" 
+       style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">ORDER</a>
+    <br>
 
-<img src="files/img/tb207.jpg" style="margin: 0 0 5px;">
-<p style="margin: 0; font-size: 1rem; color: white;">DEATHAMPHETAMINE II: "BACK IN THE PIT" OST CS</p>
-<p style="margin: 0; font-size: 10px; color: white;">Total Black, 207</p>
-<a href="https://www.sentimentalyouth.com/products/dj-speedsick-deathamphetamine-ii-back-in-the-pit-o-s-t-cs" 
-   style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">ORDER</a><br>
+    <img src="files/img/unix66605.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">YOU FUCKING PEOPLE MAKE ME SICK E-CDR</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-05</p>
+    <p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p>
+    <br>
 
-<img src="files/img/unix66605.jpg" style="margin: 0 0 5px;">
-<p style="margin: 0; font-size: 1rem; color: white;">YOU FUCKING PEOPLE MAKE ME SICK E-CDR</p>
-<p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-05</p>
-<p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p><br>
+    <!-- Art gallery marquee -->
+    <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
+        <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
+            CLICK TO VIEW ART GALLERY
+        </a>
+    </marquee>
+    <br><br>
 
-
-<marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
-   <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
-    CLICK TO VIEW ART GALLERY
-</a>
-
-</marquee><br>
-
-<br>
     <!-- Other links -->
     <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
     <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
