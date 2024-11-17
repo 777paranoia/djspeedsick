@@ -60,38 +60,121 @@
             z-index: 1;
         }
 
-        #container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            text-align: center;
-            font-family: Arial, sans-serif;
-            color: white;
-            visibility: hidden;
-        }
+/* Container Styles */
+#container {
+    font-size: 0.9rem; /* Adjust as needed (default is 1rem) */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    text-align: center;
+    font-family: Times New Roman, serif;
+    color: white; /* Default text color */
+    visibility: hidden;
+    max-height: 80%;
+    overflow-y: auto;
+    padding: 10px;
+    box-sizing: border-box;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer */
+}
 
-        #container h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
+/* Hide scrollbar in Webkit browsers */
+#container::-webkit-scrollbar {
+    display: none;
+}
 
-        #container p, #container a {
-            font-size: 1rem;
-            margin: 0.5rem 0;
-        }
+/* Keyframes for rainbow animation */
+@keyframes rainbow {
+    0% { color: red; }
+    16% { color: orange; }
+    33% { color: yellow; }
+    50% { color: green; }
+    66% { color: blue; }
+    83% { color: indigo; }
+    100% { color: violet; }
+}
 
-        #container a {
-            color: rgb(127, 255, 212);
-            text-decoration: none;
-        }
+/* Apply rainbow animation to all links in the container */
+#container a {
+    font-size: 1rem;
+    text-decoration: none;
+    animation: rainbow 3s infinite; /* Reapply animation */
+}
 
-        #container img {
-            margin: 1rem 0;
-            max-width: 300px;
-        }
-    </style>
+/* General Text and Link Styles */
+#container p {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    color: white; /* Default text color */
+}
+
+#container a {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    color: white; /* Default link color */
+    text-decoration: none;
+}
+
+#container img {
+    margin: 1rem 0;
+    max-width: 300px;
+}
+
+/* Marquee-specific styles */
+.marquee-large {
+    font-size: 1.5rem; /* For the first marquee */
+    color: white;
+    font-family: Times New Roman, serif;
+}
+
+.marquee-medium {
+    font-size: 1.25rem; /* For NEW RELEASES and ART GALLERY marquees */
+    color: white;
+    font-family: Times New Roman, serif;
+}
+/* Overlay styles */
+#artGalleryOverlay {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9); /* Dark background with transparency */
+    z-index: 9999; /* Ensure it appears above everything */
+    overflow-y: auto; /* Enable scrolling for images if needed */
+}
+
+/* Close button styles */
+#artGalleryClose {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 2rem;
+    color: white;
+    cursor: pointer;
+    z-index: 10000; /* Ensure it's above images */
+}
+
+/* Image styles */
+.responsive-image {
+    width: 100%;
+    max-width: 1200px; /* Set a maximum width for images */
+    height: auto;
+    display: block;
+    margin: 20px auto; /* Center images and add spacing */
+}
+
+/* Center the images inside the overlay */
+#artGalleryContent {
+    text-align: center;
+    padding: 20px;
+}
+
+</style>
+
     <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="butterchurn.js"></script>
     <script type="text/javascript" src="butterchurnPresets.min.js"></script>
@@ -109,22 +192,72 @@
     <audio id="audioPlayer"></audio>
     <canvas id="canvas"></canvas>
 
-    <div id="container">
-        <marquee behavior="scroll" scrollamount="10">WWW.DJSPEEDSICK.COM</marquee>
-        <br><br>
-        CONTACT:<br>
-        <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
-        <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
-        <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br>
-        <img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/unix66606.jpeg?raw=true" alt="UNIX666-06">
-        <br>FIREWALL EVENT HORIZION CD-R<br>SOLD OUT<br><br>
-        <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
-        <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
-        <a href="https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
-        <a href="https://www.x.com/djspeedsick">X</a><br>
-        <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
-        <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
-    </div>
+    <!------------------------------------------------------------------------------>
+    <!----------------------------- CONTENTSECTION --------------------------------->
+    <!------------------------------------------------------------------------------>
+
+<div id="container">
+    <!-- First marquee -->
+    <marquee behavior="scroll" scrollamount="10" class="marquee-large">
+        WWW.DJSPEEDSICK.COM
+    </marquee><br><br>
+
+    <!-- Contact information -->
+    CONTACT:<br>
+    <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
+    <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
+    <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
+
+    <!-- NEW RELEASES marquee -->
+    <marquee behavior="scroll" scrollamount="10" class="marquee-medium">
+        NEW RELEASES
+    </marquee><br><br>
+
+<!-- Release images and descriptions -->
+
+<img src="files/img/ph008.jpg" style="margin: 0 0 5px;">
+<p style="margin: 0; font-size: 1rem; color: white;">EXECUTION STYLE 12"</p>
+<p style="margin: 0; font-size: 10px; color: white;">Pure Hate, ph008</p>
+<a href="https://purehatetrax.bandcamp.com/album/execution-style-ep" 
+   style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">PRE-ORDER</a> <br>
+
+<img src="files/img/unix66606.jpeg" style="margin: 0 0 5px;">
+<p style="margin: 0; font-size: 1rem; color: white;">FIREWALL EVENT HORIZION CD-R</p>
+<p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-06</p>
+<p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p><br>
+
+<img src="files/img/tb207.jpg" style="margin: 0 0 5px;">
+<p style="margin: 0; font-size: 1rem; color: white;">DEATHAMPHETAMINE II: "BACK IN THE PIT" OST CS</p>
+<p style="margin: 0; font-size: 10px; color: white;">Total Black, 207</p>
+<a href="https://www.sentimentalyouth.com/products/dj-speedsick-deathamphetamine-ii-back-in-the-pit-o-s-t-cs" 
+   style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">ORDER</a><br>
+
+<img src="files/img/unix66605.jpg" style="margin: 0 0 5px;">
+<p style="margin: 0; font-size: 1rem; color: white;">YOU FUCKING PEOPLE MAKE ME SICK E-CDR</p>
+<p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-05</p>
+<p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p><br>
+
+
+<marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
+    <a href="javascript:void(0);" onclick="openGallery()" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
+        CLICK TO VIEW ART GALLERY
+    </a>
+</marquee><br>
+
+<br>
+    <!-- Other links -->
+    <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
+    <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
+    <a href="https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
+    <a href="https://www.x.com/djspeedsick">X</a><br>
+    <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
+    <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
+</div>
+
+
+    <!------------------------------------------------------------------------------>
+    <!------------------------------- CONTENT END ---------------------------------->
+    <!------------------------------------------------------------------------------>
 
     <script>
         const audioTracks = [
@@ -346,6 +479,31 @@
         }
 
         audioPlayer.addEventListener('ended', playRandomTrack);
+
+document.addEventListener('DOMContentLoaded', () => {
+    const galleryOverlay = document.getElementById('artGalleryOverlay');
+    const galleryClose = document.getElementById('artGalleryClose');
+
+    // Open Gallery
+    function openGallery() {
+        galleryOverlay.style.display = 'block';
+    }
+
+    // Close Gallery
+    function closeGallery() {
+        galleryOverlay.style.display = 'none';
+    }
+
+    // Event Listeners
+    galleryClose.addEventListener('click', closeGallery);
+
+    // Example trigger for gallery link
+    document.querySelector('.gallery-link').addEventListener('click', (event) => {
+        event.preventDefault();
+        openGallery();
+    });
+});
+
     </script>
 </body>
 </html>
