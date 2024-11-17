@@ -27,7 +27,7 @@
             z-index: 3;
         }
 
-        #background-video {
+        #background-gif {
             position: absolute;
             top: 0;
             left: 0;
@@ -96,12 +96,15 @@
     <script type="text/javascript" src="butterchurn.js"></script>
     <script type="text/javascript" src="butterchurnPresets.min.js"></script>
     <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
+    <script>
+        console.log('Butterchurn loaded:', typeof butterchurn !== 'undefined');
+    </script>
 </head>
 <body>
-   <div id="splash-screen">
-    <img id="background-gif" src="files/mov/indexmov.gif">
-    <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
-</div>
+    <div id="splash-screen">
+        <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
+        <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
+    </div>
 
     <audio id="audioPlayer"></audio>
     <canvas id="canvas"></canvas>
@@ -115,17 +118,17 @@
         <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br>
         <img src="https://github.com/777paranoia/djspeedsick/blob/master/files/img/unix66606.jpeg?raw=true" alt="UNIX666-06">
         <br>FIREWALL EVENT HORIZION CD-R<br>SOLD OUT<br><br>
-     <a href= "https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
-	<a href= "https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
-	<a href= "https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
-	<a href= "https://www.x.com/djspeedsick">X</a><br>
-	<a href= "https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
-	<a href= "https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
+        <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
+        <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
+        <a href="https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
+        <a href="https://www.x.com/djspeedsick">X</a><br>
+        <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
+        <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
     </div>
 
     <script>
         const audioTracks = [
-         "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
+"files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
 "files/aud/0DDE9002290A4E4B24ED7A3762742882.mp3", 
 "files/aud/0FC3589586CCC0BF1801003DA500D379.mp3", 
@@ -276,8 +279,7 @@
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3",
-            // Add more audio tracks as needed...
-        ];
+];
 
         const audioPlayer = document.getElementById('audioPlayer');
         audioPlayer.volume = 1.0;
@@ -289,12 +291,18 @@
             const randomIndex = Math.floor(Math.random() * audioTracks.length);
             const randomTrack = audioTracks[randomIndex];
             audioPlayer.src = randomTrack;
+
             return audioPlayer.play().catch(error => {
                 console.error("Playback failed:", error);
             });
         }
 
         function initVisualizer() {
+            if (typeof butterchurn === 'undefined') {
+                console.error("Butterchurn is not defined. Ensure the library is loaded correctly.");
+                return;
+            }
+
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const canvas = document.getElementById('canvas');
             canvas.width = window.innerWidth;
@@ -312,6 +320,8 @@
             if (presetKeys.length > 0) {
                 const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
                 visualizer.loadPreset(randomPreset, 0);
+            } else {
+                console.error("No presets found to load.");
             }
 
             function startRenderer() {
@@ -330,6 +340,8 @@
             document.getElementById('container').style.visibility = 'visible';
             playRandomTrack().then(() => {
                 initVisualizer();
+            }).catch(error => {
+                console.error("Error during enter button action:", error);
             });
         }
 
