@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJSPEEDSICK.COM</title>
 
-    <!-- Open Graph Metadata for Preview -->
     <meta property="og:title" content="DJSPEEDSICK.COM">
     <meta property="og:description" content="Explore the music, art, and releases of DJ Speedsick.">
     <meta property="og:image" content="files/img/preview.png">
@@ -14,7 +13,6 @@
     <meta property="og:url" content="https://www.djspeedsick.com">
     <meta property="og:type" content="website">
 
-    <!-- Twitter Card Metadata -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="DJSPEEDSICK.COM">
     <meta name="twitter:description" content="DJSPEEDSICK.COM OFFICIAL PAGE OF DJ MOTHERFUCKING SPEEDSICK WOOOOO">
@@ -234,25 +232,21 @@ body {
 <!------------------------------------------------------------------------------>
 
 <div id="container">
-    <!-- First marquee -->
     <marquee behavior="scroll" direction="right" scrollamount="13" class="marquee-large">
         WWW.DJSPEEDSICK.COM
     </marquee>
     <br><br>
 
-    <!-- Contact information -->
     <p>CONTACT:</p>
     <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
     <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
     <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
 
-    <!-- NEW RELEASES marquee -->
     <marquee behavior="scroll" direction="left" scrollamount="12" class="marquee-medium">
         NEW RELEASES
     </marquee>
     <br><br>
 
-    <!-- Release images and descriptions -->
     <img src="files/img/ph008.jpg" style="margin: 0 0 5px;"><br>
     <p class="blend-text" style="margin: 0; font-size: 1rem;">EXECUTION STYLE 12"</p>
     <p style="margin: 0; font-size: 10px; color: white;">Pure Hate, ph008</p>
@@ -279,7 +273,6 @@ body {
     <p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p>
     <br>
 
-    <!-- Art gallery marquee -->
     <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
         <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
             CLICK TO VIEW ART GALLERY
@@ -287,7 +280,6 @@ body {
     </marquee>
     <br><br>
 
-    <!-- Other links -->
     <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
     <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
     <a href="https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
@@ -302,9 +294,9 @@ body {
 
 <div id="artGalleryOverlay" style="display: none;">
     <div id="artGalleryContent">
-        <!-- Close Button -->
+
         <span id="artGalleryClose" style="cursor: pointer; position: fixed; top: 10px; right: 20px; font-size: 2rem; color: white;">✖</span>
-        <!-- Gallery Images -->
+
         <div id="image-container">
             <img src="https://www.djspeedsick.com/files/img/gallery/58DBD800-7CCF-408A-A2BB-D45AD8CF391B.JPG" alt="" class="responsive-image">
             <img src="https://www.djspeedsick.com/files/img/gallery/76CFBA80-E2B9-4C69-92AE-4C681E946C15.JPG" alt="" class="responsive-image">
@@ -548,15 +540,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioContext;
     let visualizer;
 
-    function playRandomTrack() {
-        const randomIndex = Math.floor(Math.random() * audioTracks.length);
-        const randomTrack = audioTracks[randomIndex];
-        audioPlayer.src = randomTrack;
-
-        return audioPlayer.play().catch(error => {
-            console.error("Playback failed:", error);
-        });
+function playRandomTrack() {
+    if (audioTracks.length === 0) {
+        console.error("No audio tracks available.");
+        return Promise.reject(new Error("No audio tracks available."));
     }
+
+    const randomIndex = Math.floor(Math.random() * audioTracks.length);
+    const randomTrack = audioTracks[randomIndex];
+    audioPlayer.src = randomTrack;
+
+    return audioPlayer.play().catch(error => {
+        console.error("Playback failed for track:", randomTrack, error);
+    });
+}
+
 
     function initVisualizer() {
         if (typeof butterchurn === 'undefined') {
@@ -591,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         startRenderer();
 
-        const mediaStream = audioPlayer.captureStream();
+const mediaStream = audioPlayer.captureStream ? audioPlayer.captureStream() : audioPlayer.mozCaptureStream();
         const source = audioContext.createMediaStreamSource(mediaStream);
         visualizer.connectAudio(source);
     }
