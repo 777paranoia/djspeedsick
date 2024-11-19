@@ -203,6 +203,64 @@ body {
     cursor: pointer; /* Make it clear they are clickable */
 }
 
+/* About Overlay Styling */
+#aboutOverlay {
+    position: fixed;
+    top: auto;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Slightly transparent black */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#aboutContent {
+    background-color: transparent;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+#aboutContent img {
+    max-width: 65%;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+
+/* About Button Styling */
+#aboutButton {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    z-index: 2000;
+}
+
+/* Keep the clickable "About" button in GGX88LT */
+#aboutButton a {
+    font-family: 'GGX88Lt-Italic', sans-serif; /* This applies only to the button */
+    font-size: 0.5rem; /* Make it smaller as requested */
+    text-decoration: none;
+}
+
+/* Explicitly set a different font for the About content */
+#aboutText {
+    font-family: 'GGX88 Book', sans-serif; /* Or whichever font you'd like for the About content */
+}
+
+
+
+}
+
+
+
 </style>
 
     <!-------------------------------------------------------------------------->
@@ -286,6 +344,10 @@ body {
     <a href="https://www.x.com/djspeedsick">X</a><br>
     <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
     <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
+<br><br><br><br><br><br><br> <!-- Adjust spacing as needed -->
+<a id="aboutLink" href="javascript:void(0)" onclick="toggleAbout()" style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
+    about
+
 </div>
 
     <!-------------------------------CONTAINER END---------------------------------->
@@ -365,9 +427,52 @@ body {
     </div>
 </div>
 
+
+
     <!-------------------------------GALLERY END---------------------------------->
     <!---------------------------------------------------------------------------->
     <!-------------------------------JAVA  START---------------------------------->
+
+<!-- About Section -->
+<!-- About Section -->
+<!-- About Section -->
+
+
+<div id="aboutOverlay" style="display: none;">
+    <div id="aboutContent">
+        <img src="files/img/mansoncave.jpg" alt="" class="responsive-image">
+    <p id="aboutText">
+    <span style="font-size: 2rem;">DJ Speedsick</span> <br>
+    <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
+    <span style="font-size: 0.75rem;">b. 1992</span><br>
+    <span style="font-size: 0.75rem;">d. ????</span><br><br>
+    <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
+</p>
+
+    </div>
+</div>
+
+
+<!-- About Overlay -->
+<div id="aboutOverlay" style="display: none;">
+    <div id="aboutContent">
+        <img src="files/img/mansoncave.jpg" alt="" class="responsive-image">
+        <p id="aboutText">
+            <span style="font-size: 2rem;">DJ Speedsick</span> <br>
+            <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
+            <span style="font-size: 0.75rem;">b. 1992</span><br>
+            <span style="font-size: 0.75rem;">d. ????</span><br><br>
+            <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
+        </p>
+    </div>
+</div>
+
+
+
+
+<!-- About Section End -->
+<!-- About Section End -->
+<!-- About Section End -->
 
     <script>
         const audioTracks = [
@@ -667,6 +772,28 @@ const mediaStream = audioPlayer.captureStream ? audioPlayer.captureStream() : au
             closeGallery();
         }
     });
+});
+
+function toggleAbout() {
+    const aboutOverlay = document.getElementById('aboutOverlay');
+    const galleryOverlay = document.getElementById('artGalleryOverlay');
+
+    // Close gallery if open
+    if (galleryOverlay && galleryOverlay.style.display === 'block') {
+        galleryOverlay.style.display = 'none';
+    }
+
+    // Toggle About overlay
+    if (aboutOverlay.style.display === 'none') {
+        aboutOverlay.style.display = 'block';
+    } else {
+        aboutOverlay.style.display = 'none';
+    }
+}
+
+// Prevent gallery clicks from opening About
+document.getElementById('artGalleryOverlay').addEventListener('click', (event) => {
+    event.stopPropagation();
 });
 
 
