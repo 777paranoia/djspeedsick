@@ -20,29 +20,30 @@
 
 <style>
 
-    @keyframes fade {
-        0%, 100% { opacity: 1; } 
-        50% { opacity: 0.3; }  
-    }
+  @keyframes fade {
+    0%, 100% { opacity: 1; } 
+    50% { opacity: 0.3; }  
+}
 
-    .fading-text {
-        display: inline-block;
-        animation: fade 2s infinite; /* 2 seconds, repeating infinitely */
-    }
-  
-    body {
-    font-family: 'GGX88 Book', sans-serif; /* Fallback to sans-serif */
-    }
-        html, body {
+.fading-text {
+    display: inline-block;
+    animation: fade 2s infinite;
+}
+
+body {
+    font-family: 'GGX88 Book', sans-serif;
+}
+
+html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
     height: 100%;
     width: 100%;
     position: relative;
-        }
+}
 
-        #splash-screen {
+#splash-screen {
     position: fixed;
     top: 0;
     left: 0;
@@ -53,9 +54,9 @@
     align-items: center;
     background-color: rgba(0, 0, 0, 0.9);
     z-index: 3;
-        }
+}
 
-        #background-gif {
+#background-gif {
     position: absolute;
     top: 0;
     left: 0;
@@ -63,9 +64,9 @@
     height: 100%;
     object-fit: cover;
     z-index: -1;
-        }
+}
 
-        #enter-button {
+#enter-button {
     position: relative;
     z-index: 1;
     cursor: pointer;
@@ -73,23 +74,23 @@
     max-width: 80%;
     height: auto;
     margin: 0 auto;
-        }
+}
 
-        #audioPlayer {
+#audioPlayer {
     display: none;
-        }
+}
 
-        #canvas {
+#canvas {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 1;
-        }
+}
 
-    #container {
-    font-size: 0.75rem; /* Adjust as needed (default is 1rem) */
+#container {
+    font-size: 0.75rem;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -97,21 +98,21 @@
     z-index: 2;
     text-align: center;
     font-family: GGX88 Book, sans-serif;
-    color: white; /* Default text color */
+    color: white;
     visibility: hidden;
     max-height: 80%;
     overflow-y: auto;
     padding: 10px;
     box-sizing: border-box;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Internet Explorer */
-       }
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
 
-      #container::-webkit-scrollbar {
+#container::-webkit-scrollbar {
     display: none;
-       }
+}
 
-    @keyframes rainbow {
+@keyframes rainbow {
     0% { color: red; }
     16% { color: orange; }
     33% { color: yellow; }
@@ -119,27 +120,18 @@
     66% { color: blue; }
     83% { color: indigo; }
     100% { color: violet; }
-       }
+}
 
-/* Apply rainbow animation to all links in the container */
 #container a {
     font-size: 1rem;
     text-decoration: none;
-    animation: rainbow 3s infinite; /* Reapply animation */
+    animation: rainbow 3s infinite;
 }
 
-/* General Text and Link Styles */
 #container p {
     font-size: 1rem;
     margin: 0.5rem 0;
-    color: white; /* Default text color */
-}
-
-#container a {
-    font-size: 1rem;
-    margin: 0.5rem 0;
-    color: white; /* Default link color */
-    text-decoration: none;
+    color: white;
 }
 
 #container img {
@@ -147,15 +139,14 @@
     max-width: 300px;
 }
 
-/* Marquee-specific styles */
 .marquee-large {
-    font-size: 1.5rem; /* For the first marquee */
+    font-size: 1.5rem;
     color: white;
     font-family: GGX88 Book, sans-serif;
 }
 
 .marquee-medium {
-    font-size: 1.25rem; /* For NEW RELEASES and ART GALLERY marquees */
+    font-size: 1.25rem;
     color: white;
     font-family: GGX88 Book, sans-serif;
 }
@@ -164,45 +155,52 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent; /* Fully transparent */
-    display: none;
+    width: 100vw;
+    height: 100vh;
+    background-color: transparent;
     z-index: 1000;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 #artGalleryContent {
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-height: 90%;
-    overflow-y: auto; /* Enable scrolling */
-    scrollbar-width: none; /* Hide scrollbar in Firefox */
-    -ms-overflow-style: none; /* Hide scrollbar in Internet Explorer */
+    width: 90%; 
+    height: 90%; 
+    max-width: none;
+    max-height: none;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 #artGalleryContent::-webkit-scrollbar {
-    display: none; /* Hide scrollbar in WebKit-based browsers (Chrome, Safari) */
+    display: none;
 }
 
 .responsive-image {
-    width: 80%; /* Set image width to 80% */
+    width: 100%;
     height: auto;
     display: block;
-    margin: 10px auto; /* Center the images */
-    cursor: pointer; /* Make it clear they are clickable */
+    margin: 10px auto;
+    cursor: pointer;
 }
 
-/* About Overlay Styling */
+
 #aboutOverlay {
     position: fixed;
-    top: auto;
+    top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); 
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -235,7 +233,7 @@
 
 #aboutButton a {
     font-family: 'GGX88Lt-Italic', sans-serif;
-    font-size: 0.5rem; 
+    font-size: 0.5rem;
     text-decoration: none;
 }
 
@@ -245,12 +243,12 @@
 
 .draggable-video {
     position: absolute;
-    width: 20%; 
+    width: 20%;
     height: 20%;
     cursor: move;
-    z-index: 1; 
-    object-fit: cover; 
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
+    z-index: 1;
+    object-fit: cover;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .draggable-video.top-left {
@@ -272,6 +270,7 @@
     bottom: 0;
     right: 0;
 }
+
 </style>
 
 </head>
@@ -362,7 +361,7 @@
     <a href="https://www.x.com/djspeedsick">X</a><br>
     <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
     <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
-<br><br><br><br><br><br><br> <!-- Adjust spacing as needed -->
+<br><br><br><br><br><br><br>
 <a id="aboutLink" href="javascript:void(0);" onclick="toggleAbout()" 
    style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
     about
@@ -455,7 +454,7 @@
     <script type="text/javascript" src="butterchurnPresets.min.js"></script>
     <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
     <script>
-        console.log('Butterchurn loaded:', typeof butterchurn !== 'undefined');
+        
         
         const audioTracks = [
 "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
@@ -612,14 +611,13 @@
         ];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // AUDIO PLAYER SETUP
     const audioPlayer = document.getElementById('audioPlayer');
     const enterButton = document.getElementById('enter-button');
     const splashScreen = document.getElementById('splash-screen');
     const container = document.getElementById('container');
 
     if (!audioPlayer || !enterButton || !splashScreen || !container) {
-        console.error("Missing critical elements: Check audioPlayer, enterButton, splashScreen, and container IDs.");
+        
         return;
     }
 
@@ -630,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playRandomTrack() {
         if (audioTracks.length === 0) {
-    console.error("No audio tracks available.");
+    
     return Promise.reject(new Error("No audio tracks available."));
         }
 
@@ -639,13 +637,13 @@ document.addEventListener('DOMContentLoaded', () => {
         audioPlayer.src = randomTrack;
 
         return audioPlayer.play().catch(error => {
-    console.error("Playback failed for track:", randomTrack, error);
+    
         });
     }
 
     function initVisualizer() {
         if (typeof butterchurn === 'undefined') {
-    console.error("Butterchurn is not defined. Ensure the library is loaded correctly.");
+    
     return;
         }
 
@@ -667,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
     visualizer.loadPreset(randomPreset, 0);
         } else {
-    console.error("No presets found to load.");
+    
         }
 
         function startRenderer() {
@@ -682,25 +680,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleEnterClick() {
-        // Hide splash screen and show main container
         splashScreen.style.display = 'none';
         container.style.visibility = 'visible';
 
-        // Start audio playback and initialize visualizer
         playRandomTrack().then(() => {
     initVisualizer();
         }).catch(error => {
-    console.error("Error during enter button action:", error);
+    
         });
     }
 
-    // Add event listener for the enter button
     enterButton.addEventListener('click', handleEnterClick);
 
-    // Automatically play the next track when the current one ends
     audioPlayer.addEventListener('ended', playRandomTrack);
 
-    // Draggable video functionality for the four videos
     const videos = document.querySelectorAll('.draggable-video');
 
     function makeDraggable(videoElement) {
@@ -750,14 +743,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const images = Array.from(galleryContent.querySelectorAll('img'));
         const shuffledImages = shuffle(images);
 
-        // Clear and re-add shuffled images
         galleryContent.innerHTML = '';
         shuffledImages.forEach((img) => galleryContent.appendChild(img));
     }
 
     function openGallery() {
         if (galleryOverlay) {
-    populateGallery(); // Randomize image order
+    populateGallery();
     galleryOverlay.style.display = 'block';
         }
     }
@@ -779,7 +771,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add click event to all images to close the gallery
     galleryContent.addEventListener('click', (event) => {
         if (event.target.tagName === 'IMG') {
     closeGallery();
@@ -792,26 +783,23 @@ function toggleAbout() {
     const galleryOverlay = document.getElementById('artGalleryOverlay');
 
     if (!aboutOverlay) {
-        console.error("About overlay element not found.");
+        
         return;
     }
 
-    // Close gallery if open
     if (galleryOverlay && galleryOverlay.style.display === 'block') {
         galleryOverlay.style.display = 'none';
     }
 
-    // Toggle About overlay
     if (aboutOverlay.style.display === 'none' || aboutOverlay.style.display === '') {
         aboutOverlay.style.display = 'block';
-        console.log("About overlay opened.");
+        
     } else {
         aboutOverlay.style.display = 'none';
-        console.log("About overlay closed.");
+        
     }
 }
 
-// Prevent gallery clicks from opening About
 document.getElementById('artGalleryOverlay').addEventListener('click', (event) => {
     event.stopPropagation();
 });
