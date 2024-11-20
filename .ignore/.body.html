@@ -1,0 +1,175 @@
+   <div id="splash-screen">
+    <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
+    <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
+</div>
+
+<audio id="audioPlayer"></audio>
+
+<canvas id="canvas"></canvas>
+
+<video id="video1" class="draggable-video top-left" autoplay muted loop>
+    <source src="files/mov/yfpmms.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video2" class="draggable-video top-right" autoplay muted loop>
+    <source src="files/mov/chemlove.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video3" class="draggable-video bottom-left" autoplay muted loop>
+    <source src="files/mov/grate.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video4" class="draggable-video bottom-right" autoplay muted loop>
+    <source src="files/mov/smtiaie.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<div id="container">
+    <marquee behavior="scroll" direction="right" scrollamount="13" class="marquee-large">
+        WWW.DJSPEEDSICK.COM
+    </marquee>
+    <br><br>
+
+    <p>CONTACT:</p>
+    <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
+    <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
+    <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
+
+    <marquee behavior="scroll" direction="left" scrollamount="12" class="marquee-medium">
+        NEW RELEASES
+    </marquee>
+    <br><br>
+
+    <img src="files/img/ph008.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">EXECUTION STYLE 12"</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Pure Hate, ph008</p>
+    <a href="https://purehatetrax.bandcamp.com/album/execution-style-ep" 
+       style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">PRE-ORDER</a>
+    <br>
+
+    <img src="files/img/unix66606.jpeg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">FIREWALL EVENT HORIZON CD-R</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-06</p>
+    <p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p>
+    <br>
+
+    <img src="files/img/tb207.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">DEATHAMPHETAMINE II: "BACK IN THE PIT" OST CS</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Total Black, 207</p>
+    <a href="https://www.sentimentalyouth.com/products/dj-speedsick-deathamphetamine-ii-back-in-the-pit-o-s-t-cs" 
+       style="margin: 5px 0 0; font-size: 1rem; line-height: 1; text-decoration: none; display: block;">ORDER</a>
+    <br>
+
+    <img src="files/img/unix66605.jpg" style="margin: 0 0 5px;"><br>
+    <p class="blend-text" style="margin: 0; font-size: 1rem;">YOU FUCKING PEOPLE MAKE ME SICK E-CDR</p>
+    <p style="margin: 0; font-size: 10px; color: white;">Escalationist, UNIX666-05</p>
+    <p style="margin: 5px 0 0; color: red; font-size: 1rem; line-height: 1;">SOLD OUT</p>
+    <br>
+
+    <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
+        <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
+    CLICK TO VIEW ART GALLERY
+        </a>
+    </marquee>
+    <br><br>
+
+    <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
+    <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
+    <a href="https://www.instagram.com/djspeedsick">INSTAGRAM</a><br>
+    <a href="https://www.x.com/djspeedsick">X</a><br>
+    <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
+    <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
+<br><br><br><br><br><br><br> <!-- Adjust spacing as needed -->
+<a id="aboutLink" href="javascript:void(0);" onclick="toggleAbout()" 
+   style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
+    about
+</a>
+
+<div id="artGalleryOverlay" style="display: none;">
+    <div id="artGalleryContent">
+
+        <span id="artGalleryClose" style="cursor: pointer; position: fixed; top: 10px; right: 20px; font-size: 2rem; color: white;">✖</span>
+
+        <div id="image-container">
+    <div id="image-container">
+    <img src="https://www.djspeedsick.com/files/img/gallery/58DBD800-7CCF-408A-A2BB-D45AD8CF391B.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/76CFBA80-E2B9-4C69-92AE-4C681E946C15.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/ALEXSHOWPREV1.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/BOOTCAMPFIX%20E1.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/BUY.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/CANDYV4.1PREV.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/CD%205.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/DJSS%202.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/DOWN3.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/FC5934BD-87C1-4F45-8606-2275317B23F6.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/FG%203.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/FISTMIXFRONT1.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/FOREVER_V4edit.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/GS.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/IMG_2192.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/IMG_5507.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/IMG_8106.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/NL%203.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/NL%208EDIT.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/NLPOSTER1.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/OCT7-FLYERV1.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/POG%20NEW2.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/SD%200913.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/SD%207.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%201011.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20104.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20107.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20111.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20118.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20120-Recovered.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20133e2.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2014b.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20221.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%20226%20copy.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2046e.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%205.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/Scan%2060.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/XEROX_74%202.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/bsc-1.jpg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/cd%2012e2.JPG" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/cd%209.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/djssgfkpost.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/fodcd.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/main-alt-text.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/mitb2.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/orchadsvf11.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/poster.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/scan%2012.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/scan%207.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/sp-str-back.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-01a.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-01b.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-02a.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-02b.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03a.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03b.jpeg" alt="" class="responsive-image">
+    <img src="https://www.djspeedsick.com/files/img/gallery/unix666-04a.jpeg" alt="" class="responsive-image">
+        </div>
+    </div>
+</div>
+
+<a id="aboutLink" href="javascript:void(0);" onclick="toggleAbout()" 
+   style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
+    about
+</a>
+
+<div id="aboutOverlay" style="display: none;">
+    <div id="aboutContent">
+        <img src="files/img/mansoncave.jpg" alt="About Image" class="responsive-image">
+        <p id="aboutText">
+            <span style="font-size: 2rem;">DJ Speedsick</span> <br>
+            <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
+            <span style="font-size: 0.75rem;">b. 1992</span><br>
+            <span style="font-size: 0.75rem;">d. ????</span><br><br>
+            <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
+        </p>
+    </div>
+</div>
