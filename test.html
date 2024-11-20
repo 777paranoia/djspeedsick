@@ -700,55 +700,30 @@ document.addEventListener('DOMContentLoaded', () => {
         let isDragging = false;
         let offsetX, offsetY;
 
-        const startDrag = (event) => {
-            isDragging = true;
+        videoElement.addEventListener('mousedown', (event) => {
+    isDragging = true;
+    offsetX = event.clientX - videoElement.getBoundingClientRect().left;
+    offsetY = event.clientY - videoElement.getBoundingClientRect().top;
+    videoElement.style.cursor = 'grabbing';
+        });
 
-            const clientX = event.type === 'mousedown' ? event.clientX : event.touches[0].clientX;
-            const clientY = event.type === 'mousedown' ? event.clientY : event.touches[0].clientY;
+        document.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+        videoElement.style.left = `${event.clientX - offsetX}px`;
+        videoElement.style.top = `${event.clientY - offsetY}px`;
+    }
+        });
 
-            offsetX = clientX - videoElement.getBoundingClientRect().left;
-            offsetY = clientY - videoElement.getBoundingClientRect().top;
-
-            videoElement.style.cursor = 'grabbing';
-
-            if (event.type === 'touchstart') {
-                event.preventDefault();
-            }
-        };
-
-        const drag = (event) => {
-            if (!isDragging) return;
-
-            const clientX = event.type === 'mousemove' ? event.clientX : event.touches[0].clientX;
-            const clientY = event.type === 'mousemove' ? event.clientY : event.touches[0].clientY;
-
-            videoElement.style.left = `${clientX - offsetX}px`;
-            videoElement.style.top = `${clientY - offsetY}px`;
-
-            if (event.type === 'touchmove') {
-                event.preventDefault();
-            }
-        };
-
-        const endDrag = () => {
-            isDragging = false;
-            videoElement.style.cursor = 'grab';
-        };
-
-        videoElement.addEventListener('mousedown', startDrag);
-        videoElement.addEventListener('mousemove', drag);
-        videoElement.addEventListener('mouseup', endDrag);
-
-        videoElement.addEventListener('touchstart', startDrag);
-        videoElement.addEventListener('touchmove', drag);
-        videoElement.addEventListener('touchend', endDrag);
+        document.addEventListener('mouseup', () => {
+    isDragging = false;
+    videoElement.style.cursor = 'grab';
+        });
 
         videoElement.style.cursor = 'grab';
     }
 
     videos.forEach(makeDraggable);
 });
-
 
 document.addEventListener('DOMContentLoaded', () => {
     const galleryOverlay = document.getElementById('artGalleryOverlay');
