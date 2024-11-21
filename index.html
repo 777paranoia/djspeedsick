@@ -20,78 +20,77 @@
 
 <style>
 
+  @keyframes fade {
+    0%, 100% { opacity: 1; } 
+    50% { opacity: 0.3; }  
+}
 
-    @keyframes fade {
-        0%, 100% { opacity: 1; } 
-        50% { opacity: 0.3; }   
-    }
-
-    .fading-text {
-        display: inline-block;
-        animation: fade 2s infinite; 
-    }
+.fading-text {
+    display: inline-block;
+    animation: fade 2s infinite;
+}
 
 body {
-    font-family: 'GGX88 Book', sans-serif; 
+    font-family: 'GGX88 Book', sans-serif;
 }
-        html, body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
-            position: relative;
-        }
 
-        #splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 3;
-        }
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
 
-        #background-gif {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: -1;
-        }
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 3;
+}
 
-        #enter-button {
-            position: relative;
-            z-index: 1;
-            cursor: pointer;
-            display: block;
-            max-width: 80%;
-            height: auto;
-            margin: 0 auto;
-        }
+#background-gif {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+}
 
-        #audioPlayer {
-            display: none;
-        }
+#enter-button {
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+    display: block;
+    max-width: 80%;
+    height: auto;
+    margin: 0 auto;
+}
 
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
+#audioPlayer {
+    display: none;
+}
 
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
 
 #container {
-    font-size: 0.75rem; 
+    font-size: 0.75rem;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -99,22 +98,19 @@ body {
     z-index: 2;
     text-align: center;
     font-family: GGX88 Book, sans-serif;
-    color: white; 
+    color: white;
     visibility: hidden;
     max-height: 80%;
     overflow-y: auto;
     padding: 10px;
     box-sizing: border-box;
-    scrollbar-width: none; 
-    -ms-overflow-style: none; 
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
-
-
 
 #container::-webkit-scrollbar {
     display: none;
 }
-
 
 @keyframes rainbow {
     0% { color: red; }
@@ -126,25 +122,16 @@ body {
     100% { color: violet; }
 }
 
-
 #container a {
     font-size: 1rem;
     text-decoration: none;
-    animation: rainbow 3s infinite; 
+    animation: rainbow 3s infinite;
 }
-
 
 #container p {
     font-size: 1rem;
     margin: 0.5rem 0;
-    color: white; 
-}
-
-#container a {
-    font-size: 1rem;
-    margin: 0.5rem 0;
-    color: white; 
-    text-decoration: none;
+    color: white;
 }
 
 #container img {
@@ -152,15 +139,14 @@ body {
     max-width: 300px;
 }
 
-
 .marquee-large {
-    font-size: 1.5rem; 
+    font-size: 1.5rem;
     color: white;
     font-family: GGX88 Book, sans-serif;
 }
 
 .marquee-medium {
-    font-size: 1.25rem; 
+    font-size: 1.25rem;
     color: white;
     font-family: GGX88 Book, sans-serif;
 }
@@ -169,45 +155,52 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent; 
-    display: none;
+    width: 100vw;
+    height: 100vh;
+    background-color: transparent;
     z-index: 1000;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 #artGalleryContent {
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-height: 90%;
-    overflow-y: auto; 
-    scrollbar-width: none; 
-    -ms-overflow-style: none; 
+    width: 70%; 
+    height: 90%; 
+    max-width: none;
+    max-height: none;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 #artGalleryContent::-webkit-scrollbar {
-    display: none; 
+    display: none;
 }
 
 .responsive-image {
-    width: 80%; 
+    width: 100%;
     height: auto;
     display: block;
-    margin: 10px auto; 
-    cursor: pointer; 
+    margin: 10px auto;
+    cursor: pointer;
 }
 
 
 #aboutOverlay {
     position: fixed;
-    top: auto;
+    top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); 
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -221,7 +214,7 @@ body {
     text-align: center;
     max-width: 90%;
     max-height: 90%;
-    overflow-y: auto;
+    /* overflow-y: auto; */
     border-radius: 8px;
 }
 
@@ -231,8 +224,6 @@ body {
     margin-bottom: 20px;
 }
 
-
-
 #aboutButton {
     position: fixed;
     bottom: 5px;
@@ -240,43 +231,80 @@ body {
     z-index: 2000;
 }
 
-
 #aboutButton a {
-    font-family: 'GGX88Lt-Italic', sans-serif; 
-    font-size: 0.5rem; 
+    font-family: 'GGX88Lt-Italic', sans-serif;
+    font-size: 0.5rem;
     text-decoration: none;
 }
 
-
 #aboutText {
-    font-family: 'GGX88 Book', sans-serif; 
+    font-family: 'GGX88 Book', sans-serif;
 }
 
-
-
+.draggable-video {
+    position: absolute;
+    width: 20%;
+    height: 20%;
+    cursor: move;
+    z-index: 1;
+    object-fit: cover;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
+.draggable-video.top-left {
+    top: 0;
+    left: 0;
+}
 
+.draggable-video.top-right {
+    top: 0;
+    right: 0;
+}
+
+.draggable-video.bottom-left {
+    bottom: 0;
+    left: 0;
+}
+
+.draggable-video.bottom-right {
+    bottom: 0;
+    right: 0;
+}
 
 </style>
 
-    <script type="text/javascript" src="lodash.js"></script>
-    <script type="text/javascript" src="butterchurn.js"></script>
-    <script type="text/javascript" src="butterchurnPresets.min.js"></script>
-    <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
-    <script>
-        
-    </script>
 </head>
+
 <body>
 
-    <div id="splash-screen">
-        <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
-        <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
-    </div>
+   <div id="splash-screen">
+    <img id="background-gif" src="files/mov/indexmov.gif" alt="Splash GIF">
+    <img id="enter-button" src="files/img/enter-transparency2.png" alt="Enter" onclick="handleEnterClick()">
+</div>
 
-    <audio id="audioPlayer"></audio>
-    <canvas id="canvas"></canvas>
+<audio id="audioPlayer"></audio>
+
+<canvas id="canvas"></canvas>
+
+<video id="video1" class="draggable-video top-left" autoplay muted loop>
+    <source src="files/mov/yfpmms.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video2" class="draggable-video top-right" autoplay muted loop>
+    <source src="files/mov/chemlove.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video3" class="draggable-video bottom-left" autoplay muted loop>
+    <source src="files/mov/grate.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<video id="video4" class="draggable-video bottom-right" autoplay muted loop>
+    <source src="files/mov/smtiaie.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
 
 <div id="container">
     <marquee behavior="scroll" direction="right" scrollamount="13" class="marquee-large">
@@ -322,7 +350,7 @@ body {
 
     <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
         <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
-            CLICK TO VIEW ART GALLERY
+    CLICK TO VIEW ART GALLERY
         </a>
     </marquee>
     <br><br>
@@ -334,9 +362,10 @@ body {
     <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
     <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
 <br><br><br><br><br><br><br>
-<a id="aboutLink" href="javascript:void(0)" onclick="toggleAbout()" style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
+<a id="aboutLink" href="javascript:void(0);" onclick="toggleAbout()" 
+   style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
     about
-
+</a>
 </div>
 
 <div id="artGalleryOverlay" style="display: none;">
@@ -344,6 +373,7 @@ body {
 
         <span id="artGalleryClose" style="cursor: pointer; position: fixed; top: 10px; right: 20px; font-size: 2rem; color: white;">✖</span>
 
+   
         <div id="image-container">
             <img src="https://www.djspeedsick.com/files/img/gallery/58DBD800-7CCF-408A-A2BB-D45AD8CF391B.JPG" alt="" class="responsive-image">
             <img src="https://www.djspeedsick.com/files/img/gallery/76CFBA80-E2B9-4C69-92AE-4C681E946C15.JPG" alt="" class="responsive-image">
@@ -402,13 +432,7 @@ body {
             <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03a.jpeg" alt="" class="responsive-image">
             <img src="https://www.djspeedsick.com/files/img/gallery/unix666-03b.jpeg" alt="" class="responsive-image">
             <img src="https://www.djspeedsick.com/files/img/gallery/unix666-04a.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-04b.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-05a.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-05b.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-06a.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/unix666-06b.jpeg" alt="" class="responsive-image">
-            <img src="https://www.djspeedsick.com/files/img/gallery/xxx%205.jpeg" alt="" class="responsive-image">
-        </div>
+                </div>
     </div>
 </div>
 
@@ -426,7 +450,13 @@ body {
     </div>
 </div>
 
+ <script type="text/javascript" src="lodash.js"></script>
+    <script type="text/javascript" src="butterchurn.js"></script>
+    <script type="text/javascript" src="butterchurnPresets.min.js"></script>
+    <script type="text/javascript" src="butterchurn-presets/lib/butterchurnPresetsExtra.min.js"></script>
     <script>
+       
+        
         const audioTracks = [
 "files/aud/0AA968CC9BD87190A5B9B68B785D2279.mp3", 
 "files/aud/0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3", 
@@ -579,9 +609,11 @@ body {
 "files/aud/FE739E5D62BBEE2652FA0B53231AA333.mp3", 
 "files/aud/FF3292518DB2E5ADE279029997865575.mp3", 
 "files/aud/FFC7E7F97F2936636B268947653D9068.mp3",
-];
-document.addEventListener('DOMContentLoaded', () => {
+        ];
 
+document.addEventListener('DOMContentLoaded', () => {
+     
+    console.log("HELLO");
     const audioPlayer = document.getElementById('audioPlayer');
     const enterButton = document.getElementById('enter-button');
     const splashScreen = document.getElementById('splash-screen');
@@ -597,26 +629,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioContext;
     let visualizer;
 
-function playRandomTrack() {
-    if (audioTracks.length === 0) {
-        
-        return Promise.reject(new Error("No audio tracks available."));
+    function playRandomTrack() {
+        if (audioTracks.length === 0) {
+    
+    return Promise.reject(new Error("No audio tracks available."));
+        }
+
+        const randomIndex = Math.floor(Math.random() * audioTracks.length);
+        const randomTrack = audioTracks[randomIndex];
+        audioPlayer.src = randomTrack;
+
+        return audioPlayer.play().catch(error => {
+    
+        });
     }
-
-    const randomIndex = Math.floor(Math.random() * audioTracks.length);
-    const randomTrack = audioTracks[randomIndex];
-    audioPlayer.src = randomTrack;
-
-    return audioPlayer.play().catch(error => {
-        
-    });
-}
-
 
     function initVisualizer() {
         if (typeof butterchurn === 'undefined') {
-            
-            return;
+    
+    return;
         }
 
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -625,55 +656,109 @@ function playRandomTrack() {
         canvas.height = window.innerHeight;
 
         visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-            width: canvas.width,
-            height: canvas.height,
-            pixelRatio: window.devicePixelRatio || 1,
-            textureRatio: 1,
+    width: canvas.width,
+    height: canvas.height,
+    pixelRatio: window.devicePixelRatio || 1,
+    textureRatio: 1,
         });
 
         const presets = butterchurnPresets.getPresets();
         const presetKeys = Object.keys(presets);
         if (presetKeys.length > 0) {
-            const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
-            visualizer.loadPreset(randomPreset, 0);
+    const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
+    visualizer.loadPreset(randomPreset, 0);
         } else {
-            
+    
         }
 
         function startRenderer() {
-            requestAnimationFrame(startRenderer);
-            visualizer.render();
+    requestAnimationFrame(startRenderer);
+    visualizer.render();
         }
         startRenderer();
 
-const mediaStream = audioPlayer.captureStream ? audioPlayer.captureStream() : audioPlayer.mozCaptureStream();
+        const mediaStream = audioPlayer.captureStream ? audioPlayer.captureStream() : audioPlayer.mozCaptureStream();
         const source = audioContext.createMediaStreamSource(mediaStream);
         visualizer.connectAudio(source);
     }
 
     function handleEnterClick() {
-
         splashScreen.style.display = 'none';
         container.style.visibility = 'visible';
 
         playRandomTrack().then(() => {
-            initVisualizer();
+    initVisualizer();
         }).catch(error => {
-            
+    
         });
     }
 
     enterButton.addEventListener('click', handleEnterClick);
 
     audioPlayer.addEventListener('ended', playRandomTrack);
+
+    const videos = document.querySelectorAll('.draggable-video');
+
+    function makeDraggable(videoElement) {
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        videoElement.addEventListener('mousedown', (event) => {
+            isDragging = true;
+            offsetX = event.clientX - videoElement.getBoundingClientRect().left;
+            offsetY = event.clientY - videoElement.getBoundingClientRect().top;
+            videoElement.style.cursor = 'grabbing';
+
+            // Disable pointer-events during drag
+            videoElement.style.pointerEvents = 'none';
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            if (isDragging) {
+                videoElement.style.left = `${event.clientX - offsetX}px`;
+                videoElement.style.top = `${event.clientY - offsetY}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                videoElement.style.cursor = 'grab';
+
+                // Re-enable pointer-events after drag
+                videoElement.style.pointerEvents = 'auto';
+            }
+        });
+
+        videoElement.style.cursor = 'grab';
+    }
+
+    videos.forEach(makeDraggable);
 });
 
-   document.addEventListener('DOMContentLoaded', () => {
-    const galleryOverlay = document.getElementById('artGalleryOverlay');
-    const galleryContent = document.getElementById('artGalleryContent');
-    const galleryClose = document.getElementById('artGalleryClose');
-    const galleryLink = document.querySelector('.gallery-link');
 
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Function to toggle overlay visibility
+// Function to toggle overlay visibility
+function toggleOverlay(overlayId) {
+    const overlay = document.getElementById(overlayId);
+    if (!overlay) return;
+
+    if (overlay.style.display === 'block' || overlay.style.display === 'flex') {
+        overlay.style.display = 'none';
+    } else {
+        // Use flex for aboutOverlay, block for others
+        overlay.style.display = overlayId === 'aboutOverlay' ? 'flex' : 'block';
+
+        // Populate and shuffle gallery images if it's the Art Gallery overlay
+        if (overlayId === 'artGalleryOverlay') {
+            populateGallery();
+        }
+    }
+}
+
+    // Function to shuffle an array
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -682,66 +767,82 @@ const mediaStream = audioPlayer.captureStream ? audioPlayer.captureStream() : au
         return array;
     }
 
+    // Function to populate the gallery with shuffled images
     function populateGallery() {
+        const galleryContent = document.getElementById('artGalleryContent');
+        if (!galleryContent) return;
+
         const images = Array.from(galleryContent.querySelectorAll('img'));
         const shuffledImages = shuffle(images);
 
-        galleryContent.innerHTML = '';
-        shuffledImages.forEach((img) => galleryContent.appendChild(img));
+        galleryContent.innerHTML = ''; // Clear current content
+        shuffledImages.forEach((img) => galleryContent.appendChild(img)); // Add shuffled images
     }
 
-    function openGallery() {
-        if (galleryOverlay) {
-            populateGallery(); // Randomize image order
-            galleryOverlay.style.display = 'block';
-        }
-    }
+    const aboutLink = document.getElementById('aboutLink');
+const galleryLink = document.querySelector('.gallery-link');
+const aboutOverlay = document.getElementById('aboutOverlay');
+const artGalleryOverlay = document.getElementById('artGalleryOverlay');
+const aboutContent = document.getElementById('aboutContent');
+const artGalleryContent = document.getElementById('artGalleryContent');
 
-    function closeGallery() {
-        if (galleryOverlay) {
-            galleryOverlay.style.display = 'none';
-        }
-    }
-
-    if (galleryClose) {
-        galleryClose.addEventListener('click', closeGallery);
-    }
-
-    if (galleryLink) {
-        galleryLink.addEventListener('click', (event) => {
-            event.preventDefault();
-            openGallery();
-        });
-    }
-
-    galleryContent.addEventListener('click', (event) => {
-        if (event.target.tagName === 'IMG') {
-            closeGallery();
-        }
+// Toggle About overlay
+if (aboutLink) {
+    aboutLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleOverlay('aboutOverlay');
     });
-});
-
-function toggleAbout() {
-    const aboutOverlay = document.getElementById('aboutOverlay');
-    const galleryOverlay = document.getElementById('artGalleryOverlay');
-
-    if (galleryOverlay && galleryOverlay.style.display === 'block') {
-        galleryOverlay.style.display = 'none';
-    }
-
-    if (aboutOverlay.style.display === 'none') {
-        aboutOverlay.style.display = 'block';
-    } else {
-        aboutOverlay.style.display = 'none';
-    }
 }
 
-document.getElementById('artGalleryOverlay').addEventListener('click', (event) => {
-    event.stopPropagation();
+// Toggle Art Gallery overlay
+if (galleryLink) {
+    galleryLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleOverlay('artGalleryOverlay');
+    });
+}
+
+// Close overlays when clicking outside their content
+if (aboutOverlay) {
+    aboutOverlay.addEventListener('click', (event) => {
+        if (event.target.id === 'aboutOverlay') {
+            toggleOverlay('aboutOverlay');
+        }
+    });
+}
+
+if (artGalleryOverlay) {
+    artGalleryOverlay.addEventListener('click', (event) => {
+        if (event.target.id === 'artGalleryOverlay') {
+            toggleOverlay('artGalleryOverlay');
+        }
+    });
+}
+
+// Close overlays when clicking on their content
+if (aboutContent) {
+    aboutContent.addEventListener('click', () => {
+        toggleOverlay('aboutOverlay');
+    });
+}
+
+if (artGalleryContent) {
+    artGalleryContent.addEventListener('click', () => {
+        toggleOverlay('artGalleryOverlay');
+    });
+}
+
+    // Close Art Gallery with Close Button
+    const galleryClose = document.getElementById('artGalleryClose');
+    if (galleryClose) {
+        galleryClose.addEventListener('click', (event) => {
+            event.preventDefault();
+            toggleOverlay('artGalleryOverlay');
+        });
+    }
 });
 
 
-    </script>
-
+</script>
 </body>
 </html>
