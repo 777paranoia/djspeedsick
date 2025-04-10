@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
             offsetY = event.clientY - videoElement.getBoundingClientRect().top;
             videoElement.style.cursor = 'grabbing';
 
-            // Disable pointer-events during drag
+
             videoElement.style.pointerEvents = 'none';
         });
         document.addEventListener('mousemove', (event) => {
@@ -496,7 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isDragging) {
                 isDragging = false;
                 videoElement.style.cursor = 'grab';
-                // Re-enable pointer-events after drag
                 videoElement.style.pointerEvents = 'auto';
             }
         });
@@ -505,24 +504,19 @@ document.addEventListener('DOMContentLoaded', () => {
     videos.forEach(makeDraggable);
 });
 document.addEventListener('DOMContentLoaded', () => {
-    // Function to toggle overlay visibility
-// Function to toggle overlay visibility
 function toggleOverlay(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (!overlay) return;
     if (overlay.style.display === 'block' || overlay.style.display === 'flex') {
         overlay.style.display = 'none';
     } else {
-        // Use flex for aboutOverlay, block for others
         overlay.style.display = overlayId === 'aboutOverlay' ? 'flex' : 'block';
-        // Populate and shuffle gallery images if it's the Art Gallery overlay
         if (overlayId === 'artGalleryOverlay') {
             populateGallery();
         }
     }
 }
 
-    // Function to shuffle an array
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -530,15 +524,14 @@ function toggleOverlay(overlayId) {
         }
         return array;
     }
-    // Function to populate the gallery with shuffled images
     function populateGallery() {
         const galleryContent = document.getElementById('artGalleryContent');
         if (!galleryContent) return;
 
         const images = Array.from(galleryContent.querySelectorAll('img'));
         const shuffledImages = shuffle(images);
-        galleryContent.innerHTML = ''; // Clear current content
-        shuffledImages.forEach((img) => galleryContent.appendChild(img)); // Add shuffled images
+        galleryContent.innerHTML = ''; 
+        shuffledImages.forEach((img) => galleryContent.appendChild(img)); 
     }
     const aboutLink = document.getElementById('aboutLink');
 const galleryLink = document.querySelector('.gallery-link');
@@ -546,21 +539,18 @@ const aboutOverlay = document.getElementById('aboutOverlay');
 const artGalleryOverlay = document.getElementById('artGalleryOverlay');
 const aboutContent = document.getElementById('aboutContent');
 const artGalleryContent = document.getElementById('artGalleryContent');
-// Toggle About overlay
 if (aboutLink) {
     aboutLink.addEventListener('click', (event) => {
         event.preventDefault();
         toggleOverlay('aboutOverlay');
     });
 }
-// Toggle Art Gallery overlay
 if (galleryLink) {
     galleryLink.addEventListener('click', (event) => {
         event.preventDefault();
         toggleOverlay('artGalleryOverlay');
     });
 }
-// Close overlays when clicking outside their content
 if (aboutOverlay) {
     aboutOverlay.addEventListener('click', (event) => {
         if (event.target.id === 'aboutOverlay') {
@@ -577,7 +567,6 @@ if (artGalleryOverlay) {
     });
 }
 
-// Close overlays when clicking on their content
 if (aboutContent) {
     aboutContent.addEventListener('click', () => {
         toggleOverlay('aboutOverlay');
@@ -590,7 +579,6 @@ if (artGalleryContent) {
     });
 }
 
-    // Close Art Gallery with Close Button
     const galleryClose = document.getElementById('artGalleryClose');
     if (galleryClose) {
         galleryClose.addEventListener('click', (event) => {
