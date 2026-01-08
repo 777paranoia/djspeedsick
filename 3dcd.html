@@ -11,12 +11,23 @@
 }
 body {
   margin: 0;
-  padding: 40px;
+  padding: 300px 40px 40px 40px; 
   background: #000;
   color: #fff;
   font-family: 'GGX88 Book', monospace;
   overflow-x: hidden;
 }
+
+#header-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  pointer-events: none; 
+  display: block;
+}
+
 #bg {
   position: fixed;
   inset: 0;
@@ -26,15 +37,13 @@ body {
   z-index: -1;
   pointer-events: none;
   opacity: 0.6;
-  transition: opacity 0.5s ease;
 }
+/* THIS IS THE GRID THAT WRAPS BASED ON WINDOW SIZE */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 48px;
   justify-items: center;
-transform: translateZ(0); 
-  contain: paint;
 }
 .scene {
   width: var(--case-width);
@@ -48,15 +57,13 @@ transform: translateZ(0);
   transform-style: preserve-3d;
   animation: spin var(--duration, 24s) linear infinite;
   cursor: crosshair;
-  will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
 }
 .face {
   position: absolute;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
+  background: #222; /* Placeholder so no more black holes */
 }
 .face img {
   width: 100%;
@@ -66,21 +73,24 @@ transform: translateZ(0);
 }
 .front { transform: translateZ(calc(var(--case-depth) / 2)); }
 .back { transform: rotateY(180deg) translateZ(calc(var(--case-depth) / 2)); }
+
+/* Spines */
 .spine-left, .spine-right, .edge-top, .edge-bottom {
   position: absolute;
   background: #1a1a1a;
-  box-shadow: inset 0 0 8px rgba(255,255,255,0.1);
   border: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 .spine-left { width: var(--case-depth); height: var(--case-height); left: 50%; transform: translateX(calc(var(--case-width) / -2)) rotateY(-90deg); }
 .spine-right { width: var(--case-depth); height: var(--case-height); left: 50%; transform: translateX(calc(var(--case-width) / 2 - var(--case-depth))) rotateY(90deg); }
 .edge-top { width: var(--case-width); height: var(--case-depth); top: 50%; transform: translateY(calc(var(--case-height) / -2)) rotateX(90deg); }
 .edge-bottom { width: var(--case-width); height: var(--case-depth); top: 50%; transform: translateY(calc(var(--case-height) / 2 - var(--case-depth))) rotateX(-90deg); }
+
 @keyframes spin {
   from { transform: rotateX(var(--x-start, 0deg)) rotateY(var(--y-start, 0deg)); }
   to { transform: rotateX(var(--x-end, 0deg)) rotateY(var(--y-end, 360deg)); }
 }
 .case:hover { animation-play-state: paused; }
+
 #custom-cursor {
   position: fixed;
   pointer-events: none;
@@ -99,8 +109,10 @@ transform: translateZ(0);
 </head>
 <body>
 
+<img src="files/img/esc.png" id="header-logo">
+
 <video id="bg" autoplay muted loop playsinline>
-  <source id="bgSource" src="files/mov/cdbg.mp4" type="video/mp4">
+  <source src="files/mov/cdbg.mp4" type="video/mp4">
 </video>
 
 <div id="custom-cursor"></div>
@@ -134,13 +146,11 @@ const albumData = {
 const grid = document.getElementById('cdGrid');
 const cursor = document.getElementById('custom-cursor');
 const bgVideo = document.getElementById('bg');
-const defaultVideo = "files/mov/cdbg.mp4";
 const previewPlayer = new Audio();
 previewPlayer.loop = true;
 
-const sortedKeys = Object.keys(albumData).sort((a, b) => parseInt(a) - parseInt(b));
-
-sortedKeys.forEach(id => {
+// Populate Grid
+Object.keys(albumData).sort((a, b) => parseInt(a) - parseInt(b)).forEach(id => {
   const scene = document.createElement('div');
   scene.className = 'scene';
   scene.innerHTML = `
@@ -156,11 +166,19 @@ sortedKeys.forEach(id => {
 
 document.querySelectorAll('.case').forEach(cd => {
   const id = cd.getAttribute('data-id');
+  
+  // Starting positions
   const baseY = Math.random() * 360;
-  const baseX = Math.random() * 30 - 15;
-  const yTurns = (Math.random() * 2 + 1) * 360 * (Math.random() > 0.5 ? 1 : -1);
-  const xTurns = (Math.random() * 0.4 + 0.2) * 180 * (Math.random() > 0.5 ? 1 : -1);
-  const duration = 20 + Math.random() * 15;
+  const baseX = Math.random() * 20 - 10;
+  
+  // REDUCED TURNS: Max 1.5 rotations instead of 3. 
+  // This prevents that "blur" effect.
+  const yTurns = (Math.random() * 1 + 0.5) * 360 * (Math.random() > 0.5 ? 1 : -1);
+  const xTurns = (Math.random() * 0.3 + 0.1) * 180 * (Math.random() > 0.5 ? 1 : -1);
+  
+  // CONSISTENT PACE: 14s (faster) to 22s (slower).
+  // No more "standing still" and no more "speed demons."
+  const duration = 14 + Math.random() * 8; 
 
   cd.style.setProperty('--y-start', baseY + 'deg');
   cd.style.setProperty('--x-start', baseX + 'deg');
@@ -173,21 +191,19 @@ document.querySelectorAll('.case').forEach(cd => {
     cursor.innerHTML = `${info[0]}<br>${info[1]}<br>${info[2]}`;
     cursor.style.display = 'block';
     bgVideo.src = `files/mov/${id}.mp4`;
-    bgVideo.load();
     bgVideo.play();
     previewPlayer.src = `files/aud/prev/${id}_preview.mp3`;
     previewPlayer.play().catch(() => {});
   });
 
-  cd.addEventListener('mousemove', (e) => {
+  window.addEventListener('mousemove', (e) => {
     cursor.style.left = (e.clientX + 20) + 'px';
     cursor.style.top = (e.clientY + 20) + 'px';
   });
 
   cd.addEventListener('mouseleave', () => {
     cursor.style.display = 'none';
-    bgVideo.src = defaultVideo;
-    bgVideo.load();
+    bgVideo.src = "files/mov/cdbg.mp4";
     bgVideo.play();
     previewPlayer.pause();
     previewPlayer.currentTime = 0;
