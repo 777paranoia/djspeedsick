@@ -1,9 +1,3 @@
-THIS WORKS FINALLY
-
-But there's TWO GRID TOOLTIPS in my styles
-
-also i said  I didn't want the images for the grid to warp 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,7 +13,7 @@ also i said  I didn't want the images for the grid to warp
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="DJSPEEDSICK.COM">
-    <meta name="twitter:description" content="DJSPEEDSICK.COM OFFICIAL PAGE OF DJ MOTHERFUCKING SPEEDSICK WOOOOO">
+    <meta name="twitter:description" content="DJSPEEDSICK.COM">
     <meta name="twitter:image" content="files/img/preview.png">
 <style>
   @keyframes fade {
@@ -209,6 +203,28 @@ html, body {
     display: none;
 }
 
+#legalNotice {
+  margin-top: 1rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.45rem;
+  line-height: 1.2;
+  color: rgba(200,200,200,0.6);
+  text-align: center;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  font-family: 'GGX88Lt-Italic', sans-serif;
+  letter-spacing: 0.03em;
+}
+#aboutOverlay[style*="display: flex"] #legalNotice {
+  opacity: 1;
+}
+#legalNotice p {
+  margin: 0.25rem 0;
+}
 
 #aboutOverlay {
     position: fixed;
@@ -275,6 +291,26 @@ html, body {
     bottom: 0;
     right: 0;
 }
+#featureImage {
+  text-align: center;
+  margin: 2rem 0 1.5rem 0;
+}
+
+.feature-link-image {
+  max-width: 280px;
+  width: 65%;
+  height: auto;
+  display: inline-block;
+  cursor: pointer;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  filter: brightness(0.92);
+}
+
+.feature-link-image:hover {
+  opacity: 0.8;
+  transform: scale(1.03);
+  filter: brightness(1);
+}
 
 </style>
 </head>
@@ -298,10 +334,6 @@ html, body {
     <source src="files/mov/smtiaie.mp4" type="video/mp4">
 </video>
 
-<div id="newsTop"><marquee id="tickerTop" scrollamount="10" direction="left">Loading…</marquee></div>
-<div id="newsBottom"><marquee id="tickerBottom" scrollamount="10" direction="right">Loading…</marquee></div>
-
-
 <div id="container">
     <marquee behavior="scroll" direction="right" scrollamount="13" class="marquee-large">
         WWW.DJSPEEDSICK.COM
@@ -310,11 +342,16 @@ html, body {
     <p>CONTACT:</p>
     <a href="mailto:boettke@djspeedsick.com">BOOKING</a><br>
     <a href="mailto:noreply@djspeedsick.com">PRESS</a><br>
-    <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br>
-    <marquee behavior="scroll" direction="left" scrollamount="12" class="marquee-medium">
-        NEW RELEASES
+    <a href="mailto:777paranoia@gmail.com">ART COMMISSIONS</a><br><br><br><br><br>
+    <marquee behavior="scroll" direction="left" scrollamount="15" style="font-size: 3rem; color: white; text-decoration: none;">
+        <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
+    CLICK TO VIEW ART GALLERY
+        </a>
     </marquee>
-    <br><br>
+    <br><br><br>
+    <p>
+        NEW RELEASES
+    </p>
 
     <div id="imageGridContainer">
         <img id="grid1" class="grid-item" src="files/img/unix666-18.jpg" alt="">
@@ -330,11 +367,7 @@ html, body {
         <div id="grid-tooltip" class="grid-tooltip"></div>
     </div>
 
-    <marquee behavior="scroll" direction="right" scrollamount="15" style="font-size: 1.25rem; color: white; text-decoration: none;">
-        <a href="javascript:void(0);" class="gallery-link" style="font-size: 1.25rem; color: inherit; text-decoration: none;">
-    CLICK TO VIEW ART GALLERY
-        </a>
-    </marquee>
+<br><br><br>
     <br><br>
     <a href="https://www.soundcloud.com/speedsick">SOUNDCLOUD</a><br>
     <a href="https://djspeedsick.bandcamp.com">BANDCAMP</a><br>
@@ -342,7 +375,14 @@ html, body {
     <a href="https://www.x.com/djspeedsick">X</a><br>
     <a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">SPOTIFY</a><br>
     <a href="https://www.discogs.com/artist/5782732-DJ-Speedsick">DISCOGS</a><br>
-<br><br><br><br><br><br><br>
+<br>
+<div id="featureImage">
+  <a href="https://adhd.djspeedsick.com" target="_blank" rel="noopener noreferrer">
+    <img src="files/img/attn.png" alt="ATTN:DEFICIT" class="feature-link-image">
+  </a>
+</div>
+
+<br>
 <a id="aboutLink" href="javascript:void(0);" onclick="toggleAbout()" 
    style="font-size: 0.5rem; font-family: 'GGX88Lt-Italic', sans-serif; text-decoration: none; color: white;">
     about
@@ -416,17 +456,27 @@ html, body {
 </div>
 
 <div id="aboutOverlay" style="display: none;">
-    <div id="aboutContent">
-        <img src="files/img/mansoncave.jpg" alt="" class="responsive-image">
-        <p id="aboutText">
-            <span style="font-size: 2rem;">DJ Speedsick</span> <br>
-            <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
-            <span style="font-size: 0.75rem;">b. 1992</span><br>
-            <span style="font-size: 0.75rem;">d. ????</span><br><br>
-            <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
-        </p>
+  <div id="aboutContent">
+    <img src="files/img/mansoncave.jpg" alt="" class="responsive-image">
+    <p id="aboutText">
+      <span style="font-size: 2rem;">DJ Speedsick</span><br>
+      <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
+      <span style="font-size: 0.75rem;">b. 1992</span><br>
+      <span style="font-size: 0.75rem;">d. ????</span><br><br>
+      <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
+    </p>
+
+    <div id="legalNotice">
+      <p><b>LEGAL NOTICE</b></p>
+      <p>
+        © DJ Speedsick. All content provided for informational and artistic purposes only. 
+        No material here constitutes legal or financial advice. External media remain property of their owners. 
+        No personal data collected. Use at your own risk.
+      </p>
     </div>
+  </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const images = document.querySelectorAll('#imageGridContainer .grid-item');
@@ -444,15 +494,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const gridColumns = 3;
 
     const imageDetails = {
-        grid1: "UNIX666-18",
-        grid2: "INTERDEPRAVITY",
-        grid3: "BPP-6004",
-        grid4: "UNIX666-17",
-        grid5: "UNIX666-16",
-        grid6: "UNIX666-14",
-        grid7: "UNIX666-13",
-        grid8: "UNIX666-12",
-        grid9: "RECYCLED MUSIC"
+        grid1: "UNIX666-18<br>Escalationist<br>CD-R<br>Limited edition",
+        grid2: "INTERDEPRAVITY<br>Self-Released<br>CD-R<br>2025 Sampler",
+        grid3: "BPP-6004<br>Breathing Problem Productions<br>12in vinyl<br>Split with Scant",
+        grid4: "UNIX666-17<br>Escalationist<br>2025 DJ mix<br>Limited edition",
+        grid5: "UNIX666-16<br>Escalationist<br>CD-R<br>Bootleg remixes",
+        grid6: "UNIX666-14<br>Escalationist<br>CD-R",
+        grid7: "UNIX666-13<br>Escalationist<br>50xMP3 CD-R<br>",
+        grid8: "UNIX666-12<br>Escalationist<br>2x biz card CD-R<br>Single + multitrack stems",
+        grid9: "RECYCLED MUSIC<br>RRRecords<br>Recycled Music series<br>Cassette",
     };
 
     function updateGrid() {
@@ -480,7 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGrid();
     window.addEventListener('resize', updateGrid);
 
-    // --- identical to the films.html cursor logic ---
     images.forEach((img, index) => {
         const col = index % gridColumns;
 
@@ -588,7 +637,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(error => {});
     }
 
-    // make handleEnterClick available to inline onclick
     window.handleEnterClick = handleEnterClick;
 
     enterButton.addEventListener('click', handleEnterClick);
