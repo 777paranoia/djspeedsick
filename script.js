@@ -10,28 +10,23 @@ const imageDetails = {
     grid8: "UNIX666-12<br>Stems",
     grid9: "RECYCLED MUSIC<br>Cassette"
 };
-
 const IPINFO_TOKEN = '4b45867ce7c229';
 
 async function updateSystemParams() {
     const hostEl = document.getElementById('host-val');
     const ipEl = document.getElementById('system-ip');
     const cigDisplay = document.getElementById('cig-display');
-
-    if (hostEl) hostEl.innerText = (window.location.hostname || "LOCALHOST").toUpperCase();
-    
     try {
         const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
         const data = await response.json();
-        
-        if (ipEl) ipEl.innerText = data.ip || "IP_NOT_FOUND";
-        
+        if (hostEl) hostEl.innerText = data.loc || "0.000, 0.000";
+        if (ipEl) ipEl.innerText = data.ip || "UNKNOWN_IP";
         if (data.loc && cigDisplay) {
             const [lat, lng] = data.loc.split(',').map(Number);
-            // Give Google Maps a split second to initialize if needed
-            setTimeout(() => getNearestSmokes(lat, lng), 100);
+            getNearestSmokes(lat, lng);
         }
     } catch (error) {
+        if (hostEl) hostEl.innerText = "SENSOR_FAIL";
         if (ipEl) ipEl.innerText = "NETWORK_ERROR";
         if (cigDisplay) cigDisplay.innerText = "SENSOR_OFFLINE";
     }
@@ -40,29 +35,28 @@ async function updateSystemParams() {
 function getNearestSmokes(lat, lng) {
     const display = document.getElementById('cig-display');
     const linkDiv = document.getElementById('cig-link');
-    
-    // Safety check: is Google Maps loaded?
     if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-        if (display) display.innerText = "API_INITIALIZATION_ERROR";
+        if (display) display.innerText = "API_LOAD_FAIL";
         return;
     }
-
     try {
         const service = new google.maps.places.PlacesService(document.createElement('div'));
         const request = {
             location: new google.maps.LatLng(lat, lng),
             radius: 5000,
-            type: ['convenience_store'],
-            keyword: 'cigarettes'
+            keyword: 'cigarettes tobacco convenience'
         };
-
+        const failSafe = setTimeout(() => {
+            if (display.innerText === "SCANNING...") display.innerText = "TIMEOUT";
+        }, 8000);
         service.nearbySearch(request, (results, status) => {
+            clearTimeout(failSafe);
             if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
                 const store = results[0];
                 display.innerText = store.name.toUpperCase();
                 linkDiv.innerHTML = `<a href="https://www.google.com/maps/dir/?api=1&destination=${store.geometry.location.lat()},${store.geometry.location.lng()}" target="_blank" class="conky-link">>> NAVIGATE</a>`;
             } else {
-                display.innerText = "NONE FOUND IN RANGE";
+                display.innerText = "NONE_FOUND";
             }
         });
     } catch (e) {
@@ -97,7 +91,7 @@ function handleEnterClick() {
     if (typeof audioTracks !== 'undefined') {
         const audio = document.getElementById('audioPlayer');
         audio.src = audioTracks[Math.floor(Math.random() * audioTracks.length)];
-        audio.play().then(() => initVisualizer()).catch(e => console.log("Audio play blocked by browser"));
+        audio.play().then(() => initVisualizer()).catch(e => console.log("Audio blocked"));
     }
 }
 
@@ -147,7 +141,6 @@ function initVisualizer() {
     viz.connectAudio(ctx.createMediaStreamSource(stream));
 }
 
-// Draggable Video logic
 document.querySelectorAll('.draggable-video').forEach(v => {
     let drag = false, ox, oy;
     v.addEventListener('mousedown', (e) => {
@@ -166,7 +159,6 @@ document.querySelectorAll('.draggable-video').forEach(v => {
     window.addEventListener('mouseup', () => drag = false);
 });
 
-// Custom Cursor logic
 const cursor = document.getElementById('custom-cursor');
 document.querySelectorAll('.grid-item').forEach(img => {
     img.onmouseenter = () => {
