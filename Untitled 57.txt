@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -e
+
+mkdir -p site
+
+while IFS=, read -r ts url; do
+    echo "[+] Fetch $url @ $ts"
+    wb="https://web.archive.org/web/${ts}if_/${url}"
+    wget \
+      --no-parent \
+      --convert-links \
+      --adjust-extension \
+      --page-requisites \
+      --directory-prefix=site \
+      "$wb"
+done < lanostra.csv
+
+echo "[+] Fetch done."
