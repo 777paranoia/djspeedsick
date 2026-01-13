@@ -1,16 +1,25 @@
 const RSS_SOURCES = ["https://isc.sans.edu/rssfeed_full.xml", "https://feeds.feedburner.com/TheHackersNews?format=xml", "https://0dayfans.com/feed.rss"];
 const imageDetails = {
-    grid1: "UNIX666-18<br>Escalationist<br>CD-R",
-    grid2: "INTERDEPRAVITY<br>Sampler",
-    grid3: "BPP-6004<br>12in vinyl",
-    grid4: "UNIX666-17<br>DJ mix",
-    grid5: "UNIX666-16<br>Bootleg",
-    grid6: "UNIX666-14<br>CD-R",
-    grid7: "UNIX666-13<br>MP3 CD-R",
-    grid8: "UNIX666-12<br>Stems",
-    grid9: "RECYCLED MUSIC<br>Cassette"
+    grid1: "UNIX666-18<br>Escalationist<br>CD-R<br>Limited edition",
+    grid2: "INTERDEPRAVITY<br>Self-Released<br>CD-R<br>2025 Sampler",
+    grid3: "BPP-6004<br>Breathing Problem Productions<br>12in vinyl<br>Split with Scant",
+    grid4: "UNIX666-17<br>Escalationist<br>2025 DJ mix<br>Limited edition",
+    grid5: "UNIX666-16<br>Escalationist<br>CD-R<br>Bootleg remixes",
+    grid6: "UNIX666-14<br>Escalationist<br>CD-R",
+    grid7: "UNIX666-13<br>Escalationist<br>50xMP3 CD-R<br>",
+    grid8: "UNIX666-12<br>Escalationist<br>2x biz card CD-R<br>Single + multitrack stems",
+    grid9: "RECYCLED MUSIC<br>RRRecords<br>Recycled Music series<br>Cassette",
 };
 const IPINFO_TOKEN = '4b45867ce7c229';
+
+// TETRIS GALLERY STATE
+const TetrisGallery = {
+    isSpawning: false,
+    availableIndices: [],
+    map: [],
+    isLandscape: true,
+    TRAVEL_TIME_MS: 3500
+};
 
 async function updateSystemParams() {
     const hostEl = document.getElementById('host-val');
@@ -105,24 +114,127 @@ function toggleAbout() {
     setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
 }
 
+// REPLACED WITH TETRIS LOGIC
 function openGallery() {
-    const container = document.getElementById('artGalleryContent');
     const overlay = document.getElementById('artGalleryOverlay');
-    container.innerHTML = ''; 
-    if (typeof galleryImages !== 'undefined') {
-        let shuffled = [...galleryImages]; 
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        container.innerHTML = shuffled.map(src => `<img src="${src}" class="responsive-image">`).join('');
-    }
+    const container = document.getElementById('artGalleryContent');
     overlay.style.display = 'block';
+    container.innerHTML = '';
+
+    TetrisGallery.isSpawning = true;
+    TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
+    TetrisGallery.map = TetrisGallery.isLandscape ? 
+        new Array(window.innerHeight).fill(window.innerWidth) : 
+        new Array(window.innerWidth).fill(window.innerHeight);
+    TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()];
+
+    spawnSequence();
+
     const closeHandler = () => {
         overlay.style.display = 'none';
+        TetrisGallery.isSpawning = false;
+        container.innerHTML = '';
         window.removeEventListener('click', closeHandler);
     };
     setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
+}
+
+async function spawnSequence() {
+    if (!TetrisGallery.isSpawning) return;
+    const STAGE = document.getElementById('artGalleryContent');
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    if (TetrisGallery.availableIndices.length === 0) {
+        TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()];
+    }
+
+    const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length);
+    const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0];
+    const url = galleryImages[imageIndex];
+
+    const img = new Image();
+    img.src = url;
+    await new Promise(r => img.onload = r);
+    const ratio = img.naturalHeight / img.naturalWidth;
+
+    const baseWidth = screenWidth * (Math.random() * 0.03 + 0.12);
+    let width = baseWidth;
+    let height = width * ratio;
+    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.35 : screenHeight * 0.28;
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = height / ratio;
+    }
+
+    let bestX, bestY, bestTargetPos = -Infinity;
+    const threshold = TetrisGallery.isLandscape ? screenWidth * 0.05 : screenHeight * 0.05;
+
+    if (TetrisGallery.isLandscape) {
+        for (let i = 0; i < 70; i++) {
+            const testY = Math.floor(Math.random() * (screenHeight - height));
+            let currentWall = screenWidth;
+            for (let j = testY; j < Math.min(testY + Math.floor(height), screenHeight); j++) {
+                if (TetrisGallery.map[j] < currentWall) currentWall = TetrisGallery.map[j];
+            }
+            const testTargetX = currentWall - width;
+            if (testTargetX > bestTargetPos) {
+                bestTargetPos = testTargetX;
+                bestY = testY;
+            }
+        }
+        bestX = -width - 150;
+    } else {
+        for (let i = 0; i < 70; i++) {
+            const testX = Math.floor(Math.random() * (screenWidth - width));
+            let currentFloor = screenHeight;
+            for (let j = testX; j < Math.min(testX + Math.floor(width), screenWidth); j++) {
+                if (TetrisGallery.map[j] < currentFloor) currentFloor = TetrisGallery.map[j];
+            }
+            const testTargetY = currentFloor - height;
+            if (testTargetY > bestTargetPos) {
+                bestTargetPos = testTargetY;
+                bestX = testX;
+            }
+        }
+        bestY = -height - 150;
+    }
+
+    if (bestTargetPos < threshold) {
+        STAGE.innerHTML = '';
+        TetrisGallery.map = TetrisGallery.isLandscape ? 
+            new Array(screenHeight).fill(screenWidth) : 
+            new Array(screenWidth).fill(screenHeight);
+        spawnSequence();
+        return;
+    }
+
+    const block = document.createElement('div');
+    block.className = 'art-block';
+    block.style.width = `${width}px`;
+    block.style.height = `${height}px`;
+    block.style.left = `${bestX}px`;
+    block.style.top = `${bestY}px`;
+    block.style.backgroundImage = `url('${url}')`;
+    STAGE.appendChild(block);
+
+    void block.offsetWidth;
+    block.classList.add('moving');
+    if (TetrisGallery.isLandscape) {
+        block.style.transform = `translateX(${bestTargetPos + width + 150}px)`;
+    } else {
+        block.style.transform = `translateY(${bestTargetPos + height + 150}px)`;
+    }
+
+    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS));
+    if (TetrisGallery.isLandscape) {
+        for (let k = bestY; k < Math.min(bestY + Math.floor(height), screenHeight); k++) TetrisGallery.map[k] = bestTargetPos;
+    } else {
+        for (let k = bestX; k < Math.min(bestX + Math.floor(width), screenWidth); k++) TetrisGallery.map[k] = bestTargetPos;
+    }
+
+    await new Promise(r => setTimeout(r, 150));
+    spawnSequence();
 }
 
 function initVisualizer() {
