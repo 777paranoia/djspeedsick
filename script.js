@@ -12,7 +12,6 @@ const imageDetails = {
 };
 const IPINFO_TOKEN = '4b45867ce7c229';
 
-// TETRIS GALLERY STATE
 const TetrisGallery = {
     isSpawning: false,
     availableIndices: [],
@@ -113,23 +112,18 @@ function toggleAbout() {
     };
     setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
 }
-
-// REPLACED WITH TETRIS LOGIC
 function openGallery() {
     const overlay = document.getElementById('artGalleryOverlay');
     const container = document.getElementById('artGalleryContent');
     overlay.style.display = 'block';
     container.innerHTML = '';
-
     TetrisGallery.isSpawning = true;
     TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
     TetrisGallery.map = TetrisGallery.isLandscape ? 
         new Array(window.innerHeight).fill(window.innerWidth) : 
         new Array(window.innerWidth).fill(window.innerHeight);
     TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()];
-
     spawnSequence();
-
     const closeHandler = () => {
         overlay.style.display = 'none';
         TetrisGallery.isSpawning = false;
@@ -144,21 +138,17 @@ async function spawnSequence() {
     const STAGE = document.getElementById('artGalleryContent');
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
-
     if (TetrisGallery.availableIndices.length === 0) {
         TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()];
     }
-
     const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length);
     const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0];
     const url = galleryImages[imageIndex];
-
     const img = new Image();
     img.src = url;
     await new Promise(r => img.onload = r);
     const ratio = img.naturalHeight / img.naturalWidth;
-
-    const baseWidth = screenWidth * (Math.random() * 0.03 + 0.12);
+    const baseWidth = screenWidth * (Math.random() * 0.05 + 0.1);
     let width = baseWidth;
     let height = width * ratio;
     const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.35 : screenHeight * 0.28;
@@ -166,41 +156,41 @@ async function spawnSequence() {
         height = maxHeight;
         width = height / ratio;
     }
-
-    let bestX, bestY, bestTargetPos = -Infinity;
-    const threshold = TetrisGallery.isLandscape ? screenWidth * 0.05 : screenHeight * 0.05;
-
-    if (TetrisGallery.isLandscape) {
-        for (let i = 0; i < 70; i++) {
+    let bestX, bestY, bestScore = -Infinity;
+    const threshold = TetrisGallery.isLandscape ? screenWidth * 0.02 : screenHeight * 0.02;
+    for (let i = 0; i < 150; i++) {
+        if (TetrisGallery.isLandscape) {
             const testY = Math.floor(Math.random() * (screenHeight - height));
             let currentWall = screenWidth;
-            for (let j = testY; j < Math.min(testY + Math.floor(height), screenHeight); j++) {
+            let areaScore = 0;
+            for (let j = testY; j < testY + Math.floor(height); j++) {
                 if (TetrisGallery.map[j] < currentWall) currentWall = TetrisGallery.map[j];
+                areaScore += TetrisGallery.map[j];
             }
-            const testTargetX = currentWall - width;
-            if (testTargetX > bestTargetPos) {
-                bestTargetPos = testTargetX;
+            const score = currentWall + (areaScore / height);
+            if (score > bestScore) {
+                bestScore = score;
                 bestY = testY;
+                bestX = -width - 150;
             }
-        }
-        bestX = -width - 150;
-    } else {
-        for (let i = 0; i < 70; i++) {
+        } else {
             const testX = Math.floor(Math.random() * (screenWidth - width));
             let currentFloor = screenHeight;
-            for (let j = testX; j < Math.min(testX + Math.floor(width), screenWidth); j++) {
+            let areaScore = 0;
+            for (let j = testX; j < testX + Math.floor(width); j++) {
                 if (TetrisGallery.map[j] < currentFloor) currentFloor = TetrisGallery.map[j];
+                areaScore += TetrisGallery.map[j];
             }
-            const testTargetY = currentFloor - height;
-            if (testTargetY > bestTargetPos) {
-                bestTargetPos = testTargetY;
+            const score = currentFloor + (areaScore / width);
+            if (score > bestScore) {
+                bestScore = score;
                 bestX = testX;
+                bestY = -height - 150;
             }
         }
-        bestY = -height - 150;
     }
-
-    if (bestTargetPos < threshold) {
+    const finalPos = bestScore - (TetrisGallery.isLandscape ? width : height);
+    if (finalPos < threshold) {
         STAGE.innerHTML = '';
         TetrisGallery.map = TetrisGallery.isLandscape ? 
             new Array(screenHeight).fill(screenWidth) : 
@@ -208,7 +198,6 @@ async function spawnSequence() {
         spawnSequence();
         return;
     }
-
     const block = document.createElement('div');
     block.className = 'art-block';
     block.style.width = `${width}px`;
@@ -217,26 +206,18 @@ async function spawnSequence() {
     block.style.top = `${bestY}px`;
     block.style.backgroundImage = `url('${url}')`;
     STAGE.appendChild(block);
-
     void block.offsetWidth;
     block.classList.add('moving');
     if (TetrisGallery.isLandscape) {
-        block.style.transform = `translateX(${bestTargetPos + width + 150}px)`;
+        block.style.transform = `translateX(${finalPos + width + 150}px)`;
+        for (let k = bestY; k < bestY + Math.floor(height); k++) TetrisGallery.map[k] = finalPos;
     } else {
-        block.style.transform = `translateY(${bestTargetPos + height + 150}px)`;
+        block.style.transform = `translateY(${finalPos + height + 150}px)`;
+        for (let k = bestX; k < bestX + Math.floor(width); k++) TetrisGallery.map[k] = finalPos;
     }
-
-    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS));
-    if (TetrisGallery.isLandscape) {
-        for (let k = bestY; k < Math.min(bestY + Math.floor(height), screenHeight); k++) TetrisGallery.map[k] = bestTargetPos;
-    } else {
-        for (let k = bestX; k < Math.min(bestX + Math.floor(width), screenWidth); k++) TetrisGallery.map[k] = bestTargetPos;
-    }
-
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS + 150));
     spawnSequence();
 }
-
 function initVisualizer() {
     const ctx = new(window.AudioContext || window.webkitAudioContext)();
     const can = document.getElementById('canvas');
