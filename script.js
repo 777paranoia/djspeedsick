@@ -1,14 +1,14 @@
 const RSS_SOURCES = ["https://isc.sans.edu/rssfeed_full.xml", "https://feeds.feedburner.com/TheHackersNews?format=xml", "https://0dayfans.com/feed.rss"];
 const imageDetails = {
-    grid1: "UNIX666-18<br>Escalationist<br>CD-R<br>Limited edition",
-    grid2: "INTERDEPRAVITY<br>Self-Released<br>CD-R<br>2025 Sampler",
-    grid3: "BPP-6004<br>Breathing Problem Productions<br>12in vinyl<br>Split with Scant",
-    grid4: "UNIX666-17<br>Escalationist<br>2025 DJ mix<br>Limited edition",
-    grid5: "UNIX666-16<br>Escalationist<br>CD-R<br>Bootleg remixes",
-    grid6: "UNIX666-14<br>Escalationist<br>CD-R",
-    grid7: "UNIX666-13<br>Escalationist<br>50xMP3 CD-R<br>",
-    grid8: "UNIX666-12<br>Escalationist<br>2x biz card CD-R<br>Single + multitrack stems",
-    grid9: "RECYCLED MUSIC<br>RRRecords<br>Recycled Music series<br>Cassette",
+    grid1: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
+    grid2: "UNIX666-20<br>Compliance OST<br>Escalationist<br>CD-R",
+    grid3: "UNIX666-18<br>Selbstentfremdungsbewusstsein<br>Escalationist<br>CD-R<br>",
+    grid4: "INTERDEPRAVITY 2025 Sampler<br>Self-Released<br>CD-R",
+    grid5: "BPP-6004<br>Split with Scant<br>Breathing Problem Productions<br>12in vinyl",
+    grid6: "UNIX666-17<br>djss250417-dj.sbd<br>Escalationist<br>CD-R",
+    grid7: "UNIX666-16<br>Nothing Is Original (Bootleg Remixes And Edits 2017-2025)<br>Escalationist<br>CD-R<br>",
+    grid8: "UNIX666-14<br>Non-Diagetic Instrumentals Vol. I<br>Escalationist<br>CD-R",
+    grid9: "UNIX666-13<br>Head Crash<br>Escalationist<br>MP3-CD<br>",
 };
 const IPINFO_TOKEN = '4b45867ce7c229';
 
@@ -17,7 +17,7 @@ const TetrisGallery = {
     availableIndices: [],
     map: [],
     isLandscape: true,
-    TRAVEL_TIME_MS: 3500
+    TRAVEL_TIME_MS: 2500
 };
 
 async function updateSystemParams() {
@@ -112,10 +112,12 @@ function toggleAbout() {
     };
     setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
 }
+
 function openGallery() {
     const overlay = document.getElementById('artGalleryOverlay');
     const container = document.getElementById('artGalleryContent');
     overlay.style.display = 'block';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
     container.innerHTML = '';
     TetrisGallery.isSpawning = true;
     TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
@@ -148,49 +150,42 @@ async function spawnSequence() {
     img.src = url;
     await new Promise(r => img.onload = r);
     const ratio = img.naturalHeight / img.naturalWidth;
-    const baseWidth = screenWidth * (Math.random() * 0.05 + 0.1);
+    const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); 
     let width = baseWidth;
     let height = width * ratio;
-    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.35 : screenHeight * 0.28;
+    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.4 : screenHeight * 0.35;
     if (height > maxHeight) {
         height = maxHeight;
         width = height / ratio;
     }
-    let bestX, bestY, bestScore = -Infinity;
-    const threshold = TetrisGallery.isLandscape ? screenWidth * 0.02 : screenHeight * 0.02;
-    for (let i = 0; i < 150; i++) {
+    let bestX, bestY, bestImpactX = -Infinity;
+    const buffer = 15;
+    for (let i = 0; i < 400; i++) {
         if (TetrisGallery.isLandscape) {
-            const testY = Math.floor(Math.random() * (screenHeight - height));
-            let currentWall = screenWidth;
-            let areaScore = 0;
+            const testY = Math.floor(Math.random() * (screenHeight - height - buffer));
+            let currentLimit = screenWidth;
             for (let j = testY; j < testY + Math.floor(height); j++) {
-                if (TetrisGallery.map[j] < currentWall) currentWall = TetrisGallery.map[j];
-                areaScore += TetrisGallery.map[j];
+                if (TetrisGallery.map[j] < currentLimit) currentLimit = TetrisGallery.map[j];
             }
-            const score = currentWall + (areaScore / height);
-            if (score > bestScore) {
-                bestScore = score;
+            if (currentLimit > bestImpactX) {
+                bestImpactX = currentLimit;
                 bestY = testY;
-                bestX = -width - 150;
             }
         } else {
-            const testX = Math.floor(Math.random() * (screenWidth - width));
-            let currentFloor = screenHeight;
-            let areaScore = 0;
+            const testX = Math.floor(Math.random() * (screenWidth - width - buffer));
+            let currentLimit = screenHeight;
             for (let j = testX; j < testX + Math.floor(width); j++) {
-                if (TetrisGallery.map[j] < currentFloor) currentFloor = TetrisGallery.map[j];
-                areaScore += TetrisGallery.map[j];
+                if (TetrisGallery.map[j] < currentLimit) currentLimit = TetrisGallery.map[j];
             }
-            const score = currentFloor + (areaScore / width);
-            if (score > bestScore) {
-                bestScore = score;
+            if (currentLimit > bestImpactX) {
+                bestImpactX = currentLimit;
                 bestX = testX;
-                bestY = -height - 150;
             }
         }
     }
-    const finalPos = bestScore - (TetrisGallery.isLandscape ? width : height);
-    if (finalPos < threshold) {
+    const finalX = TetrisGallery.isLandscape ? (bestImpactX - width - buffer) : bestX;
+    const finalY = TetrisGallery.isLandscape ? bestY : (bestImpactX - height - buffer);
+    if (bestImpactX < (TetrisGallery.isLandscape ? width : height) + 40) {
         STAGE.innerHTML = '';
         TetrisGallery.map = TetrisGallery.isLandscape ? 
             new Array(screenHeight).fill(screenWidth) : 
@@ -202,22 +197,30 @@ async function spawnSequence() {
     block.className = 'art-block';
     block.style.width = `${width}px`;
     block.style.height = `${height}px`;
-    block.style.left = `${bestX}px`;
-    block.style.top = `${bestY}px`;
+    const startX = TetrisGallery.isLandscape ? -width - 200 : finalX;
+    const startY = TetrisGallery.isLandscape ? finalY : -height - 200;
+    block.style.left = `${startX}px`;
+    block.style.top = `${startY}px`;
     block.style.backgroundImage = `url('${url}')`;
     STAGE.appendChild(block);
     void block.offsetWidth;
     block.classList.add('moving');
+    const moveX = TetrisGallery.isLandscape ? (finalX - startX) : 0;
+    const moveY = TetrisGallery.isLandscape ? 0 : (finalY - startY);
+    block.style.transform = `translate(${moveX}px, ${moveY}px)`;
     if (TetrisGallery.isLandscape) {
-        block.style.transform = `translateX(${finalPos + width + 150}px)`;
-        for (let k = bestY; k < bestY + Math.floor(height); k++) TetrisGallery.map[k] = finalPos;
+        for (let k = bestY; k < bestY + Math.floor(height); k++) {
+            if (TetrisGallery.map[k] > finalX) TetrisGallery.map[k] = finalX;
+        }
     } else {
-        block.style.transform = `translateY(${finalPos + height + 150}px)`;
-        for (let k = bestX; k < bestX + Math.floor(width); k++) TetrisGallery.map[k] = finalPos;
+        for (let k = bestX; k < bestX + Math.floor(width); k++) {
+            if (TetrisGallery.map[k] > finalY) TetrisGallery.map[k] = finalY;
+        }
     }
-    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS + 150));
+    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS + 100));
     spawnSequence();
 }
+
 function initVisualizer() {
     const ctx = new(window.AudioContext || window.webkitAudioContext)();
     const can = document.getElementById('canvas');

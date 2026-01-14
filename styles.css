@@ -58,7 +58,7 @@ body {
     background: transparent;
     color: #00ff00;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 1rem;
+    font-size: 0.8rem;
     padding: 0;
     border: none;
     z-index: 700;
@@ -86,7 +86,7 @@ body {
     padding: 0 4px;
     display: inline-block;
     font-weight: bold;
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 .separator {
