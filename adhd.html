@@ -64,11 +64,11 @@
 
         .page-title {
             position: absolute;
-            top: 200px; 
+            top: 150px; 
             left: 50%;
             transform: translateX(-50%);
             z-index: 2;
-            max-width: 550px; 
+            max-width: 650px; 
             height: auto; 
             pointer-events: none;
         }
@@ -78,7 +78,7 @@
             flex-direction: column;
             align-items: center;
             z-index: 2;
-            margin-top: 375px;
+            margin-top: 325px;
         }
 
         .track {
@@ -265,18 +265,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initVisuals() {
         if (visualizer) return;
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        visualizer = butterchurn.createVisualizer(audioCtx, canvas, {
-            width: canvas.width, height: canvas.height,
-            pixelRatio: window.devicePixelRatio || 1, textureRatio: 1
-        });
-        mediaNode = audioCtx.createMediaElementSource(player);
-        visualizer.connectAudio(mediaNode);
-        mediaNode.connect(audioCtx.destination);
-        presets = butterchurnPresets.getPresets();
-        presetKeys = Object.keys(presets);
-        const loop = () => { visualizer.render(); requestAnimationFrame(loop); };
-        loop();
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            visualizer = butterchurn.createVisualizer(audioCtx, canvas, {
+                width: canvas.width, height: canvas.height,
+                pixelRatio: window.devicePixelRatio || 1, textureRatio: 1
+            });
+            mediaNode = audioCtx.createMediaElementSource(player);
+            visualizer.connectAudio(mediaNode);
+            mediaNode.connect(audioCtx.destination);
+            
+            presets = butterchurnPresets.getPresets();
+            presetKeys = Object.keys(presets);
+            
+            visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0);
+
+            const loop = () => { visualizer.render(); requestAnimationFrame(loop); };
+            loop();
+        } catch (e) {
+            console.error("Visualizer failed to init:", e);
+        }
+    }
+
+    function shufflePreset() {
+        if (visualizer && presets && presetKeys) {
+            const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
+            visualizer.loadPreset(randomPreset, 0.0);
+        }
     }
 
     document.addEventListener('click', (e) => {
@@ -292,12 +307,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.track').forEach(btn => {
         btn.onclick = (e) => {
-            e.stopPropagation(); initVisuals();
+            e.stopPropagation(); 
+            initVisuals(); 
             if (player.src.includes(btn.dataset.src) && !player.paused) {
                 player.pause();
             } else {
-                player.src = btn.dataset.src; player.play();
+                player.src = btn.dataset.src; 
+                player.play();
                 document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn));
+                
+                // SHUFFLE ON EVERY CLICK
+                shufflePreset();
             }
         };
     });
@@ -363,16 +383,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     player.onplay = () => {
-        canvas.style.opacity = '1'; document.body.classList.add('visualizer-active');
+        initVisuals(); 
+        canvas.style.opacity = '1'; 
+        document.body.classList.add('visualizer-active');
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        
         if (presetTimer) clearInterval(presetTimer);
-        presetTimer = setInterval(() => { 
-            if (visualizer && presets && presetKeys) {
-                visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random()*presetKeys.length)]], 2.0); 
-            }
-        }, 15000);
+        presetTimer = setInterval(shufflePreset, 15000);
     };
 });
 </script>
 </body>
-</html>
+</html> 
