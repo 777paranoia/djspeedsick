@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Films & Audio</title>
+
+    <style>
+        @font-face {
+            font-family: 'SymbolsNerdFont';
+            src: url('files/font/SymbolsNerdFont-Regular.woff2') format('woff2'),
+                 url('files/font/SymbolsNerdFont-Regular.woff') format('woff');
+            font-display: swap;
+        }
+
+        :root {
+            --fg: #000;
+            --muted: #666;
+            --item-size: 13px; 
+            --track-gap: 2px;
+        }
+
+        body {
+            font-family: 'GGX88 Book', sans-serif;
+            margin: 0; padding: 0; overflow: hidden;
+            height: 100vh; width: 100vw;
+            background-color: white;
+        }
+
+        #bg-text-canvas {
+            position: fixed; top: -20%; left: -20%; width: 140vw; height: 140vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'GGX88 Book', sans-serif; font-size: 28vw; font-weight: 900;
+            color: black; line-height: 0.8; letter-spacing: -0.04em;
+            text-transform: uppercase; pointer-events: none; z-index: 0;
+            white-space: nowrap; overflow: hidden; user-select: none;
+            will-change: transform; padding: 10vw; box-sizing: border-box;
+        }
+
+        #bgCanvas {
+            position: fixed; inset: 0; pointer-events: none; opacity: 0;
+            transition: opacity .25s ease; z-index: 0;
+        }
+
+        .back-to-index, .help-icon {
+            position: absolute; left: 10px; font-family: 'SymbolsNerdFont', sans-serif;
+            font-size: 14px; text-decoration: none; color: black; z-index: 10;
+        }
+        .back-to-index { top: 10px; }
+        .help-icon { top: 30px; cursor: pointer; }
+
+        .split-container {
+            display: flex; height: 100vh; width: 100vw; position: relative; z-index: 1;
+        }
+
+        .audio-section {
+            width: 50%; height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start; position: relative;
+        }
+
+        .films-section {
+            width: 50%; height: 100%; position: relative; overflow: hidden;
+        }
+
+        .page-title {
+            position: absolute;
+            top: 200px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            max-width: 550px; 
+            height: auto; 
+            pointer-events: none;
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            margin-top: 375px;
+        }
+
+        .track {
+            background: none; border: 0; color: var(--fg); cursor: pointer;
+            font: 400 var(--item-size)/1.1 'GGX88 Book', ui-monospace, Menlo, monospace;
+            letter-spacing: .25em; text-transform: uppercase; white-space: nowrap;
+            padding: 2px 0; margin: var(--track-gap) 0;
+        }
+        .track.is-playing { text-decoration: underline; }
+
+        video {
+            position: absolute; object-fit: cover; cursor: grab; z-index: 2;
+            transition: width 0.2s ease-in-out, height 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        .dragging { cursor: grabbing; z-index: 100; transition: none !important; }
+
+        .custom-cursor {
+            position: absolute; pointer-events: none; z-index: 1000; color: white;
+            font-size: 13px; white-space: nowrap; display: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        body.visualizer-active { background-color: transparent; }
+        body.visualizer-active .track, 
+        body.visualizer-active .back-to-index, body.visualizer-active .help-icon { color: #fff; }
+        body.visualizer-active .page-title { filter: invert(1); }
+    </style>
+</head>
+<body id="main-body">
+
+<canvas id="bgCanvas"></canvas>
+<div id="bg-text-canvas"></div>
+
+<a href="index.html" class="back-to-index"><</a>
+<div id="help-icon" class="help-icon">?</div>
+
+<div class="split-container">
+    <div class="audio-section">
+        <main class="list">
+            <img src="files/img/index.png" class="page-title" alt="HEADER">
+            <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button>
+            <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button>
+            <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button>
+            <br>
+            <button class="track" data-src="files/aud/NIKE-3.m4a">AUDIO:001::N2:25</button>
+            <button class="track" data-src="files/aud/NIKE-2.m4a">AUDIO:002::N2:24</button>
+            <button class="track" data-src="files/aud/NIKE-1x.m4a">AUDIO:003::N2:25</button>
+            <br>
+            <button class="track" data-src="files/aud/MARGIELA_V2.0.m4a">AUDIO:001::MM:24</button>
+            <button class="track" data-src="files/aud/MARGIELA_V1.0.m4a">AUDIO:002::MM:24</button>
+            <br>
+            <button class="track" data-src="files/aud/OP3-v2dubbed.m4a">AUDIO:001::AS:24</button>
+            <button class="track" data-src="files/aud/ACNE_COATEDDENIM_CUT4.m4a">AUDIO:002::AS:24</button>
+            <button class="track" data-src="files/aud/ACNE_TEASER_CUT1.m4a">AUDIO:001::AS:24</button>
+            <button class="track" data-src="files/aud/OP3-v1.m4a">AUDIO:002::AS:24</button>
+            <button class="track" data-src="files/aud/ACNE_SHERLING_CUT3.m4a">AUDIO:003::AS:24</button>
+            <button class="track" data-src="files/aud/ACNE_SHERLING_CUT2.m4a">AUDIO:004::AS:24</button>
+            <button class="track" data-src="files/aud/ACNE_DARKSSIDE_CUT5V2.m4a">AUDIO:005::AS:24</button>
+            <audio id="player" preload="metadata" crossorigin="anonymous"></audio>
+        </main>
+    </div>
+
+    <div class="films-section">
+        <video id="video10" autoplay muted loop playsinline><source src="files/mov/nthng.mp4"></video>
+        <video id="video11" autoplay muted loop playsinline><source src="files/mov/tricky.mp4"></video>
+        <video id="video12" autoplay muted loop playsinline><source src="files/mov/mmxgm.mp4"></video>
+        <video id="video1" autoplay muted loop playsinline><source src="files/mov/acne1.mp4"></video>
+        <video id="video13" autoplay muted loop playsinline><source src="files/mov/gstar1.mp4"></video>
+        <video id="video14" autoplay muted loop playsinline><source src="files/mov/gstar2.mp4"></video>
+        <video id="video2" autoplay muted loop playsinline><source src="files/mov/acne2.mp4"></video>
+        <video id="video3" autoplay muted loop playsinline><source src="files/mov/acne3.mp4"></video>
+        <video id="video4" autoplay muted loop playsinline><source src="files/mov/acne4.mp4"></video>
+        <video id="video5" autoplay muted loop playsinline><source src="files/mov/camper1.mp4"></video>
+        <video id="video15" autoplay muted loop playsinline><source src="files/mov/gstar3.mp4"></video>
+        <video id="video16" autoplay muted loop playsinline><source src="files/mov/gstar4.mp4"></video>
+        <video id="video6" autoplay muted loop playsinline><source src="files/mov/camper2.mp4"></video>
+        <video id="video7" autoplay muted loop playsinline><source src="files/mov/camper3.mp4"></video>
+        <video id="video8" autoplay muted loop playsinline><source src="files/mov/marg1.mp4"></video>
+        <video id="video9" autoplay muted loop playsinline><source src="files/mov/marg2.mp4"></video>
+        <video id="videoR1" autoplay muted loop playsinline><source src="files/mov/compreelnu1.mp4"></video>
+        <video id="videoR2" autoplay muted loop playsinline><source src="files/mov/compreelnu2.mp4"></video>
+        <div id="custom-cursor" class="custom-cursor"></div>
+    </div>
+</div>
+
+<script src="lodash.js"></script>
+<script src="butterchurn.js"></script>
+<script src="butterchurnPresets.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const videos = document.querySelectorAll('video');
+    const customCursor = document.getElementById('custom-cursor');
+    const bgCanvasText = document.getElementById('bg-text-canvas');
+    const filmsSection = document.querySelector('.films-section');
+    const player = document.getElementById('player');
+    const canvas = document.getElementById('bgCanvas');
+
+    const columnPattern = [4, 2, 4, 2, 4];
+    const gstarIds = new Set(['video13','video14','video15','video16']);
+    const reelIds = new Set(['videoR1','videoR2']);
+
+    const videoDetails = {
+        video13: "G-Star Raw<br>Directed by Jordan Hemingway<br>2025",
+        video14: "G-Star Raw<br>Directed by Jordan Hemingway<br>2025",
+        video15: "G-Star Raw<br>Directed by Jordan Hemingway<br>2025",
+        video16: "G-Star Raw<br>Directed by Jordan Hemingway<br>2025",
+        video10: "Nothing<br>Directed by Jordan Hemingway<br>2025",
+        video11: "Acne Studios X Kappa<br>Directed by Jordan Hemingway<br>2025",
+        video12: "Maison Margiela x Gentle Monsters<br>Directed by Jordan Hemingway<br>2025",
+        video1: "Acne Studios<br>Directed by Jordan Hemingway<br>2024",
+        video2: "Acne Studios<br>Directed by Jordan Hemingway<br>2024",
+        video3: "Acne Studios<br>Directed by Jordan Hemingway<br>2024",
+        video4: "Acne Studios<br>Directed by Jordan Hemingway<br>2024",
+        video5: "Camperlab<br>Directed by Jordan Hemingway<br>2024",
+        video6: "Camperlab<br>Directed by Jordan Hemingway<br>2024",
+        video7: "Camperlab<br>Directed by Jordan Hemingway<br>2024",
+        video8: "Maison Margiela<br>Directed by Jordan Hemingway<br>2025",
+        video9: "Maison Margiela<br>Directed by Jordan Hemingway<br>2025",
+        videoR1: "Compliance (Original Score)<br>Directed by Kyle Mangione-Smith<br>2026",
+        videoR2: "Compliance (Original Score)<br>Directed by Kyle Mangione-Smith<br>2026"
+    };
+
+    function updateGrid() {
+        const sw = filmsSection.clientWidth;
+        const sh = filmsSection.clientHeight;
+        const videoSize = Math.min(sw, sh) / 8.2;
+        const gap = videoSize * 0.08;
+        const gridWidth = columnPattern.length * videoSize + (columnPattern.length - 1) * gap;
+        const startX = (sw - gridWidth) / 2;
+        let index = 0;
+        const gridVideos = Array.from(videos).filter(v => !reelIds.has(v.id));
+        
+        columnPattern.forEach((rows, colIndex) => {
+            const colX = startX + colIndex * (videoSize + gap);
+            let colH = 0;
+            for (let i = 0; i < rows && index + i < gridVideos.length; i++) {
+                const v = gridVideos[index + i];
+                colH += gstarIds.has(v.id) ? (videoSize * 2 + gap) : videoSize;
+                if (i < rows - 1) colH += gap;
+            }
+            let y = (sh * 0.38) - (colH / 2);
+            for (let row = 0; row < rows && index < gridVideos.length; row++) {
+                const video = gridVideos[index];
+                const h = gstarIds.has(video.id) ? (videoSize * 2 + gap) : videoSize;
+                video.style.width = `${videoSize}px`;
+                video.style.height = `${h}px`;
+                video.style.left = `${colX}px`;
+                video.style.top = `${y}px`;
+                video.dataset.vcol = colIndex === 0 ? 0 : (colIndex === columnPattern.length - 1 ? 2 : 1);
+                y += h + gap; index++;
+            }
+        });
+        
+        const reelVideos = Array.from(videos).filter(v => reelIds.has(v.id));
+        const reelW = (gridWidth / 2) - (gap / 2);
+        let gridB = 0;
+        gridVideos.forEach(v => {
+            const b = parseFloat(v.style.top) + parseFloat(v.style.height);
+            if (b > gridB) gridB = b;
+        });
+        reelVideos.forEach((v, i) => {
+            v.style.width = `${reelW}px`;
+            v.style.height = `${reelW * 0.5625}px`;
+            v.style.left = `${startX + (i * (reelW + gap))}px`;
+            v.style.top = `${gridB + gap}px`;
+            v.dataset.vcol = 1;
+        });
+    }
+
+    updateGrid();
+    window.addEventListener('resize', updateGrid);
+
+    let audioCtx, visualizer, mediaNode, presetTimer, presets, presetKeys;
+
+    function fit() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        if (visualizer) visualizer.setRendererSize(canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', fit);
+    fit();
+
+    function initVisuals() {
+        if (visualizer) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        visualizer = butterchurn.createVisualizer(audioCtx, canvas, {
+            width: canvas.width, height: canvas.height,
+            pixelRatio: window.devicePixelRatio || 1, textureRatio: 1
+        });
+        mediaNode = audioCtx.createMediaElementSource(player);
+        visualizer.connectAudio(mediaNode);
+        mediaNode.connect(audioCtx.destination);
+        presets = butterchurnPresets.getPresets();
+        presetKeys = Object.keys(presets);
+        const loop = () => { visualizer.render(); requestAnimationFrame(loop); };
+        loop();
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.track')) player.pause();
+    });
+
+    player.onpause = () => {
+        canvas.style.opacity = '0';
+        document.body.classList.remove('visualizer-active');
+        document.querySelectorAll('.track').forEach(b => b.classList.remove('is-playing'));
+        if (presetTimer) clearInterval(presetTimer);
+    };
+
+    document.querySelectorAll('.track').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation(); initVisuals();
+            if (player.src.includes(btn.dataset.src) && !player.paused) {
+                player.pause();
+            } else {
+                player.src = btn.dataset.src; player.play();
+                document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn));
+            }
+        };
+    });
+
+    let currentDraggingVideo = null;
+    let dragStartX, dragStartY;
+
+    videos.forEach(video => {
+        video.onmousedown = e => {
+            currentDraggingVideo = video;
+            dragStartX = e.clientX - video.offsetLeft;
+            dragStartY = e.clientY - video.offsetTop;
+            video.classList.add('dragging');
+            e.preventDefault();
+        };
+
+        video.onmouseenter = () => {
+            if (currentDraggingVideo) return;
+            player.pause();
+            const detail = videoDetails[video.id] || "";
+            const col = Number(video.dataset.vcol);
+            bgCanvasText.style.alignItems = col === 0 ? 'flex-start' : (col === 1 ? 'center' : 'flex-end');
+            bgCanvasText.style.textAlign = col === 0 ? 'left' : (col === 1 ? 'center' : 'right');
+            customCursor.innerHTML = detail; 
+            customCursor.style.display = 'block';
+            bgCanvasText.innerHTML = detail; 
+            video.muted = false; 
+            video.play().catch(() => {});
+        };
+
+        video.onmousemove = e => {
+            if (currentDraggingVideo) return;
+            const col = Number(video.dataset.vcol);
+            const sectionRect = filmsSection.getBoundingClientRect();
+            customCursor.style.top = `${e.clientY - sectionRect.top - (customCursor.offsetHeight / 2)}px`;
+            
+            if (col === 0) customCursor.style.left = `${e.clientX - sectionRect.left + 15}px`;
+            else if (col === 1) customCursor.style.left = `${e.clientX - sectionRect.left - (customCursor.offsetWidth / 2)}px`;
+            else customCursor.style.left = `${e.clientX - sectionRect.left - customCursor.offsetWidth - 15}px`;
+        };
+
+        video.onmouseleave = () => {
+            if (currentDraggingVideo) return;
+            customCursor.style.display = 'none'; 
+            bgCanvasText.innerHTML = ""; 
+            video.muted = true;
+        };
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (currentDraggingVideo) {
+            currentDraggingVideo.style.left = `${e.clientX - dragStartX}px`;
+            currentDraggingVideo.style.top = `${e.clientY - dragStartY}px`;
+            bgCanvasText.innerHTML = "";
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (currentDraggingVideo) {
+            currentDraggingVideo.classList.remove('dragging');
+            currentDraggingVideo = null;
+        }
+    });
+
+    player.onplay = () => {
+        canvas.style.opacity = '1'; document.body.classList.add('visualizer-active');
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (presetTimer) clearInterval(presetTimer);
+        presetTimer = setInterval(() => { 
+            if (visualizer && presets && presetKeys) {
+                visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random()*presetKeys.length)]], 2.0); 
+            }
+        }, 15000);
+    };
+});
+</script>
+</body>
+</html>
