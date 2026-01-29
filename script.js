@@ -1,11 +1,4 @@
-const RSS_SOURCES = ["https://isc.sans.edu/rssfeed_full.xml", "https://feeds.feedburner.com/TheHackersNews?format=xml", "https://0dayfans.com/feed.rss", "https://www.darkreading.com/rss.xml", "https://hackread.com/feed/", "https://cvefeed.io/rss", "https://www.zerodayinitiative.com/rss/", "https://dailydarkweb.net/data-breaches.rss", "https://www.bleepingcomputer.com/rss-feeds/"];
-const IPINFO_TOKEN = '4b45867ce7c229';
-
-const galleryImages = Array.from({ length: 299 }, (_, i) => {
-    const num = (i + 1).toString().padStart(5, '0');
-    return `https://www.djspeedsick.com/files/img/gallery/${num}.webp`;
-});
-
+const RSS_SOURCES = ["https://isc.sans.edu/rssfeed_full.xml", "https://feeds.feedburner.com/TheHackersNews?format=xml", "https://0dayfans.com/feed.rss"];
 const imageDetails = {
     grid1: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
     grid2: "UNIX666-20<br>Compliance OST<br>Escalationist<br>CD-R",
@@ -17,6 +10,7 @@ const imageDetails = {
     grid8: "UNIX666-14<br>Non-Diagetic Instrumentals Vol. I<br>Escalationist<br>CD-R",
     grid9: "UNIX666-13<br>Head Crash<br>Escalationist<br>MP3-CD<br>",
 };
+const IPINFO_TOKEN = '4b45867ce7c229';
 
 const TetrisGallery = {
     isSpawning: false,
@@ -88,13 +82,11 @@ async function updateIntelligence() {
         } catch (err) {}
     }
     const tickerText = " +++ " + headlines.join(" +++ ") + " +++ ";
-    const tTop = document.getElementById('rss-top');
-    const tBottom = document.getElementById('rss-bottom');
-    if (tTop) tTop.innerText = tickerText;
-    if (tBottom) tBottom.innerText = tickerText;
+    document.getElementById('rss-top').innerText = tickerText;
+    document.getElementById('rss-bottom').innerText = tickerText;
     const duration = (headlines.length * 4) + "s";
-    if (tTop) tTop.style.animationDuration = duration;
-    if (tBottom) tBottom.style.animationDuration = duration;
+    document.getElementById('rss-top').style.animationDuration = duration;
+    document.getElementById('rss-bottom').style.animationDuration = duration;
 }
 
 function handleEnterClick() {
@@ -156,15 +148,7 @@ async function spawnSequence() {
     const url = galleryImages[imageIndex];
     const img = new Image();
     img.src = url;
-    try {
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            setTimeout(() => reject("Timeout"), 3000);
-        });
-    } catch (e) {
-        return spawnSequence();
-    }
+    await new Promise(r => img.onload = r);
     const ratio = img.naturalHeight / img.naturalWidth;
     const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); 
     let width = baseWidth;
@@ -206,7 +190,8 @@ async function spawnSequence() {
         TetrisGallery.map = TetrisGallery.isLandscape ? 
             new Array(screenHeight).fill(screenWidth) : 
             new Array(screenWidth).fill(screenHeight);
-        return spawnSequence();
+        spawnSequence();
+        return;
     }
     const block = document.createElement('div');
     block.className = 'art-block';
@@ -218,14 +203,11 @@ async function spawnSequence() {
     block.style.top = `${startY}px`;
     block.style.backgroundImage = `url('${url}')`;
     STAGE.appendChild(block);
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            block.classList.add('moving');
-            const moveX = TetrisGallery.isLandscape ? (finalX - startX) : 0;
-            const moveY = TetrisGallery.isLandscape ? 0 : (finalY - startY);
-            block.style.transform = `translate(${moveX}px, ${moveY}px)`;
-        });
-    });
+    void block.offsetWidth;
+    block.classList.add('moving');
+    const moveX = TetrisGallery.isLandscape ? (finalX - startX) : 0;
+    const moveY = TetrisGallery.isLandscape ? 0 : (finalY - startY);
+    block.style.transform = `translate(${moveX}px, ${moveY}px)`;
     if (TetrisGallery.isLandscape) {
         for (let k = bestY; k < bestY + Math.floor(height); k++) {
             if (TetrisGallery.map[k] > finalX) TetrisGallery.map[k] = finalX;
@@ -276,10 +258,8 @@ document.querySelectorAll('.draggable-video').forEach(v => {
 const cursor = document.getElementById('custom-cursor');
 document.querySelectorAll('.grid-item').forEach(img => {
     img.onmouseenter = () => {
-        if (imageDetails[img.id]) {
-            cursor.innerHTML = imageDetails[img.id];
-            cursor.style.display = 'block';
-        }
+        cursor.innerHTML = imageDetails[img.id];
+        cursor.style.display = 'block';
     };
     img.onmouseleave = () => cursor.style.display = 'none';
     img.onmousemove = (e) => {
