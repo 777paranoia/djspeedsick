@@ -146,9 +146,20 @@ async function spawnSequence() {
     const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length);
     const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0];
     const url = galleryImages[imageIndex];
+    
     const img = new Image();
     img.src = url;
-    await new Promise(r => img.onload = r);
+    
+    await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+    });
+
+    if (!img.complete || img.naturalWidth === 0) {
+        spawnSequence();
+        return;
+    }
+
     const ratio = img.naturalHeight / img.naturalWidth;
     const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); 
     let width = baseWidth;
