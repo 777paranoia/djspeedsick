@@ -6,180 +6,183 @@
     <title>Films & Audio</title>
 
     <style>
-      @font-face {
-    font-family: 'SymbolsNerdFont';
-    src: url('files/font/SymbolsNerdFont-Regular.woff2') format('woff2'),
-         url('files/font/SymbolsNerdFont-Regular.woff') format('woff');
-    font-display: swap;
-}
+        @font-face {
+            font-family: 'SymbolsNerdFont';
+            src: url('files/font/SymbolsNerdFont-Regular.woff2') format('woff2'),
+                 url('files/font/SymbolsNerdFont-Regular.woff') format('woff');
+            font-display: swap;
+        }
 
-:root {
-    --fg: #000;
-    --muted: #666;
-    --item-size: 13px; 
-    --track-gap: 2px;
-}
+        :root {
+            --fg: #000;
+            --muted: #666;
+            --item-size: 13px; 
+            --track-gap: 2px;
+        }
 
-body {
-    font-family: 'GGX88 Book', sans-serif;
-    margin: 0; padding: 0; overflow: hidden;
-    height: 100vh; width: 100vw;
-    background-color: white;
-}
+        body {
+            font-family: 'GGX88 Book', sans-serif;
+            margin: 0; padding: 0; overflow: hidden;
+            height: 100vh; width: 100vw;
+            background-color: white;
+        }
 
-#bg-text-canvas {
-    position: fixed; 
-    top: -20%; 
-    left: -20%; 
-    width: 140vw; 
-    height: 140vh;
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    font-family: 'GGX88 Book', sans-serif; 
-    font-size: 28vw; 
-    font-weight: 900;
-    color: black; 
-    line-height: 0.8; 
-    letter-spacing: -0.04em;
-    text-transform: uppercase; 
-    pointer-events: none; 
-    z-index: 1;
-    white-space: nowrap; 
-    overflow: hidden; 
-    user-select: none;
-    will-change: transform; 
-    padding: 10vw; 
-    box-sizing: border-box;
-}
+        #bg-text-canvas {
+            position: fixed; 
+            top: -20%; 
+            left: -20%; 
+            width: 140vw; 
+            height: 140vh;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            font-family: 'GGX88 Book', sans-serif; 
+            font-size: 28vw; 
+            font-weight: 900;
+            color: black; 
+            line-height: 0.8; 
+            letter-spacing: -0.04em;
+            text-transform: uppercase; 
+            pointer-events: none; 
+            z-index: 1;
+            white-space: nowrap; 
+            overflow: hidden; 
+            user-select: none;
+            will-change: transform; 
+            padding: 10vw; 
+            box-sizing: border-box;
+        }
 
-#bgCanvas {
-    position: fixed; 
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none; 
-    opacity: 0;
-    transition: opacity .25s ease; 
-    z-index: 0;
-}
+        #bgCanvas {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; 
+            opacity: 0;
+            transition: opacity .25s ease; 
+            z-index: 0;
+        }
 
-.back-to-index, .help-icon {
-    position: absolute; 
-    left: 10px; 
-    font-family: 'SymbolsNerdFont', sans-serif;
-    font-size: 14px; 
-    text-decoration: none; 
-    color: black; 
-    z-index: 10;
-}
+        .back-to-index, .help-icon {
+            position: absolute; 
+            left: 10px; 
+            font-family: 'SymbolsNerdFont', sans-serif;
+            font-size: 14px; 
+            text-decoration: none; 
+            color: black; 
+            z-index: 100; /* Ensure UI is always on top */
+        }
 
-.back-to-index { top: 10px; }
-.help-icon { top: 30px; cursor: pointer; }
+        .back-to-index { top: 10px; }
+        .help-icon { top: 30px; cursor: pointer; }
 
-.split-container {
-    display: flex; 
-    height: 100vh; 
-    width: 100vw; 
-    position: relative; 
-    z-index: 5;
-}
+        .split-container {
+            display: flex; 
+            height: 100vh; 
+            width: 100vw; 
+            position: relative; 
+            z-index: 5;
+        }
 
-.audio-section {
-    width: 50%; 
-    height: 100%; 
-    display: flex; 
-    flex-direction: column;
-    align-items: center; 
-    justify-content: flex-start; 
-    position: relative;
-}
+        .audio-section {
+            width: 50%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: flex-start; 
+            position: relative;
+            z-index: 5; /* Base level for audio */
+        }
 
-.films-section {
-    width: 50%; 
-    height: 100%; 
-    position: relative; 
-    overflow: hidden;
-}
+        .films-section {
+            width: 50%; 
+            height: 100%; 
+            position: relative; 
+            /* FIX: Ensure videos stay above the audio section box */
+            overflow: visible; 
+            z-index: 10; 
+        }
 
-.page-title {
-    position: absolute;
-    top: 150px; 
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
-    max-width: 650px; 
-    height: auto; 
-    pointer-events: none;
-}
+        .page-title {
+            position: absolute;
+            top: 150px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            max-width: 650px; 
+            height: auto; 
+            pointer-events: none;
+        }
 
-.list {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-    margin-top: 325px;
-}
+        .list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            margin-top: 325px;
+        }
 
-.track {
-    background: none; 
-    border: 0; 
-    color: var(--fg); 
-    cursor: pointer;
-    font: 400 var(--item-size)/1.1 'GGX88 Book', ui-monospace, Menlo, monospace;
-    letter-spacing: .25em; 
-    text-transform: uppercase; 
-    white-space: nowrap;
-    padding: 2px 0; 
-    margin: var(--track-gap) 0;
-}
+        .track {
+            background: none; 
+            border: 0; 
+            color: var(--fg); 
+            cursor: pointer;
+            font: 400 var(--item-size)/1.1 'GGX88 Book', ui-monospace, Menlo, monospace;
+            letter-spacing: .25em; 
+            text-transform: uppercase; 
+            white-space: nowrap;
+            padding: 2px 0; 
+            margin: var(--track-gap) 0;
+        }
 
-.track.is-playing { text-decoration: underline; }
+        .track.is-playing { text-decoration: underline; }
 
-video {
-    position: absolute; 
-    object-fit: cover; 
-    cursor: grab; 
-    z-index: 2;
-    transition: width 0.2s ease-in-out, height 0.2s ease-in-out, transform 0.2s ease-in-out;
-}
+        video {
+            position: absolute; 
+            object-fit: cover; 
+            cursor: grab; 
+            z-index: 10; 
+            transition: width 0.2s ease-in-out, height 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
 
-.dragging { cursor: grabbing; z-index: 100; transition: none !important; }
+        .dragging { cursor: grabbing; z-index: 200; transition: none !important; }
 
-.custom-cursor {
-    position: absolute; 
-    pointer-events: none; 
-    z-index: 1000; 
-    color: white;
-    font-size: 13px; 
-    white-space: nowrap; 
-    display: none;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
+        .custom-cursor {
+            position: absolute; 
+            pointer-events: none; 
+            z-index: 1000; 
+            color: white;
+            font-size: 13px; 
+            white-space: nowrap; 
+            display: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
 
-.tooltip {
-    position: fixed;
-    top: 30px;
-    left: 30px;
-    color: black;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    display: none;
-    z-index: 1000;
-    pointer-events: none;
-}
+        .tooltip {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            color: black;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: none;
+            z-index: 1000;
+            pointer-events: none;
+        }
 
-body.visualizer-active { background-color: transparent; }
-body.visualizer-active .track, 
-body.visualizer-active .back-to-index, 
-body.visualizer-active .help-icon,
-body.visualizer-active .tooltip { color: #fff; }
-body.visualizer-active .page-title { filter: invert(1); }
-body.visualizer-active #bgCanvas { opacity: 1; z-index: 0; }
-body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; z-index: 1; }
+        body.visualizer-active { background-color: transparent; }
+        body.visualizer-active .track, 
+        body.visualizer-active .back-to-index, 
+        body.visualizer-active .help-icon,
+        body.visualizer-active .tooltip { color: #fff; }
+        body.visualizer-active .page-title { filter: invert(1); }
+        body.visualizer-active #bgCanvas { opacity: 1; z-index: 0; }
+        body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; z-index: 1; }
     </style>
 </head>
 <body id="main-body">
@@ -366,7 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const loop = () => { visualizer.render(); requestAnimationFrame(loop); };
             loop();
         } catch (e) {
-            console.error("Visualizer failed to init:", e);
         }
     }
 
@@ -398,8 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.src = btn.dataset.src; 
                 player.play();
                 document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn));
-                
-                // SHUFFLE ON EVERY CLICK
                 shufflePreset();
             }
         };
@@ -477,4 +477,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html> 
+</html>
