@@ -1,4 +1,3 @@
-/* GLOBAL */
 body {
     margin: 0;
     padding: 0;
@@ -9,7 +8,6 @@ body {
     width: 100vw;
 }
 
-/* SPLASH */
 #splash-screen {
     position: fixed;
     top: 0;
@@ -39,7 +37,6 @@ body {
     position: relative;
 }
 
-/* CANVAS (butterchurn) */
 #canvas {
     position: absolute;
     top: 0;
@@ -49,7 +46,6 @@ body {
     z-index: 1;
 }
 
-/* SIDEBAR */
 #conky-sidebar {
     position: fixed;
     top: 100px;
@@ -64,8 +60,8 @@ body {
     z-index: 700;
     text-align: left;
     pointer-events: auto;
-    display: none; /* initially hidden until enter click */
-}
+    display: none;
+    }
 
 .conky-line {
     margin: 2px 0;
