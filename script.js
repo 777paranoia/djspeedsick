@@ -1,4 +1,5 @@
-const RSS_SOURCES = ["https://isc.sans.edu/rssfeed_full.xml", "https://feeds.feedburner.com/TheHackersNews?format=xml", "https://0dayfans.com/feed.rss"];
+const RSS_SOURCES = ["https://thegrayzone.com/feed/"];
+/*"https://0dayfans.com/feed.rss"*/
 const imageDetails = {
     grid1: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
     grid2: "UNIX666-20<br>Compliance OST<br>Escalationist<br>CD-R",
