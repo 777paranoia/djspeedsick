@@ -126,51 +126,6 @@
         body.visualizer-active .page-title { filter: invert(1); }
         body.visualizer-active #bgCanvas { opacity: 1; }
         body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; }
-        .footer-nav {
-            position: fixed; bottom: 15px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; gap: 20px; z-index: 3000;
-        }
-        .footer-link {
-            font-family: monospace; font-size: 10px;
-            color: #000; text-decoration: underline;
-            cursor: pointer; text-transform: uppercase;
-        }
-        body.visualizer-active .footer-link { color: #fff; }
-        #cv-overlay {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            #background: rgba(0, 0, 0, 0.98);
-            z-index: 5000; display: none;
-            flex-direction: column; align-items: center;
-            overflow-y: auto; padding: 5vh 0; cursor: pointer;
-        }
-        #cv-content {
-            color: #00ff00; font-family: monospace;
-            text-shadow: 1px 1px 2px black;          
-            font-size: 13px; line-height: 1.2;
-            white-space: pre-wrap; max-width: 80ch;
-            width: 90%; word-wrap: break-word; pointer-events: none;
-        }
-        #artGalleryOverlay {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            #background-color: transparent;
-            z-index: 6000; display: none;
-        }
-        #artGalleryContent {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; overflow: hidden;
-        }
-        .art-block {
-            position: absolute; background-position: center;
-            background-size: contain; background-repeat: no-repeat;
-            transition: transform 3.5s linear, opacity 0.5s ease;
-            outline: 1px solid rgba(255, 255, 255, 0.1);
-            will-change: transform; opacity: 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.7);
-        }
-        .moving { opacity: 1; }
     </style>
 </head>
 <body id="main-body">
@@ -228,18 +183,10 @@
         <div id="custom-cursor" class="custom-cursor"></div>
     </div>
 </div>
-<div class="footer-nav">
-    <div class="footer-link" onclick="loadCV(event)">cv</div>
-    <div class="footer-link" onclick="openGallery()">gallery</div>
-</div>
-<div id="cv-overlay" onclick="this.style.display='none'"><pre id="cv-content"></pre></div>
-<div id="artGalleryOverlay"><div id="artGalleryContent"></div></div>
-<script src="gallery.js"></script>
 <script src="lodash.js"></script>
 <script src="butterchurn.js"></script>
 <script src="butterchurnPresets.min.js"></script>
 <script>
-const TetrisGallery = { isSpawning: false, availableIndices: [], map: [], isLandscape: true, TRAVEL_TIME_MS: 2500 };
 document.addEventListener('DOMContentLoaded', () => {
     const videos = document.querySelectorAll('video');
     const customCursor = document.getElementById('custom-cursor');
@@ -249,6 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('bgCanvas');
     const helpIcon = document.getElementById('help-icon');
     const tip = document.getElementById('tip');
+
+    helpIcon.onmouseenter = () => { tip.style.display = 'block'; };
+    helpIcon.onmouseleave = () => { tip.style.display = 'none'; };
+
     const columnPattern = [4, 2, 4, 2, 4];
     const gstarIds = new Set(['video13','video14','video15','video16']);
     const reelIds = new Set(['videoR1','videoR2']);
@@ -263,8 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         video8: "Maison Margiela<br>Jordan Hemingway<br>2025", video9: "Maison Margiela<br>Jordan Hemingway<br>2025",
         videoR1: "Compliance<br>Kyle Mangione-Smith<br>2026", videoR2: "Compliance<br>Kyle Mangione-Smith<br>2026"
     };
-    helpIcon.onmousedown = () => { tip.style.display = 'block'; };
-    window.onmouseup = () => { tip.style.display = 'none'; };
+
     function updateGrid() {
         const sw = filmsSection.clientWidth; const sh = filmsSection.clientHeight;
         const videoSize = Math.min(sw, sh) / 8.2; const gap = videoSize * 0.08;
@@ -295,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     window.addEventListener('resize', updateGrid); updateGrid();
+
     let audioCtx, visualizer, mediaNode, presets, presetKeys;
     function fit() {
         const dpr = window.devicePixelRatio || 1;
@@ -313,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const loop = () => { visualizer.render(); requestAnimationFrame(loop); }; loop();
         } catch (e) {}
     }
+
     document.querySelectorAll('.track').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation(); initVisuals();
@@ -320,8 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
             else { player.src = btn.dataset.src; player.play(); document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn)); visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0); }
         };
     });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.track')) { player.pause(); }
+    });
+
     player.onpause = () => { canvas.style.opacity = '0'; document.body.classList.remove('visualizer-active'); document.querySelectorAll('.track').forEach(b => b.classList.remove('is-playing')); };
     player.onplay = () => { initVisuals(); canvas.style.opacity = '1'; document.body.classList.add('visualizer-active'); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); };
+
     let curD = null; let oX, oY;
     videos.forEach(v => {
         v.onmousedown = e => { curD = v; const r = v.getBoundingClientRect(); oX = e.clientX - r.left; oY = e.clientY - r.top; v.classList.add('dragging'); e.preventDefault(); };
@@ -332,50 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousemove', e => { if (curD) { curD.style.left = `${e.clientX - oX}px`; curD.style.top = `${e.clientY - oY}px`; bgCanvasText.innerHTML = ""; } });
     document.addEventListener('mouseup', () => { if (curD) { curD.classList.remove('dragging'); curD = null; } });
 });
-async function loadCV(e) { e.stopPropagation(); const o = document.getElementById('cv-overlay'); const c = document.getElementById('cv-content'); try { const r = await fetch('files/nfo/cv.nfo'); if (!r.ok) throw new Error(); const t = await r.text(); c.textContent = t; o.style.display = 'flex'; } catch (err) { c.textContent = ">>> ERROR: CV_NOT_FOUND"; o.style.display = 'flex'; } }
-function openGallery() {
-    const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent');
-    overlay.style.display = 'block'; overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'; container.innerHTML = '';
-    TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
-    TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight);
-    TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence();
-    const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); };
-    setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
-}
-async function spawnSequence() {
-    if (!TetrisGallery.isSpawning) return; const STAGE = document.getElementById('artGalleryContent'); const screenWidth = window.innerWidth; const screenHeight = window.innerHeight;
-    if (TetrisGallery.availableIndices.length === 0) { TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; }
-    const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length);
-    const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0]; const url = galleryImages[imageIndex];
-    const img = new Image(); img.src = url;
-    await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
-    if (!img.complete || img.naturalWidth === 0) { spawnSequence(); return; }
-    const ratio = img.naturalHeight / img.naturalWidth; const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); let width = baseWidth; let height = width * ratio;
-    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.4 : screenHeight * 0.35;
-    if (height > maxHeight) { height = maxHeight; width = height / ratio; }
-    let bestX, bestY, bestImpactX = -Infinity; const buffer = 15;
-    for (let i = 0; i < 400; i++) {
-        if (TetrisGallery.isLandscape) {
-            const testY = Math.floor(Math.random() * (screenHeight - height - buffer)); let currentLimit = screenWidth;
-            for (let j = testY; j < testY + Math.floor(height); j++) { if (TetrisGallery.map[j] < currentLimit) currentLimit = TetrisGallery.map[j]; }
-            if (currentLimit > bestImpactX) { bestImpactX = currentLimit; bestY = testY; }
-        } else {
-            const testX = Math.floor(Math.random() * (screenWidth - width - buffer)); let currentLimit = screenHeight;
-            for (let j = testX; j < testX + Math.floor(width); j++) { if (TetrisGallery.map[j] < currentLimit) currentLimit = TetrisGallery.map[j]; }
-            if (currentLimit > bestImpactX) { bestImpactX = currentLimit; bestX = testX; }
-        }
-    }
-    const finalX = TetrisGallery.isLandscape ? (bestImpactX - width - buffer) : bestX; const finalY = TetrisGallery.isLandscape ? bestY : (bestImpactX - height - buffer);
-    if (bestImpactX < (TetrisGallery.isLandscape ? width : height) + 40) { STAGE.innerHTML = ''; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(screenHeight).fill(screenWidth) : new Array(screenWidth).fill(screenHeight); spawnSequence(); return; }
-    const block = document.createElement('div'); block.className = 'art-block'; block.style.width = `${width}px`; block.style.height = `${height}px`;
-    const startX = TetrisGallery.isLandscape ? -width - 200 : finalX; const startY = TetrisGallery.isLandscape ? finalY : -height - 200;
-    block.style.left = `${startX}px`; block.style.top = `${startY}px`; block.style.backgroundImage = `url('${url}')`; STAGE.appendChild(block);
-    void block.offsetWidth; block.classList.add('moving'); const moveX = TetrisGallery.isLandscape ? (finalX - startX) : 0; const moveY = TetrisGallery.isLandscape ? 0 : (finalY - startY);
-    block.style.transform = `translate(${moveX}px, ${moveY}px)`;
-    if (TetrisGallery.isLandscape) { for (let k = bestY; k < bestY + Math.floor(height); k++) { if (TetrisGallery.map[k] > finalX) TetrisGallery.map[k] = finalX; } } 
-    else { for (let k = bestX; k < bestX + Math.floor(width); k++) { if (TetrisGallery.map[k] > finalY) TetrisGallery.map[k] = finalY; } }
-    await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS + 100)); spawnSequence();
-}
 </script>
 </body>
 </html>
