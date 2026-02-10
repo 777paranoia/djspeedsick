@@ -51,7 +51,6 @@
             font-size: 14px; text-decoration: none; color: black; z-index: 3000;
         }
         
-        /* FIXED HEADER */
         .page-title {
             position: fixed; top: 40px; left: 50%;
             transform: translateX(-50%); z-index: 2500;
@@ -83,7 +82,7 @@
             width: 100vw; height: auto; 
             scroll-snap-align: start; position: relative;
             display: flex; flex-direction: column; align-items: center;
-            padding-bottom: 50px; 
+            padding-bottom: 100px;
         }
         .films-section { 
             width: 100vw; height: 100vh;
@@ -91,13 +90,13 @@
             overflow: visible; z-index: 20; 
         }
         
-        /* TREE LIST STYLES */
         .list {
             display: flex; flex-direction: column; align-items: flex-start;
             z-index: 2; margin-top: 280px;
             font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
             font-size: 12px; line-height: 1.5; color: var(--fg);
             white-space: pre; 
+            text-shadow: 0px 0px 5px rgba(255, 255, 255, 0.8), 0px 0px 2px white;
         }
         .tree-line { display: flex; align-items: center; }
         .track {
@@ -128,7 +127,7 @@
         body.visualizer-active .track { color: #fff; }
         body.visualizer-active .track:hover { background-color: #fff; color: #000; }
         body.visualizer-active .track.is-playing { background-color: #fff; color: #000; }
-        body.visualizer-active .list { color: #fff; }
+        body.visualizer-active .list { color: #fff; text-shadow: 2px 2px 2px #000; }
         body.visualizer-active .back-to-index, 
         body.visualizer-active .header-link,
         body.visualizer-active .help-trigger { color: #fff; }
@@ -137,22 +136,35 @@
         body.visualizer-active #bgCanvas { opacity: 1; }
         body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; }
 
+        /* CV OVERLAY UPDATES */
         #cv-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.98); z-index: 5000; display: none;
-            flex-direction: column; align-items: center; overflow-y: auto; padding: 5vh 0; cursor: pointer;
+            position: fixed; top: 0; left: 0; 
+            width: 100vw; height: 100vh;
+            background: none; 
+            z-index: 5000; display: none;
+            /* Flex center both axes */
+            flex-direction: column; align-items: center; justify-content: center;
+            overflow: hidden; /* No scrolling, fitting to screen */
+            padding: 0;
+            cursor: pointer;
         }
         #cv-content {
-            color: #00ff00; font-family: monospace; text-shadow: 1px 1px 2px black;          
-            font-size: 13px; line-height: 1.2; white-space: pre-wrap; max-width: 80ch;
-            width: 90%; word-wrap: break-word; pointer-events: none;
+            color: #00ff00; font-family: monospace; 
+            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            white-space: pre; 
+            text-align: left;
+            width: auto;
+            max-width: 100vw;
+            pointer-events: none;
         }
+        
         #artGalleryOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 6000; display: none; }
         #artGalleryContent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
         .art-block {
             position: absolute; background-position: center; background-size: contain; background-repeat: no-repeat;
             transition: transform 3.5s linear, opacity 0.5s ease; outline: 1px solid rgba(255, 255, 255, 0.1);
-            will-change: transform; opacity: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+            will-change: transform; opacity: 0; 
+            box-shadow: none; 
         }
         .moving { opacity: 1; }
     </style>
@@ -181,10 +193,10 @@
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button></div>
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button></div>
 <div class="tree-line">│   └── <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button></div>
-<div class="tree-line">├── 2025_NIKE</div>
-<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-3.m4a">AUDIO:001::N2:25</button></div>
-<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-2.m4a">AUDIO:002::N2:24</button></div>
-<div class="tree-line">│   └── <button class="track" data-src="files/aud/NIKE-1x.m4a">AUDIO:003::N2:25</button></div>
+<div class="tree-line">├── 2025_****</div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/nike-3.m4a">AUDIO:001::N2:25</button></div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/nike-2.m4a">AUDIO:002::N2:24</button></div>
+<div class="tree-line">│   └── <button class="track" data-src="files/aud/nike-1x.m4a">AUDIO:003::N2:25</button></div>
 <div class="tree-line">├── 2025_MAISON_MARGIELA</div>
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/MARGIELA_V2.0.m4a">AUDIO:001::MM:24</button></div>
 <div class="tree-line">│   └── <button class="track" data-src="files/aud/MARGIELA_V1.0.m4a">AUDIO:002::MM:24</button></div>
@@ -288,7 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
             v.dataset.vcol = 1;
         });
     }
-    window.addEventListener('resize', updateGrid); updateGrid();
+    updateGrid();
+    window.addEventListener('resize', updateGrid);
 
     let audioCtx, visualizer, mediaNode, presets, presetKeys;
     function fit() {
@@ -325,23 +338,41 @@ document.addEventListener('DOMContentLoaded', () => {
         v.onmousemove = e => { if (curD) return; const col = Number(v.dataset.vcol); customCursor.style.top = `${e.clientY + 15}px`; if (col === 0) customCursor.style.left = `${e.clientX + 15}px`; else if (col === 1) customCursor.style.left = `${e.clientX - (customCursor.offsetWidth / 2)}px`; else customCursor.style.left = `${e.clientX - customCursor.offsetWidth - 15}px`; };
         v.onmouseleave = () => { if (curD) return; customCursor.style.display = 'none'; bgCanvasText.innerHTML = ""; v.muted = true; };
     });
-    
-    // CORRECTED DRAG LOGIC
     document.addEventListener('mousemove', e => { 
         if (curD) { 
             const rect = filmsSection.getBoundingClientRect();
-            // Subtract container position to account for scroll
             curD.style.left = `${e.clientX - oX - rect.left}px`; 
             curD.style.top = `${e.clientY - oY - rect.top}px`; 
             bgCanvasText.innerHTML = ""; 
         } 
     });
-    
     document.addEventListener('mouseup', () => { if (curD) { curD.classList.remove('dragging'); curD = null; } });
 });
 
-async function loadCV(e) { e.stopPropagation(); const o = document.getElementById('cv-overlay'); const c = document.getElementById('cv-content'); try { const r = await fetch('files/nfo/cv.nfo'); if (!r.ok) throw new Error(); const t = await r.text(); c.textContent = t; o.style.display = 'flex'; } catch (err) { c.textContent = ">>> ERROR: CV_NOT_FOUND"; o.style.display = 'flex'; } }
-function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
+async function loadCV(e) { 
+    e.stopPropagation(); 
+    const o = document.getElementById('cv-overlay'); 
+    const c = document.getElementById('cv-content'); 
+    try { 
+        const r = await fetch('files/nfo/cv.nfo'); 
+        if (!r.ok) throw new Error(); 
+        const t = await r.text(); 
+        const cleanText = t.trim(); 
+        c.textContent = cleanText; 
+        
+        const lines = cleanText.split(/\r\n|\r|\n/).length;
+        const vh = window.innerHeight;
+        const newSize = vh / lines; 
+        c.style.fontSize = `${newSize}px`;
+        c.style.lineHeight = `${newSize}px`;
+        
+        o.style.display = 'flex'; 
+    } catch (err) { 
+        c.textContent = ">>> ERROR: CV_NOT_FOUND"; 
+        o.style.display = 'flex'; 
+    } 
+}
+function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'transparent'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
 async function spawnSequence() {
     if (!TetrisGallery.isSpawning) return; const STAGE = document.getElementById('artGalleryContent'); const screenWidth = window.innerWidth; const screenHeight = window.innerHeight;
     if (TetrisGallery.availableIndices.length === 0) { TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; }
