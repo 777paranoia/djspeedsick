@@ -1,16 +1,16 @@
 const RSS_SOURCES = ["https://thegrayzone.com/feed/"];
 /*"https://0dayfans.com/feed.rss"*/
 const imageDetails = {
-    grid1: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
-    grid2: "UNIX666-20<br>Compliance OST<br>Escalationist<br>CD-R",
-    grid3: "UNIX666-18<br>Selbstentfremdungsbewusstsein<br>Escalationist<br>CD-R<br>",
-    grid4: "INTERDEPRAVITY 2025 Sampler<br>Self-Released<br>CD-R",
-    grid5: "BPP-6004<br>Split with Scant<br>Breathing Problem Productions<br>12in vinyl",
-    grid6: "UNIX666-17<br>djss250417-dj.sbd<br>Escalationist<br>CD-R",
-    grid7: "UNIX666-16<br>Nothing Is Original (Bootleg Remixes And Edits 2017-2025)<br>Escalationist<br>CD-R<br>",
-    grid8: "UNIX666-14<br>Non-Diagetic Instrumentals Vol. I<br>Escalationist<br>CD-R",
-    grid9: "UNIX666-13<br>Head Crash<br>Escalationist<br>MP3-CD<br>",
-};
+    grid1: "SPEEDSICK INDUSTRIES 002<br>The First Five Years<br>Speedsick Industries<br>4x CD-R boxset",
+    grid2: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
+    grid3: "UNIX666-20<br>Compliance OST<br>Escalationist<br>CD-R",
+    grid4: "UNIX666-18<br>Selbstentfremdungsbewusstsein<br>Escalationist<br>CD-R<br>",
+    grid5: "INTERDEPRAVITY 2025 Sampler<br>Self-Released<br>CD-R",
+    grid6: "BPP-6004<br>Split with Scant<br>Breathing Problem Productions<br>12in vinyl",
+    grid7: "UNIX666-17<br>djss250417-dj.sbd<br>Escalationist<br>CD-R",
+    grid8: "UNIX666-16<br>Nothing Is Original (Bootleg Remixes And Edits 2017-2025)<br>Escalationist<br>CD-R<br>",
+    grid9: "UNIX666-14<br>Non-Diagetic Instrumentals Vol. I<br>Escalationist<br>CD-R",
+    };
 const IPINFO_TOKEN = '4b45867ce7c229';
 
 const TetrisGallery = {
