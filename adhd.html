@@ -19,155 +19,140 @@
         }
         body {
             font-family: 'GGX88 Book', sans-serif;
-            margin: 0; padding: 0; overflow: hidden;
+            margin: 0; padding: 0;
             height: 100vh; width: 100vw;
             background-color: white;
-        }
-        #bg-text-canvas {
-            position: fixed; 
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            font-family: 'GGX88 Book', sans-serif; 
-            font-size: 28vw; 
-            font-weight: 900;
-            color: black; 
-            line-height: 0.8; 
-            letter-spacing: -0.04em;
-            text-transform: uppercase; 
-            pointer-events: none; 
-            z-index: 1;
-            white-space: nowrap; 
-            overflow: hidden; 
-            user-select: none;
-            padding: 10vw; 
-            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
         }
         #bgCanvas {
-            position: fixed; 
-            top: 0; left: 0;
+            position: fixed; top: 0; left: 0;
             width: 100vw; height: 100vh;
-            pointer-events: none; 
-            opacity: 0;
-            transition: opacity .25s ease; 
-            z-index: 0;
+            pointer-events: none; opacity: 0;
+            transition: opacity .25s ease; z-index: 0;
         }
-        .back-to-index, .help-icon {
-            position: absolute; 
-            left: 10px; 
+        #bg-text-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
+            font-family: 'GGX88 Book', sans-serif; 
+            font-size: 28vw; font-weight: 900;
+            color: black; line-height: 0.8; letter-spacing: -0.04em;
+            text-transform: uppercase; pointer-events: none; 
+            z-index: 1; white-space: nowrap; 
+            overflow: hidden; user-select: none;
+            padding: 10vw; box-sizing: border-box;
+        }
+        .back-to-index {
+            position: fixed; left: 10px; top: 10px;
             font-family: 'SymbolsNerdFont', sans-serif;
-            font-size: 14px; 
-            text-decoration: none; 
-            color: black; 
-            z-index: 1000;
+            font-size: 14px; text-decoration: none; color: black; z-index: 3000;
         }
-        .back-to-index { top: 10px; }
-        .help-icon { top: 30px; cursor: pointer; }
-        .split-container {
-            display: flex; 
-            height: 100vh; width: 100vw; 
-            position: relative; 
-            z-index: 5;
-        }
-        .audio-section {
-            width: 50%; height: 100%; 
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: flex-start; 
-            position: relative;
-            z-index: 5;
-        }
-        .films-section {
-            width: 50%; height: 100%; 
-            position: relative; 
-            overflow: visible; 
-            z-index: 20;
-        }
+        
+        /* FIXED HEADER */
         .page-title {
-            position: absolute; top: 150px; left: 50%;
-            transform: translateX(-50%);
-            z-index: 2;
-            max-width: 650px; height: auto; 
+            position: fixed; top: 40px; left: 50%;
+            transform: translateX(-50%); z-index: 2500;
+            width: 800px; max-width: 90%; height: auto; 
             pointer-events: none;
         }
-        .list {
-            display: flex; flex-direction: column; align-items: center;
-            z-index: 2; margin-top: 325px;
+        .header-nav {
+            position: fixed; top: 230px; left: 50%;
+            transform: translateX(-50%);
+            display: flex; gap: 20px; z-index: 2500; align-items: center;
         }
+        .header-link {
+            font-family: monospace; font-size: 10px;
+            color: #000; text-decoration: underline;
+            cursor: pointer; text-transform: uppercase;
+        }
+        .help-trigger {
+            font-family: 'SymbolsNerdFont', sans-serif;
+            font-size: 12px; text-decoration: none;
+            cursor: pointer;
+        }
+
+        .split-container {
+            display: flex; flex-direction: column;
+            width: 100vw; position: relative; z-index: 5;
+        }
+        
+        .audio-section {
+            width: 100vw; height: auto; 
+            scroll-snap-align: start; position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            padding-bottom: 50px; 
+        }
+        .films-section { 
+            width: 100vw; height: 100vh;
+            scroll-snap-align: start; position: relative;
+            overflow: visible; z-index: 20; 
+        }
+        
+        /* TREE LIST STYLES */
+        .list {
+            display: flex; flex-direction: column; align-items: flex-start;
+            z-index: 2; margin-top: 280px;
+            font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
+            font-size: 12px; line-height: 1.5; color: var(--fg);
+            white-space: pre; 
+        }
+        .tree-line { display: flex; align-items: center; }
         .track {
             background: none; border: 0; color: var(--fg); cursor: pointer;
-            font: 400 var(--item-size)/1.1 'GGX88 Book', monospace;
-            letter-spacing: .25em; text-transform: uppercase;
-            white-space: nowrap; padding: 2px 0; margin: var(--track-gap) 0;
+            font: inherit; letter-spacing: 0; text-transform: none;
+            white-space: pre; padding: 0; margin: 0;
+            text-decoration: none;
         }
-        .track.is-playing { text-decoration: underline; }
-        video {
-            position: fixed; 
-            object-fit: cover; cursor: grab; z-index: 100;
-        }
+        .track:hover { background-color: #000; color: #fff; }
+        .track.is-playing { background-color: #000; color: #fff; text-decoration: none; }
+        
+        video { position: absolute; object-fit: cover; cursor: grab; z-index: 100; }
         .dragging { cursor: grabbing; z-index: 1000 !important; }
+        
         .custom-cursor {
             position: fixed; pointer-events: none; z-index: 2000; 
             color: white; font-size: 13px; display: none;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         .tooltip {
-            position: fixed; top: 30px; left: 30px;
-            color: black; font-size: 11px; text-transform: uppercase;
-            letter-spacing: 0.1em; display: none; z-index: 1000;
-            pointer-events: none;
+            position: fixed; top: 250px; left: 50%; transform: translateX(-50%);
+            color: black; font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.1em; display: none; z-index: 3500;
+            pointer-events: none; text-align: center;
+            background: rgba(255,255,255,0.8); padding: 5px; border: 1px solid black;
         }
-        body.visualizer-active .track, 
+
+        body.visualizer-active .track { color: #fff; }
+        body.visualizer-active .track:hover { background-color: #fff; color: #000; }
+        body.visualizer-active .track.is-playing { background-color: #fff; color: #000; }
+        body.visualizer-active .list { color: #fff; }
         body.visualizer-active .back-to-index, 
-        body.visualizer-active .help-icon,
-        body.visualizer-active .tooltip { color: #fff; }
+        body.visualizer-active .header-link,
+        body.visualizer-active .help-trigger { color: #fff; }
+        body.visualizer-active .tooltip { color: #fff; background: rgba(0,0,0,0.8); border: 1px solid white; }
         body.visualizer-active .page-title { filter: invert(1); }
         body.visualizer-active #bgCanvas { opacity: 1; }
         body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; }
-        .footer-nav {
-            position: fixed; bottom: 15px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; gap: 20px; z-index: 3000;
-        }
-        .footer-link {
-            font-family: monospace; font-size: 10px;
-            color: #000; text-decoration: underline;
-            cursor: pointer; text-transform: uppercase;
-        }
-        body.visualizer-active .footer-link { color: #fff; }
+
         #cv-overlay {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.98);
-            z-index: 5000; display: none;
-            flex-direction: column; align-items: center;
-            overflow-y: auto; padding: 5vh 0; cursor: pointer;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.98); z-index: 5000; display: none;
+            flex-direction: column; align-items: center; overflow-y: auto; padding: 5vh 0; cursor: pointer;
         }
         #cv-content {
-            color: #00ff00; font-family: monospace;
-            text-shadow: 1px 1px 2px black;          
-            font-size: 13px; line-height: 1.2;
-            white-space: pre-wrap; max-width: 80ch;
+            color: #00ff00; font-family: monospace; text-shadow: 1px 1px 2px black;          
+            font-size: 13px; line-height: 1.2; white-space: pre-wrap; max-width: 80ch;
             width: 90%; word-wrap: break-word; pointer-events: none;
         }
-        #artGalleryOverlay {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 6000; display: none;
-        }
-        #artGalleryContent {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; overflow: hidden;
-        }
+        #artGalleryOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 6000; display: none; }
+        #artGalleryContent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
         .art-block {
-            position: absolute; background-position: center;
-            background-size: contain; background-repeat: no-repeat;
-            transition: transform 3.5s linear, opacity 0.5s ease;
-            outline: 1px solid rgba(255, 255, 255, 0.1);
-            will-change: transform; opacity: 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+            position: absolute; background-position: center; background-size: contain; background-repeat: no-repeat;
+            transition: transform 3.5s linear, opacity 0.5s ease; outline: 1px solid rgba(255, 255, 255, 0.1);
+            will-change: transform; opacity: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.7);
         }
         .moving { opacity: 1; }
     </style>
@@ -176,32 +161,44 @@
 <canvas id="bgCanvas"></canvas>
 <div id="bg-text-canvas"></div>
 <a href="index.html" class="back-to-index"><</a>
-<div id="help-icon" class="help-icon">?</div>
+
 <div id="tip" class="tooltip">
     Click text to play audio sample / Click again anywhere to stop.<br>
-    Hover over videos to unmute audio / Drag them anywhere you wish.</div>
+    Hover over videos to unmute audio / Drag them anywhere you wish.
+</div>
+
+<img src="files/img/index.png" class="page-title" alt="">
+<div class="header-nav">
+    <div class="header-link" onclick="loadCV(event)">cv</div>
+    <div class="header-link" onclick="openGallery(event)">gallery</div>
+    <div class="help-trigger" id="help-icon">?</div>
+</div>
+
 <div class="split-container">
     <div class="audio-section">
         <main class="list">
-            <img src="files/img/index.png" class="page-title" alt="HEADER">
-            <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button>
-            <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button>
-            <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button>
-            <br>
-            <button class="track" data-src="files/aud/NIKE-3.m4a">AUDIO:001::N2:25</button>
-            <button class="track" data-src="files/aud/NIKE-2.m4a">AUDIO:002::N2:24</button>
-            <button class="track" data-src="files/aud/NIKE-1x.m4a">AUDIO:003::N2:25</button>
-            <br>
-            <button class="track" data-src="files/aud/MARGIELA_V2.0.m4a">AUDIO:001::MM:24</button>
-            <button class="track" data-src="files/aud/MARGIELA_V1.0.m4a">AUDIO:002::MM:24</button>
-            <br>
-            <button class="track" data-src="files/aud/OP3-v2dubbed.m4a">AUDIO:001::AS:24</button>
-            <button class="track" data-src="files/aud/ACNE_COATEDDENIM_CUT4.m4a">AUDIO:002::AS:24</button>
-            <button class="track" data-src="files/aud/ACNE_TEASER_CUT1.m4a">AUDIO:001::AS:24</button>
-            <button class="track" data-src="files/aud/OP3-v1.m4a">AUDIO:002::AS:24</button>
-            <button class="track" data-src="files/aud/ACNE_SHERLING_CUT3.m4a">AUDIO:003::AS:24</button>
-            <button class="track" data-src="files/aud/ACNE_SHERLING_CUT2.m4a">AUDIO:004::AS:24</button>
-            <button class="track" data-src="files/aud/ACNE_DARKSSIDE_CUT5V2.m4a">AUDIO:005::AS:24</button>
+<div class="tree-line">├── 2026_FRAGMENTS</div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button></div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button></div>
+<div class="tree-line">│   └── <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button></div>
+<div class="tree-line">├── 2025_NIKE</div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-3.m4a">AUDIO:001::N2:25</button></div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-2.m4a">AUDIO:002::N2:24</button></div>
+<div class="tree-line">│   └── <button class="track" data-src="files/aud/NIKE-1x.m4a">AUDIO:003::N2:25</button></div>
+<div class="tree-line">├── 2025_MAISON_MARGIELA</div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/MARGIELA_V2.0.m4a">AUDIO:001::MM:24</button></div>
+<div class="tree-line">│   └── <button class="track" data-src="files/aud/MARGIELA_V1.0.m4a">AUDIO:002::MM:24</button></div>
+<div class="tree-line">└── 2024_ACNE_STUDIOS</div>
+<div class="tree-line">    ├── CAMPAIGN</div>
+<div class="tree-line">    │   ├── <button class="track" data-src="files/aud/ACNE_COATEDDENIM_CUT4.m4a">AUDIO:001::AS:24</button></div>
+<div class="tree-line">    │   ├── <button class="track" data-src="files/aud/ACNE_TEASER_CUT1.m4a">AUDIO:002::AS:24</button></div>
+<div class="tree-line">    │   └── <button class="track" data-src="files/aud/ACNE_DARKSSIDE_CUT5V2.m4a">AUDIO:003::AS:24</button></div>
+<div class="tree-line">    ├── OP3</div>
+<div class="tree-line">    │   ├── <button class="track" data-src="files/aud/OP3-v2dubbed.m4a">AUDIO:001::AS:24</button></div>
+<div class="tree-line">    │   └── <button class="track" data-src="files/aud/OP3-v1.m4a">AUDIO:002::AS:24</button></div>
+<div class="tree-line">    └── SHEARLING</div>
+<div class="tree-line">        ├── <button class="track" data-src="files/aud/ACNE_SHERLING_CUT3.m4a">AUDIO:001::AS:24</button></div>
+<div class="tree-line">        └── <button class="track" data-src="files/aud/ACNE_SHERLING_CUT2.m4a">AUDIO:002::AS:24</button></div>
             <audio id="player" preload="metadata" crossorigin="anonymous"></audio>
         </main>
     </div>
@@ -227,12 +224,10 @@
         <div id="custom-cursor" class="custom-cursor"></div>
     </div>
 </div>
-<div class="footer-nav">
-    <div class="footer-link" onclick="loadCV(event)">cv</div>
-    <div class="footer-link" onclick="openGallery()">gallery</div>
-</div>
+
 <div id="cv-overlay" onclick="this.style.display='none'"><pre id="cv-content"></pre></div>
 <div id="artGalleryOverlay"><div id="artGalleryContent"></div></div>
+
 <script src="gallery.js"></script>
 <script src="lodash.js"></script>
 <script src="butterchurn.js"></script>
@@ -248,9 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('bgCanvas');
     const helpIcon = document.getElementById('help-icon');
     const tip = document.getElementById('tip');
-    const columnPattern = [4, 2, 4, 2, 4];
-    const gstarIds = new Set(['video13','video14','video15','video16']);
-    const reelIds = new Set(['videoR1','videoR2']);
     const videoDetails = {
         video13: "G-Star Raw<br>Jordan Hemingway<br>2025", video14: "G-Star Raw<br>Jordan Hemingway<br>2025",
         video15: "G-Star Raw<br>Jordan Hemingway<br>2025", video16: "G-Star Raw<br>Jordan Hemingway<br>2025",
@@ -269,10 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateGrid() {
         const sw = filmsSection.clientWidth; const sh = filmsSection.clientHeight;
         const videoSize = Math.min(sw, sh) / 8.2; const gap = videoSize * 0.08;
-        const gridWidth = columnPattern.length * videoSize + (columnPattern.length - 1) * gap;
-        const startX = filmsSection.offsetLeft + (sw - gridWidth) / 2;
+        const colPattern = [4, 2, 4, 2, 4]; const gstarIds = new Set(['video13','video14','video15','video16']); const reelIds = new Set(['videoR1','videoR2']);
+        const gridWidth = colPattern.length * videoSize + (colPattern.length - 1) * gap;
+        const startX = (sw - gridWidth) / 2;
         let index = 0; const gridVideos = Array.from(videos).filter(v => !reelIds.has(v.id));
-        columnPattern.forEach((rows, colIndex) => {
+        colPattern.forEach((rows, colIndex) => {
             const colX = startX + colIndex * (videoSize + gap); let colH = 0;
             for (let i = 0; i < rows && index + i < gridVideos.length; i++) {
                 const v = gridVideos[index + i]; colH += gstarIds.has(v.id) ? (videoSize * 2 + gap) : videoSize;
@@ -283,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const video = gridVideos[index]; const h = gstarIds.has(video.id) ? (videoSize * 2 + gap) : videoSize;
                 video.style.width = `${videoSize}px`; video.style.height = `${h}px`;
                 video.style.left = `${colX}px`; video.style.top = `${y}px`;
-                video.dataset.vcol = colIndex === 0 ? 0 : (colIndex === columnPattern.length - 1 ? 2 : 1);
+                video.dataset.vcol = colIndex === 0 ? 0 : (colIndex === colPattern.length - 1 ? 2 : 1);
                 y += h + gap; index++;
             }
         });
@@ -322,11 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else { player.src = btn.dataset.src; player.play(); document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn)); visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0); }
         };
     });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.track') && !e.target.closest('.footer-link')) { player.pause(); }
-    });
-
+    document.addEventListener('click', (e) => { if (!e.target.closest('.track') && !e.target.closest('.header-link')) { player.pause(); } });
     player.onpause = () => { canvas.style.opacity = '0'; document.body.classList.remove('visualizer-active'); document.querySelectorAll('.track').forEach(b => b.classList.remove('is-playing')); };
     player.onplay = () => { initVisuals(); canvas.style.opacity = '1'; document.body.classList.add('visualizer-active'); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); };
     let curD = null; let oX, oY;
@@ -336,31 +325,33 @@ document.addEventListener('DOMContentLoaded', () => {
         v.onmousemove = e => { if (curD) return; const col = Number(v.dataset.vcol); customCursor.style.top = `${e.clientY + 15}px`; if (col === 0) customCursor.style.left = `${e.clientX + 15}px`; else if (col === 1) customCursor.style.left = `${e.clientX - (customCursor.offsetWidth / 2)}px`; else customCursor.style.left = `${e.clientX - customCursor.offsetWidth - 15}px`; };
         v.onmouseleave = () => { if (curD) return; customCursor.style.display = 'none'; bgCanvasText.innerHTML = ""; v.muted = true; };
     });
-    document.addEventListener('mousemove', e => { if (curD) { curD.style.left = `${e.clientX - oX}px`; curD.style.top = `${e.clientY - oY}px`; bgCanvasText.innerHTML = ""; } });
+    
+    // CORRECTED DRAG LOGIC
+    document.addEventListener('mousemove', e => { 
+        if (curD) { 
+            const rect = filmsSection.getBoundingClientRect();
+            // Subtract container position to account for scroll
+            curD.style.left = `${e.clientX - oX - rect.left}px`; 
+            curD.style.top = `${e.clientY - oY - rect.top}px`; 
+            bgCanvasText.innerHTML = ""; 
+        } 
+    });
+    
     document.addEventListener('mouseup', () => { if (curD) { curD.classList.remove('dragging'); curD = null; } });
 });
+
 async function loadCV(e) { e.stopPropagation(); const o = document.getElementById('cv-overlay'); const c = document.getElementById('cv-content'); try { const r = await fetch('files/nfo/cv.nfo'); if (!r.ok) throw new Error(); const t = await r.text(); c.textContent = t; o.style.display = 'flex'; } catch (err) { c.textContent = ">>> ERROR: CV_NOT_FOUND"; o.style.display = 'flex'; } }
-function openGallery() {
-    const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent');
-    overlay.style.display = 'block'; overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'; container.innerHTML = '';
-    TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
-    TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight);
-    TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence();
-    const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); };
-    setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
-}
+function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
 async function spawnSequence() {
     if (!TetrisGallery.isSpawning) return; const STAGE = document.getElementById('artGalleryContent'); const screenWidth = window.innerWidth; const screenHeight = window.innerHeight;
     if (TetrisGallery.availableIndices.length === 0) { TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; }
-    const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length);
-    const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0]; const url = galleryImages[imageIndex];
-    const img = new Image(); img.src = url;
-    await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+    const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length); const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0]; const url = galleryImages[imageIndex];
+    const img = new Image(); img.src = url; await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
     if (!img.complete || img.naturalWidth === 0) { spawnSequence(); return; }
     const ratio = img.naturalHeight / img.naturalWidth; const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); let width = baseWidth; let height = width * ratio;
     const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.4 : screenHeight * 0.35;
     if (height > maxHeight) { height = maxHeight; width = height / ratio; }
-    let bestX, bestY, bestImpactX = -Infinity; const buffer = 15;
+    let bestImpactX = -Infinity; let bestX, bestY; const buffer = 15;
     for (let i = 0; i < 400; i++) {
         if (TetrisGallery.isLandscape) {
             const testY = Math.floor(Math.random() * (screenHeight - height - buffer)); let currentLimit = screenWidth;
