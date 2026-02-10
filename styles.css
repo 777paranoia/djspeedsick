@@ -90,20 +90,30 @@ body {
     white-space: nowrap;
 }
 
-/* MARQUEES */
 .speedsick-marquee {
-    position: fixed;
-    left: 0;
-    width: 100%;
-    color: #00FF00;
-    font-family: 'GGX88 Book', monospace;
-    font-size: 16px;
-    z-index: 5;
-    padding: 4px 0;
-    overflow: hidden;
-    white-space: nowrap;
-    display: none; /* shown after enter */
+position: fixed;
+left: 0;
+width: 100%;
+color: #00ff00;
+font-family: 'GGX88 Book', monospace;
+font-size: 16px;
+z-index: 5;
+padding: 4px 0;
+overflow: hidden;
+white-space: nowrap;
+display: none; 
 }
+
+text-shadow:
+  0 0 1px rgba(232,106,47,0.9),
+  0 0 4px rgba(232,106,47,0.7),
+  0 0 10px rgba(232,106,47,0.45),
+  0 0 18px rgba(232,106,47,0.25);
+
+filter:
+  brightness(1.15)
+  contrast(1.1)
+  blur(0.25px);}
 
 .top-bar { top: 0; }
 .bottom-bar { bottom: 0; }
