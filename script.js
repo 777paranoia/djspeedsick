@@ -1,4 +1,4 @@
-const RSS_SOURCES = ["https://thegrayzone.com/feed/", "https://www.ufosightingsdaily.com/feeds/posts/default"];
+const RSS_SOURCES = ["https://thegrayzone.com/feed/", "https://www.ufosightingsdaily.com/feeds/posts/default", "https://www.theblackvault.com/documentarchive/feed/"];
 /*"https://0dayfans.com/feed.rss"*/
 const imageDetails = {
     grid1: "SPEEDSICK INDUSTRIES 002<br>The First Five Years<br>Speedsick Industries<br>4x CD-R boxset",
