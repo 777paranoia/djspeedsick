@@ -50,7 +50,6 @@
             font-family: 'SymbolsNerdFont', sans-serif;
             font-size: 14px; text-decoration: none; color: black; z-index: 3000;
         }
-        
         .page-title {
             position: fixed; top: 40px; left: 50%;
             transform: translateX(-50%); z-index: 2500;
@@ -72,12 +71,10 @@
             font-size: 12px; text-decoration: none;
             cursor: pointer;
         }
-
         .split-container {
             display: flex; flex-direction: column;
             width: 100vw; position: relative; z-index: 5;
         }
-        
         .audio-section {
             width: 100vw; height: auto; 
             scroll-snap-align: start; position: relative;
@@ -89,7 +86,6 @@
             scroll-snap-align: start; position: relative;
             overflow: visible; z-index: 20; 
         }
-        
         .list {
             display: flex; flex-direction: column; align-items: flex-start;
             z-index: 2; margin-top: 280px;
@@ -107,10 +103,8 @@
         }
         .track:hover { background-color: #000; color: #fff; }
         .track.is-playing { background-color: #000; color: #fff; text-decoration: none; }
-        
         video { position: absolute; object-fit: cover; cursor: grab; z-index: 100; }
         .dragging { cursor: grabbing; z-index: 1000 !important; }
-        
         .custom-cursor {
             position: fixed; pointer-events: none; z-index: 2000; 
             color: white; font-size: 13px; display: none;
@@ -123,7 +117,6 @@
             pointer-events: none; text-align: center;
             background: rgba(255,255,255,0.8); padding: 5px; border: 1px solid black;
         }
-
         body.visualizer-active .track { color: #fff; }
         body.visualizer-active .track:hover { background-color: #fff; color: #000; }
         body.visualizer-active .track.is-playing { background-color: #fff; color: #000; }
@@ -135,29 +128,32 @@
         body.visualizer-active .page-title { filter: invert(1); }
         body.visualizer-active #bgCanvas { opacity: 1; }
         body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; }
-
-        /* CV OVERLAY UPDATES */
+        
         #cv-overlay {
             position: fixed; top: 0; left: 0; 
             width: 100vw; height: 100vh;
-            background: none; 
+            background: transparent; 
             z-index: 5000; display: none;
-            /* Flex center both axes */
-            flex-direction: column; align-items: center; justify-content: center;
-            overflow: hidden; /* No scrolling, fitting to screen */
-            padding: 0;
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            overflow: hidden; 
+            box-sizing: border-box;
             cursor: pointer;
         }
         #cv-content {
-            color: #00ff00; font-family: monospace; 
-            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            color: #00ff00; 
+            font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
             white-space: pre; 
             text-align: left;
-            width: auto;
-            max-width: 100vw;
             pointer-events: none;
+            text-shadow: 
+                3px 3px 0 #000, -1px -1px 0 #000, 
+                1px -1px 0 #000, -1px 1px 0 #000, 
+                1px 1px 0 #000;
+            font-size: min(calc(90vh / 82), calc(95vw / 80 * 0.6));
+            line-height: 1;
         }
-        
         #artGalleryOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 6000; display: none; }
         #artGalleryContent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
         .art-block {
@@ -173,19 +169,16 @@
 <canvas id="bgCanvas"></canvas>
 <div id="bg-text-canvas"></div>
 <a href="index.html" class="back-to-index"><</a>
-
 <div id="tip" class="tooltip">
     Click text to play audio sample / Click again anywhere to stop.<br>
     Hover over videos to unmute audio / Drag them anywhere you wish.
 </div>
-
 <img src="files/img/index.png" class="page-title" alt="">
 <div class="header-nav">
     <div class="header-link" onclick="loadCV(event)">cv</div>
     <div class="header-link" onclick="openGallery(event)">gallery</div>
     <div class="help-trigger" id="help-icon">?</div>
 </div>
-
 <div class="split-container">
     <div class="audio-section">
         <main class="list">
@@ -193,10 +186,10 @@
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button></div>
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button></div>
 <div class="tree-line">│   └── <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button></div>
-<div class="tree-line">├── 2025_****</div>
-<div class="tree-line">│   ├── <button class="track" data-src="files/aud/nike-3.m4a">AUDIO:001::N2:25</button></div>
-<div class="tree-line">│   ├── <button class="track" data-src="files/aud/nike-2.m4a">AUDIO:002::N2:24</button></div>
-<div class="tree-line">│   └── <button class="track" data-src="files/aud/nike-1x.m4a">AUDIO:003::N2:25</button></div>
+<div class="tree-line">├── 2025_NIKE</div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-3.m4a">AUDIO:001::N2:25</button></div>
+<div class="tree-line">│   ├── <button class="track" data-src="files/aud/NIKE-2.m4a">AUDIO:002::N2:24</button></div>
+<div class="tree-line">│   └── <button class="track" data-src="files/aud/NIKE-1x.m4a">AUDIO:003::N2:25</button></div>
 <div class="tree-line">├── 2025_MAISON_MARGIELA</div>
 <div class="tree-line">│   ├── <button class="track" data-src="files/aud/MARGIELA_V2.0.m4a">AUDIO:001::MM:24</button></div>
 <div class="tree-line">│   └── <button class="track" data-src="files/aud/MARGIELA_V1.0.m4a">AUDIO:002::MM:24</button></div>
@@ -236,10 +229,8 @@
         <div id="custom-cursor" class="custom-cursor"></div>
     </div>
 </div>
-
 <div id="cv-overlay" onclick="this.style.display='none'"><pre id="cv-content"></pre></div>
 <div id="artGalleryOverlay"><div id="artGalleryContent"></div></div>
-
 <script src="gallery.js"></script>
 <script src="lodash.js"></script>
 <script src="butterchurn.js"></script>
@@ -266,10 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
         video8: "Maison Margiela<br>Jordan Hemingway<br>2025", video9: "Maison Margiela<br>Jordan Hemingway<br>2025",
         videoR1: "Compliance<br>Kyle Mangione-Smith<br>2026", videoR2: "Compliance<br>Kyle Mangione-Smith<br>2026"
     };
-
     helpIcon.onmouseenter = () => { tip.style.display = 'block'; };
     helpIcon.onmouseleave = () => { tip.style.display = 'none'; };
-
     function updateGrid() {
         const sw = filmsSection.clientWidth; const sh = filmsSection.clientHeight;
         const videoSize = Math.min(sw, sh) / 8.2; const gap = videoSize * 0.08;
@@ -302,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateGrid();
     window.addEventListener('resize', updateGrid);
-
     let audioCtx, visualizer, mediaNode, presets, presetKeys;
     function fit() {
         const dpr = window.devicePixelRatio || 1;
@@ -354,24 +342,15 @@ async function loadCV(e) {
     const o = document.getElementById('cv-overlay'); 
     const c = document.getElementById('cv-content'); 
     try { 
-        const r = await fetch('files/nfo/cv.nfo'); 
+        const r = await fetch('files/nfo/cv.nfo?t=' + Date.now()); 
         if (!r.ok) throw new Error(); 
-        const t = await r.text(); 
-        const cleanText = t.trim(); 
-        c.textContent = cleanText; 
-        
-        const lines = cleanText.split(/\r\n|\r|\n/).length;
-        const vh = window.innerHeight;
-        const newSize = vh / lines; 
-        c.style.fontSize = `${newSize}px`;
-        c.style.lineHeight = `${newSize}px`;
-        
-        o.style.display = 'flex'; 
+        c.textContent = await r.text(); 
     } catch (err) { 
         c.textContent = ">>> ERROR: CV_NOT_FOUND"; 
-        o.style.display = 'flex'; 
-    } 
+    }
+    o.style.display = 'flex';
 }
+
 function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'transparent'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
 async function spawnSequence() {
     if (!TetrisGallery.isSpawning) return; const STAGE = document.getElementById('artGalleryContent'); const screenWidth = window.innerWidth; const screenHeight = window.innerHeight;
