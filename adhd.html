@@ -151,8 +151,9 @@
                 3px 3px 0 #000, -1px -1px 0 #000, 
                 1px -1px 0 #000, -1px 1px 0 #000, 
                 1px 1px 0 #000;
-            font-size: min(calc(90vh / 82), calc(95vw / 80 * 0.6));
+            font-size: 10px;
             line-height: 1;
+            transform-origin: center center;
         }
         #artGalleryOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 6000; display: none; }
         #artGalleryContent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
@@ -349,6 +350,19 @@ async function loadCV(e) {
         c.textContent = ">>> ERROR: CV_NOT_FOUND"; 
     }
     o.style.display = 'flex';
+    
+    requestAnimationFrame(() => {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const cw = c.offsetWidth;
+        const ch = c.offsetHeight;
+        
+        const scaleX = (vw * 0.95) / cw;
+        const scaleY = (vh * 0.9) / ch;
+        const scale = Math.min(scaleX, scaleY);
+        
+        c.style.transform = `scale(${scale})`;
+    });
 }
 
 function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'transparent'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
