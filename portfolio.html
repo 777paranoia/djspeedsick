@@ -24,7 +24,6 @@
             background-color: white;
             overflow-x: hidden;
             overflow-y: scroll;
-            scroll-snap-type: y mandatory;
         }
         #bgCanvas {
             position: fixed; top: 0; left: 0;
@@ -77,13 +76,13 @@
         }
         .audio-section {
             width: 100vw; height: auto; 
-            scroll-snap-align: start; position: relative;
+            position: relative;
             display: flex; flex-direction: column; align-items: center;
             padding-bottom: 100px;
         }
         .films-section { 
             width: 100vw; height: 100vh;
-            scroll-snap-align: start; position: relative;
+            position: relative;
             overflow: visible; z-index: 20; 
         }
         .list {
@@ -128,7 +127,6 @@
         body.visualizer-active .page-title { filter: invert(1); }
         body.visualizer-active #bgCanvas { opacity: 1; }
         body.visualizer-active #bg-text-canvas { color: #fff; opacity: 0.1; }
-        
         #cv-overlay {
             position: fixed; top: 0; left: 0; 
             width: 100vw; height: 100vh;
@@ -136,24 +134,26 @@
             z-index: 5000; display: none;
             flex-direction: column; 
             align-items: center; 
-            justify-content: center;
+            justify-content: flex-start;
             overflow: hidden; 
+            padding-top: 320px; 
             box-sizing: border-box;
             cursor: pointer;
         }
         #cv-content {
-            color: #00ff00; 
-            font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
+            color: #00ff00; font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
             white-space: pre; 
             text-align: left;
+            width: 80ch; 
+            min-width: 80ch; 
+            max-width: 80ch;
+            height: auto;
             pointer-events: none;
+            transform-origin: top center;
             text-shadow: 
                 3px 3px 0 #000, -1px -1px 0 #000, 
                 1px -1px 0 #000, -1px 1px 0 #000, 
                 1px 1px 0 #000;
-            font-size: 10px;
-            line-height: 1;
-            transform-origin: center center;
         }
         #artGalleryOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 6000; display: none; }
         #artGalleryContent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
@@ -180,14 +180,17 @@
     <div class="header-link" onclick="openGallery(event)">gallery</div>
     <div class="help-trigger" id="help-icon">?</div>
 </div>
+
+<audio id="player" preload="metadata" crossorigin="anonymous"></audio>
+
 <div class="split-container">
     <div class="audio-section">
         <main class="list">
 <div class="tree-line">    ┌────┬───────────────┐</div>
-<div class="tree-line">    │    │ AUDIO SAMPLES │</div> 
+<div class="tree-line">    │    │ AUDIO SAMPLES │</div>
 <div class="tree-line">    │    └───────────────┘</div>
 <div class="tree-line">┌───┤</div>
-<div class="tree-line">│   ├──── <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button></div> 
+<div class="tree-line">│   ├──── <button class="track" data-src="files/aud/TRAP_FRAGMENT.m4a">AUDIO:001::N1:25</button></div>
 <div class="tree-line">│   ├──── <button class="track" data-src="files/aud/POP_PUNK_CLIP.m4a">AUDIO:002::N1:25</button></div>
 <div class="tree-line">│   └──── <button class="track" data-src="files/aud/GABBER_CLIP.m4a">AUDIO:003::N1.25</button></div>
 <div class="tree-line">│</div>
@@ -216,7 +219,6 @@
 <div class="tree-line">   └──┐</div>
 <div class="tree-line">      ├── <button class="track" data-src="files/aud/ACNE_SHERLING_CUT3.m4a">AUDIO:001::AS:24</button></div>
 <div class="tree-line">      └── <button class="track" data-src="files/aud/ACNE_SHERLING_CUT2.m4a">AUDIO:002::AS:24</button></div>
-            <audio id="player" preload="metadata" crossorigin="anonymous"></audio>
         </main>
     </div>
     <div class="films-section">
@@ -249,104 +251,248 @@
 <script src="butterchurnPresets.min.js"></script>
 <script>
 const TetrisGallery = { isSpawning: false, availableIndices: [], map: [], isLandscape: true, TRAVEL_TIME_MS: 2500 };
+const videoDetails = {
+    video13: "G-Star Raw<br>Jordan Hemingway<br>2025", video14: "G-Star Raw<br>Jordan Hemingway<br>2025",
+    video15: "G-Star Raw<br>Jordan Hemingway<br>2025", video16: "G-Star Raw<br>Jordan Hemingway<br>2025",
+    video10: "Nothing<br>Jordan Hemingway<br>2025", video11: "Acne Studios X Kappa<br>Jordan Hemingway<br>2025",
+    video12: "Maison Margiela x Gentle Monsters<br>Jordan Hemingway<br>2025", video1: "Acne Studios<br>Jordan Hemingway<br>2024",
+    video2: "Acne Studios<br>Jordan Hemingway<br>2024", video3: "Acne Studios<br>Jordan Hemingway<br>2024",
+    video4: "Acne Studios<br>Jordan Hemingway<br>2024", video5: "Camperlab<br>Jordan Hemingway<br>2024",
+    video6: "Camperlab<br>Jordan Hemingway<br>2024", video7: "Camperlab<br>Jordan Hemingway<br>2024",
+    video8: "Maison Margiela<br>Jordan Hemingway<br>2025", video9: "Maison Margiela<br>Jordan Hemingway<br>2025",
+    videoR1: "Compliance<br>Kyle Mangione-Smith<br>2026", videoR2: "Compliance<br>Kyle Mangione-Smith<br>2026"
+};
+
+let audioCtx, visualizer, mediaNode, presets, presetKeys;
+let curD = null; 
+let oX, oY;
+
 document.addEventListener('DOMContentLoaded', () => {
-    const videos = document.querySelectorAll('video');
-    const customCursor = document.getElementById('custom-cursor');
-    const bgCanvasText = document.getElementById('bg-text-canvas');
-    const filmsSection = document.querySelector('.films-section');
-    const player = document.getElementById('player');
-    const canvas = document.getElementById('bgCanvas');
+    const container = document.querySelector('.split-container');
+    const originalAudio = document.querySelector('.audio-section');
+    const originalFilms = document.querySelector('.films-section');
     const helpIcon = document.getElementById('help-icon');
     const tip = document.getElementById('tip');
-    const videoDetails = {
-        video13: "G-Star Raw<br>Jordan Hemingway<br>2025", video14: "G-Star Raw<br>Jordan Hemingway<br>2025",
-        video15: "G-Star Raw<br>Jordan Hemingway<br>2025", video16: "G-Star Raw<br>Jordan Hemingway<br>2025",
-        video10: "Nothing<br>Jordan Hemingway<br>2025", video11: "Acne Studios X Kappa<br>Jordan Hemingway<br>2025",
-        video12: "Maison Margiela x Gentle Monsters<br>Jordan Hemingway<br>2025", video1: "Acne Studios<br>Jordan Hemingway<br>2024",
-        video2: "Acne Studios<br>Jordan Hemingway<br>2024", video3: "Acne Studios<br>Jordan Hemingway<br>2024",
-        video4: "Acne Studios<br>Jordan Hemingway<br>2024", video5: "Camperlab<br>Jordan Hemingway<br>2024",
-        video6: "Camperlab<br>Jordan Hemingway<br>2024", video7: "Camperlab<br>Jordan Hemingway<br>2024",
-        video8: "Maison Margiela<br>Jordan Hemingway<br>2025", video9: "Maison Margiela<br>Jordan Hemingway<br>2025",
-        videoR1: "Compliance<br>Kyle Mangione-Smith<br>2026", videoR2: "Compliance<br>Kyle Mangione-Smith<br>2026"
+    const bgCanvasText = document.getElementById('bg-text-canvas');
+    const customCursor = document.getElementById('custom-cursor');
+    const player = document.getElementById('player');
+    const canvas = document.getElementById('bgCanvas');
+
+    // CLONE CONTENT FOR LOOP
+    const cloneAudio = originalAudio.cloneNode(true);
+    const cloneFilms = originalFilms.cloneNode(true);
+    container.appendChild(cloneAudio);
+    container.appendChild(cloneFilms);
+
+    // INIT SCROLL POSITION
+    let totalH = 0;
+    const recalculateHeight = () => {
+        totalH = originalAudio.offsetHeight + originalFilms.offsetHeight;
+        if (window.scrollY < 50) {
+            window.scrollTo(0, totalH); 
+        }
     };
+    setTimeout(recalculateHeight, 100); 
+    window.addEventListener('resize', recalculateHeight);
+
     helpIcon.onmouseenter = () => { tip.style.display = 'block'; };
     helpIcon.onmouseleave = () => { tip.style.display = 'none'; };
-    function updateGrid() {
-        const sw = filmsSection.clientWidth; const sh = filmsSection.clientHeight;
-        const videoSize = Math.min(sw, sh) / 8.2; const gap = videoSize * 0.08;
-        const colPattern = [4, 2, 4, 2, 4]; const gstarIds = new Set(['video13','video14','video15','video16']); const reelIds = new Set(['videoR1','videoR2']);
+
+    // VIDEO SYNC AND DRAG LOGIC
+    function initVideoEvents(videoElement) {
+        // Sync Helper: Find all videos with the same ID
+        function getClones() {
+            return Array.from(document.querySelectorAll(`video[id="${videoElement.id}"]`));
+        }
+
+        videoElement.onmousedown = e => { 
+            curD = videoElement; 
+            const rect = videoElement.getBoundingClientRect();
+            oX = e.clientX - rect.left;
+            oY = e.clientY - rect.top;
+            videoElement.classList.add('dragging'); 
+            e.preventDefault(); 
+        };
+        videoElement.onmouseenter = () => { 
+            if (curD) return; 
+            player.pause(); 
+            const detail = videoDetails[videoElement.id] || ""; 
+            const col = Number(videoElement.dataset.vcol); 
+            bgCanvasText.style.alignItems = col === 0 ? 'flex-start' : (col === 1 ? 'center' : 'flex-end'); 
+            bgCanvasText.style.textAlign = col === 0 ? 'left' : (col === 1 ? 'center' : 'right'); 
+            customCursor.innerHTML = detail; 
+            customCursor.style.display = 'block'; 
+            bgCanvasText.innerHTML = detail; 
+            
+            // Play clones too
+            getClones().forEach(v => {
+                v.muted = (v !== videoElement); // mute others to avoid echo
+                v.play();
+            });
+        };
+        videoElement.onmousemove = e => { 
+            if (curD) return; 
+            const col = Number(videoElement.dataset.vcol); 
+            customCursor.style.top = `${e.clientY + 15}px`; 
+            if (col === 0) customCursor.style.left = `${e.clientX + 15}px`; 
+            else if (col === 1) customCursor.style.left = `${e.clientX - (customCursor.offsetWidth / 2)}px`; 
+            else customCursor.style.left = `${e.clientX - customCursor.offsetWidth - 15}px`; 
+        };
+        videoElement.onmouseleave = () => { 
+            if (curD) return; 
+            customCursor.style.display = 'none'; 
+            bgCanvasText.innerHTML = ""; 
+            getClones().forEach(v => {
+                v.muted = true;
+            });
+        };
+    }
+
+    document.querySelectorAll('video').forEach(v => initVideoEvents(v));
+
+    function updateAllGrids() {
+        const sw = document.body.clientWidth;
+        const sh = window.innerHeight;
+        const videoSize = Math.min(sw, sh) / 8.2; 
+        const gap = videoSize * 0.08;
+        const colPattern = [4, 2, 4, 2, 4];
+        const gstarIds = new Set(['video13','video14','video15','video16']);
+        const reelIds = new Set(['videoR1','videoR2']);
         const gridWidth = colPattern.length * videoSize + (colPattern.length - 1) * gap;
         const startX = (sw - gridWidth) / 2;
-        let index = 0; const gridVideos = Array.from(videos).filter(v => !reelIds.has(v.id));
-        colPattern.forEach((rows, colIndex) => {
-            const colX = startX + colIndex * (videoSize + gap); let colH = 0;
-            for (let i = 0; i < rows && index + i < gridVideos.length; i++) {
-                const v = gridVideos[index + i]; colH += gstarIds.has(v.id) ? (videoSize * 2 + gap) : videoSize;
-                if (i < rows - 1) colH += gap;
-            }
-            let y = (sh * 0.38) - (colH / 2);
-            for (let row = 0; row < rows && index < gridVideos.length; row++) {
-                const video = gridVideos[index]; const h = gstarIds.has(video.id) ? (videoSize * 2 + gap) : videoSize;
-                video.style.width = `${videoSize}px`; video.style.height = `${h}px`;
-                video.style.left = `${colX}px`; video.style.top = `${y}px`;
-                video.dataset.vcol = colIndex === 0 ? 0 : (colIndex === colPattern.length - 1 ? 2 : 1);
-                y += h + gap; index++;
-            }
-        });
-        const reelVideos = Array.from(videos).filter(v => reelIds.has(v.id)); const reelW = (gridWidth / 2) - (gap / 2);
-        let gridB = 0; gridVideos.forEach(v => { const b = parseFloat(v.style.top) + parseFloat(v.style.height); if (b > gridB) gridB = b; });
-        reelVideos.forEach((v, i) => {
-            v.style.width = `${reelW}px`; v.style.height = `${reelW * 0.5625}px`;
-            v.style.left = `${startX + (i * (reelW + gap))}px`; v.style.top = `${gridB + gap}px`;
-            v.dataset.vcol = 1;
+
+        document.querySelectorAll('.films-section').forEach(section => {
+            const sectionVideos = Array.from(section.querySelectorAll('video'));
+            let index = 0;
+            const gridVideos = sectionVideos.filter(v => !reelIds.has(v.id));
+            
+            colPattern.forEach((rows, colIndex) => {
+                const colX = startX + colIndex * (videoSize + gap); 
+                let colH = 0;
+                for (let i = 0; i < rows && index + i < gridVideos.length; i++) {
+                    const v = gridVideos[index + i]; 
+                    colH += gstarIds.has(v.id) ? (videoSize * 2 + gap) : videoSize;
+                    if (i < rows - 1) colH += gap;
+                }
+                let y = (sh * 0.38) - (colH / 2);
+                for (let row = 0; row < rows && index < gridVideos.length; row++) {
+                    const video = gridVideos[index]; 
+                    const h = gstarIds.has(video.id) ? (videoSize * 2 + gap) : videoSize;
+                    video.style.width = `${videoSize}px`; 
+                    video.style.height = `${h}px`;
+                    video.style.left = `${colX}px`; 
+                    video.style.top = `${y}px`;
+                    video.dataset.vcol = colIndex === 0 ? 0 : (colIndex === colPattern.length - 1 ? 2 : 1);
+                    y += h + gap; 
+                    index++;
+                }
+            });
+            const reelVideos = sectionVideos.filter(v => reelIds.has(v.id));
+            const reelW = (gridWidth / 2) - (gap / 2);
+            let gridB = 0;
+            gridVideos.forEach(v => { const b = parseFloat(v.style.top) + parseFloat(v.style.height); if (b > gridB) gridB = b; });
+            reelVideos.forEach((v, i) => {
+                v.style.width = `${reelW}px`; 
+                v.style.height = `${reelW * 0.5625}px`;
+                v.style.left = `${startX + (i * (reelW + gap))}px`; 
+                v.style.top = `${gridB + gap}px`;
+                v.dataset.vcol = 1;
+            });
         });
     }
-    updateGrid();
-    window.addEventListener('resize', updateGrid);
-    let audioCtx, visualizer, mediaNode, presets, presetKeys;
+    
+    updateAllGrids();
+    window.addEventListener('resize', updateAllGrids);
+
     function fit() {
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr;
+        canvas.width = window.innerWidth * dpr; 
+        canvas.height = window.innerHeight * dpr;
         if (visualizer) visualizer.setRendererSize(canvas.width, canvas.height);
     }
     window.addEventListener('resize', fit); fit();
+
     function initVisuals() {
         if (visualizer) return;
         try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             visualizer = butterchurn.createVisualizer(audioCtx, canvas, { width: canvas.width, height: canvas.height, pixelRatio: window.devicePixelRatio || 1, textureRatio: 1 });
-            mediaNode = audioCtx.createMediaElementSource(player); visualizer.connectAudio(mediaNode); mediaNode.connect(audioCtx.destination);
-            presets = butterchurnPresets.getPresets(); presetKeys = Object.keys(presets);
+            mediaNode = audioCtx.createMediaElementSource(player); 
+            visualizer.connectAudio(mediaNode); 
+            mediaNode.connect(audioCtx.destination);
+            presets = butterchurnPresets.getPresets(); 
+            presetKeys = Object.keys(presets);
             visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0);
-            const loop = () => { visualizer.render(); requestAnimationFrame(loop); }; loop();
+            const loop = () => { visualizer.render(); requestAnimationFrame(loop); }; 
+            loop();
         } catch (e) {}
     }
-    document.querySelectorAll('.track').forEach(btn => {
-        btn.onclick = (e) => {
-            e.stopPropagation(); initVisuals();
-            if (player.src.includes(btn.dataset.src) && !player.paused) { player.pause(); } 
-            else { player.src = btn.dataset.src; player.play(); document.querySelectorAll('.track').forEach(b => b.classList.toggle('is-playing', b === btn)); visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0); }
-        };
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.track');
+        if (btn) {
+            e.stopPropagation(); 
+            initVisuals();
+            const src = btn.dataset.src;
+            
+            if (player.src.includes(src) && !player.paused) { 
+                player.pause(); 
+            } else { 
+                player.src = src; 
+                player.play(); 
+                document.querySelectorAll('.track').forEach(b => {
+                    if (b.dataset.src === src) b.classList.add('is-playing');
+                    else b.classList.remove('is-playing');
+                });
+                if (visualizer) visualizer.loadPreset(presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]], 0.0); 
+            }
+        } else if (!e.target.closest('.header-link')) {
+            player.pause();
+        }
     });
-    document.addEventListener('click', (e) => { if (!e.target.closest('.track') && !e.target.closest('.header-link')) { player.pause(); } });
-    player.onpause = () => { canvas.style.opacity = '0'; document.body.classList.remove('visualizer-active'); document.querySelectorAll('.track').forEach(b => b.classList.remove('is-playing')); };
-    player.onplay = () => { initVisuals(); canvas.style.opacity = '1'; document.body.classList.add('visualizer-active'); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); };
-    let curD = null; let oX, oY;
-    videos.forEach(v => {
-        v.onmousedown = e => { curD = v; const r = v.getBoundingClientRect(); oX = e.clientX - r.left; oY = e.clientY - r.top; v.classList.add('dragging'); e.preventDefault(); };
-        v.onmouseenter = () => { if (curD) return; player.pause(); const detail = videoDetails[v.id] || ""; const col = Number(v.dataset.vcol); bgCanvasText.style.alignItems = col === 0 ? 'flex-start' : (col === 1 ? 'center' : 'flex-end'); bgCanvasText.style.textAlign = col === 0 ? 'left' : (col === 1 ? 'center' : 'right'); customCursor.innerHTML = detail; customCursor.style.display = 'block'; bgCanvasText.innerHTML = detail; v.muted = false; v.play(); };
-        v.onmousemove = e => { if (curD) return; const col = Number(v.dataset.vcol); customCursor.style.top = `${e.clientY + 15}px`; if (col === 0) customCursor.style.left = `${e.clientX + 15}px`; else if (col === 1) customCursor.style.left = `${e.clientX - (customCursor.offsetWidth / 2)}px`; else customCursor.style.left = `${e.clientX - customCursor.offsetWidth - 15}px`; };
-        v.onmouseleave = () => { if (curD) return; customCursor.style.display = 'none'; bgCanvasText.innerHTML = ""; v.muted = true; };
-    });
+
+    player.onpause = () => { 
+        canvas.style.opacity = '0'; 
+        document.body.classList.remove('visualizer-active'); 
+        document.querySelectorAll('.track').forEach(b => b.classList.remove('is-playing')); 
+    };
+    player.onplay = () => { 
+        initVisuals(); 
+        canvas.style.opacity = '1'; 
+        document.body.classList.add('visualizer-active'); 
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
+    };
+
     document.addEventListener('mousemove', e => { 
         if (curD) { 
-            const rect = filmsSection.getBoundingClientRect();
-            curD.style.left = `${e.clientX - oX - rect.left}px`; 
-            curD.style.top = `${e.clientY - oY - rect.top}px`; 
+            const parent = curD.closest('.films-section');
+            const rect = parent.getBoundingClientRect();
+            // Sync movement across all instances of this video
+            const id = curD.id;
+            const clones = document.querySelectorAll(`video[id="${id}"]`);
+            const x = e.clientX - oX - rect.left;
+            const y = e.clientY - oY - rect.top;
+            
+            clones.forEach(clone => {
+                clone.style.left = `${x}px`;
+                clone.style.top = `${y}px`;
+            });
+            
             bgCanvasText.innerHTML = ""; 
         } 
     });
     document.addEventListener('mouseup', () => { if (curD) { curD.classList.remove('dragging'); curD = null; } });
+
+    // INFINITE SCROLL
+    window.addEventListener('scroll', () => {
+        const viewH = window.innerHeight;
+        if (window.scrollY >= (totalH * 2) - viewH) {
+            window.scrollTo(0, window.scrollY - totalH);
+        } 
+        else if (window.scrollY <= 0) {
+            window.scrollTo(0, window.scrollY + totalH);
+        }
+    });
 });
 
 async function loadCV(e) { 
@@ -356,24 +502,33 @@ async function loadCV(e) {
     try { 
         const r = await fetch('files/nfo/cv.nfo?t=' + Date.now()); 
         if (!r.ok) throw new Error(); 
-        c.textContent = await r.text(); 
+        const t = await r.text(); 
+        const cleanText = t.trim(); 
+        c.textContent = cleanText; 
+        
+        c.style.fontSize = '12px';
+        c.style.lineHeight = '1';
+        c.style.transform = 'none';
+        
+        o.style.display = 'flex'; 
+        
+        const lines = cleanText.split(/\r\n|\r|\n/).length;
+        const safeZoneHeight = window.innerHeight - 320; 
+        const newSize = safeZoneHeight / lines; 
+        
+        c.style.fontSize = `${newSize}px`;
+        c.style.lineHeight = `${newSize}px`;
+        
+        const contentWidth = c.offsetWidth;
+        const viewportWidth = window.innerWidth;
+        if (contentWidth > viewportWidth) {
+            const scale = viewportWidth / contentWidth;
+            c.style.transform = `scale(${scale})`;
+        }
     } catch (err) { 
         c.textContent = ">>> ERROR: CV_NOT_FOUND"; 
-    }
-    o.style.display = 'flex';
-    
-    requestAnimationFrame(() => {
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const cw = c.offsetWidth;
-        const ch = c.offsetHeight;
-        
-        const scaleX = (vw * 0.95) / cw;
-        const scaleY = (vh * 0.9) / ch;
-        const scale = Math.min(scaleX, scaleY);
-        
-        c.style.transform = `scale(${scale})`;
-    });
+        o.style.display = 'flex'; 
+    } 
 }
 
 function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'transparent'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
