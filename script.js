@@ -1,5 +1,6 @@
 const RSS_SOURCES = ["https://thegrayzone.com/feed/", "https://www.ufosightingsdaily.com/feeds/posts/default", "https://www.theblackvault.com/documentarchive/feed/"];
 /*"https://0dayfans.com/feed.rss"*/
+
 const imageDetails = {
     grid1: "SPEEDSICK INDUSTRIES 002<br>The First Five Years<br>Speedsick Industries<br>4x CD-R boxset",
     grid2: "KEY008<br>Spectator Death<br>The Key Records<br>Cassette",
@@ -10,7 +11,8 @@ const imageDetails = {
     grid7: "UNIX666-17<br>djss250417-dj.sbd<br>Escalationist<br>CD-R",
     grid8: "UNIX666-16<br>Nothing Is Original (Bootleg Remixes And Edits 2017-2025)<br>Escalationist<br>CD-R<br>",
     grid9: "UNIX666-14<br>Non-Diagetic Instrumentals Vol. I<br>Escalationist<br>CD-R",
-    };
+};
+
 const IPINFO_TOKEN = '4b45867ce7c229';
 
 const TetrisGallery = {
@@ -20,6 +22,8 @@ const TetrisGallery = {
     isLandscape: true,
     TRAVEL_TIME_MS: 2500
 };
+
+// --- SYSTEM FUNCTIONS ---
 
 async function updateSystemParams() {
     const hostEl = document.getElementById('host-val');
@@ -63,7 +67,7 @@ function getNearestSmokes(lat, lng) {
             if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
                 const store = results[0];
                 display.innerText = store.name.toUpperCase();
-                linkDiv.innerHTML = `<a href="https://www.google.com/maps/dir/?api=1&destination=${store.geometry.location.lat()},${store.geometry.location.lng()}" target="_blank" class="conky-link">>> NAVIGATE</a>`;
+                linkDiv.innerHTML = `<a href="http://googleusercontent.com/maps.google.com/?q=${store.geometry.location.lat()},${store.geometry.location.lng()}" target="_blank" class="conky-link">>> NAVIGATE</a>`;
             } else {
                 display.innerText = "NONE_FOUND";
             }
@@ -83,26 +87,111 @@ async function updateIntelligence() {
         } catch (err) {}
     }
     const tickerText = " +++ " + headlines.join(" +++ ") + " +++ ";
-    document.getElementById('rss-top').innerText = tickerText;
-    document.getElementById('rss-bottom').innerText = tickerText;
-    const duration = (headlines.length * 4) + "s";
-    document.getElementById('rss-top').style.animationDuration = duration;
-    document.getElementById('rss-bottom').style.animationDuration = duration;
+    
+    ['rss-top', 'rss-bottom', 'rss-left', 'rss-right'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerText = tickerText;
+            const baseTime = id.includes('left') || id.includes('right') ? 6 : 4;
+            el.style.animationDuration = (headlines.length * baseTime) + "s";
+        }
+    });
 }
 
 function handleEnterClick() {
     document.getElementById('splash-screen').style.display = 'none';
     document.getElementById('container').style.visibility = 'visible';
     document.getElementById('conky-sidebar').style.display = 'block';
+    
+    // FIX: Use 'block' to respect marquee logic
     document.querySelectorAll('.speedsick-marquee').forEach(el => el.style.display = 'block');
+    
     updateSystemParams();
     updateIntelligence();
+    
     if (typeof audioTracks !== 'undefined') {
         const audio = document.getElementById('audioPlayer');
         audio.src = audioTracks[Math.floor(Math.random() * audioTracks.length)];
         audio.play().then(() => initVisualizer()).catch(e => console.log("Audio blocked"));
     }
+    
+    // Init loop
+    initContainerLoop();
 }
+
+function initContainerLoop() {
+    const container = document.getElementById('container');
+    const originalSection = container.querySelector('.loop-section');
+    
+    const images = originalSection.querySelectorAll('img');
+    let loadedCount = 0;
+    const totalImages = images.length;
+
+    const startLoop = () => {
+        const clone = originalSection.cloneNode(true);
+        container.appendChild(clone);
+        
+        let sectionHeight = originalSection.offsetHeight;
+        // Start exactly at the beginning of the second set
+        container.scrollTop = sectionHeight;
+
+        container.addEventListener('scroll', () => {
+            sectionHeight = originalSection.offsetHeight;
+            const scrollPos = container.scrollTop;
+            const viewHeight = container.clientHeight;
+            
+            // Loop Logic:
+            // 1. If we scroll UP into the first set (top < 10px), jump to start of second set.
+            if (scrollPos <= 5) {
+                container.scrollTop = sectionHeight + 5;
+            } 
+            // 2. If we scroll DOWN past the second set (bottom of view hits bottom of content), jump to end of first set.
+            else if (scrollPos >= (sectionHeight * 2) - viewHeight - 5) {
+                container.scrollTop = sectionHeight - viewHeight - 5;
+            }
+        });
+    };
+
+    if (totalImages === 0) {
+        startLoop();
+    } else {
+        images.forEach(img => {
+            if (img.complete) {
+                loadedCount++;
+                if (loadedCount === totalImages) startLoop();
+            } else {
+                img.onload = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) startLoop();
+                };
+            }
+        });
+    }
+}
+
+// Delegate hover for grid items (original + clone)
+document.addEventListener('mouseover', (e) => {
+    const item = e.target.closest('.grid-item');
+    if (item) {
+        const cursor = document.getElementById('custom-cursor');
+        cursor.innerHTML = imageDetails[item.id];
+        cursor.style.display = 'block';
+    }
+});
+
+document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('.grid-item')) {
+        document.getElementById('custom-cursor').style.display = 'none';
+    }
+});
+
+document.addEventListener('mousemove', (e) => {
+    const cursor = document.getElementById('custom-cursor');
+    if (cursor.style.display === 'block') {
+        cursor.style.left = (e.clientX + 15) + 'px';
+        cursor.style.top = e.clientY + 'px';
+    }
+});
 
 function toggleAbout() {
     const overlay = document.getElementById('aboutOverlay');
@@ -118,7 +207,7 @@ function openGallery() {
     const overlay = document.getElementById('artGalleryOverlay');
     const container = document.getElementById('artGalleryContent');
     overlay.style.display = 'block';
-    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
+    overlay.style.backgroundColor = 'transparent';
     container.innerHTML = '';
     TetrisGallery.isSpawning = true;
     TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight;
@@ -134,9 +223,7 @@ function openGallery() {
         window.removeEventListener('click', closeHandler);
     };
     setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
-}
-
-async function spawnSequence() {
+}async function spawnSequence() {
     if (!TetrisGallery.isSpawning) return;
     const STAGE = document.getElementById('artGalleryContent');
     const screenWidth = window.innerWidth;
@@ -162,14 +249,23 @@ async function spawnSequence() {
     }
 
     const ratio = img.naturalHeight / img.naturalWidth;
-    const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); 
+
+    // --- REFINED "TETRIS" SIZING ---
+    // Width: 18% to 22% of screen width (Tighter, more consistent blocks)
+    // Raised min (was 0.15), Lowered max (was 0.25)
+    const baseWidth = screenWidth * (Math.random() * 0.04 + 0.18); 
     let width = baseWidth;
     let height = width * ratio;
-    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.4 : screenHeight * 0.35;
+    
+    // Max Height: 45% (Critical for stacking logic)
+    const maxHeight = screenHeight * 0.45;
+    
     if (height > maxHeight) {
         height = maxHeight;
         width = height / ratio;
     }
+    // -------------------------------
+
     let bestX, bestY, bestImpactX = -Infinity;
     const buffer = 15;
     for (let i = 0; i < 400; i++) {
@@ -197,6 +293,7 @@ async function spawnSequence() {
     }
     const finalX = TetrisGallery.isLandscape ? (bestImpactX - width - buffer) : bestX;
     const finalY = TetrisGallery.isLandscape ? bestY : (bestImpactX - height - buffer);
+    
     if (bestImpactX < (TetrisGallery.isLandscape ? width : height) + 40) {
         STAGE.innerHTML = '';
         TetrisGallery.map = TetrisGallery.isLandscape ? 
@@ -205,6 +302,7 @@ async function spawnSequence() {
         spawnSequence();
         return;
     }
+
     const block = document.createElement('div');
     block.className = 'art-block';
     block.style.width = `${width}px`;
@@ -232,7 +330,6 @@ async function spawnSequence() {
     await new Promise(r => setTimeout(r, TetrisGallery.TRAVEL_TIME_MS + 100));
     spawnSequence();
 }
-
 function initVisualizer() {
     const ctx = new(window.AudioContext || window.webkitAudioContext)();
     const can = document.getElementById('canvas');
@@ -265,17 +362,4 @@ document.querySelectorAll('.draggable-video').forEach(v => {
         }
     });
     window.addEventListener('mouseup', () => drag = false);
-});
-
-const cursor = document.getElementById('custom-cursor');
-document.querySelectorAll('.grid-item').forEach(img => {
-    img.onmouseenter = () => {
-        cursor.innerHTML = imageDetails[img.id];
-        cursor.style.display = 'block';
-    };
-    img.onmouseleave = () => cursor.style.display = 'none';
-    img.onmousemove = (e) => {
-        cursor.style.left = (e.clientX + 15) + 'px';
-        cursor.style.top = e.clientY + 'px';
-    };
 });
