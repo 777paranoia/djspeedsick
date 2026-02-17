@@ -1,121 +1,294 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>GEOGRAPHIC_DEFRAG // BRUTALIST_SISYPHUS</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; cursor: none; }
-        canvas { display: block; filter: contrast(180%) brightness(110%); }
-    </style>
-</head>
-<body>
+<!doctype html>
+<html>
+<body style="margin:0;background:black;overflow:hidden">
 <canvas id="c"></canvas>
 
 <script>
-/**
- * BRUTALIST TOPOGRAPHY // CORNER_CALCULATION
- */
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let w, h, frame = 0;
-const COLS = 50, ROWS = 50, SIZE = 22;
-let mesh = [];
-let agent = { x: 25, z: 25, target: null, calc: 0 };
+const canvas = document.getElementById("c");
+const gl = canvas.getContext("webgl");
+if(!gl) document.body.textContent="WebGL unavailable";
 
-function init() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    for(let i=0; i<COLS; i++) {
-        mesh[i] = [];
-        for(let j=0; j<ROWS; j++) {
-            mesh[i][j] = { y: 0, morph: 0, v: 0 };
-        }
-    }
+/* ========= FULLSCREEN TRIANGLE ========= */
+
+const vert = `
+attribute vec2 p;
+void main(){ gl_Position = vec4(p,0.0,1.0); }
+`;
+
+/* ========= 3D FRACTAL ========= */
+
+const frag = `
+precision highp float;
+
+uniform vec2 r;
+uniform float t;
+
+/* ---------- rotations ---------- */
+
+mat3 rotY(float a){
+  float c=cos(a), s=sin(a);
+  return mat3(
+    c,0.0,-s,
+    0.0,1.0,0.0,
+    s,0.0,c
+  );
 }
 
-function project(x, y, z) {
-    let rotX = 0.9, rotY = frame * 0.003;
-    let x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
-    let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
-    let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
-    let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
-    let scale = 1100 / (1100 + z2 + 800);
-    return { x: w/2 + x1 * scale, y: h/2 + y2 * scale };
+mat3 rotX(float a){
+  float c=cos(a), s=sin(a);
+  return mat3(
+    1.0,0.0,0.0,
+    0.0,c,-s,
+    0.0,s,c
+  );
 }
 
-function update() {
-    frame++;
-    // THE ENTROPY: Liquid geographic bubbling
-    for(let i=0; i<COLS; i++) {
-        for(let j=0; j<ROWS; j++) {
-            let m = mesh[i][j];
-            let n = Math.sin(i*0.15 + frame*0.04) * Math.cos(j*0.15 + frame*0.03) * 70;
-            // Domes are "soft" unless the agent is calculating their corners
-            if (m.morph < 0.5) {
-                m.y += (n - m.y) * 0.08;
-                m.morph = Math.max(0, m.morph - 0.01);
-            }
-        }
-    }
+/* ---------- util ---------- */
 
-    // THE AGENT: Polyhedric Resolver
-    if (!agent.target) {
-        let rx = Math.floor(Math.random() * COLS);
-        let rz = Math.floor(Math.random() * ROWS);
-        agent.target = mesh[rx][rz];
-        agent.calc = 0;
-    } else {
-        agent.calc += 0.9;
-        agent.target.morph += 0.04; // Adding corners
-        
-        // As corners are calculated, height is suppressed into a flat crystal
-        agent.target.y *= 0.92; 
-
-        // THE SISYPHUS LIMIT: Panic/Abandonment
-        if (agent.calc > 90 || Math.random() < 0.01) {
-            agent.target = null;
-        }
-    }
+mat3 lookAt(vec3 ro, vec3 ta){
+  vec3 f = normalize(ta - ro);
+  vec3 up = vec3(0.0,1.0,0.0);
+  vec3 rgt = normalize(cross(f, up));
+  vec3 up2 = cross(rgt, f);
+  return mat3(rgt, up2, f);
 }
 
-function draw() {
-    // THE FEEDBACK: Additive "Smear" (Mimicking your 3rd image)
-    ctx.save();
-    ctx.globalAlpha = 0.94;
-    ctx.drawImage(canvas, 1, 1, w-2, h-2);
-    ctx.restore();
+/* ---------- noise (smooth random) ---------- */
 
-    ctx.fillStyle = 'rgba(0,0,0,0.1)';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.lineWidth = 1;
-    for(let i=0; i<COLS-1; i++) {
-        for(let j=0; j<ROWS-1; j++) {
-            let m = mesh[i][j];
-            let p1 = project((i-COLS/2)*SIZE, m.y, (j-ROWS/2)*SIZE);
-            let p2 = project((i+1-COLS/2)*SIZE, mesh[i+1][j].y, (j-ROWS/2)*SIZE);
-            let p3 = project((i-COLS/2)*SIZE, mesh[i][j+1].y, (j+1-ROWS/2)*SIZE);
-            
-            ctx.beginPath();
-            // Spheric = Red/Pink wireframe. Polyhedric = Cyan sharp crystal.
-            ctx.strokeStyle = m.morph > 0.4 ? '#00ffff' : '#ff0055';
-            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
-            ctx.closePath();
-            ctx.stroke();
-
-            // Crystallization density (from your 2nd image)
-            if (m.morph > 0.8) {
-                ctx.strokeStyle = '#fff';
-                ctx.strokeRect(p1.x-2, p1.y-2, 4, 4);
-            }
-        }
-    }
+float hash11(float p){
+  p = fract(p*0.1031);
+  p *= p + 33.33;
+  p *= p + p;
+  return fract(p);
 }
 
-init();
-function loop() { update(); draw(); requestAnimationFrame(loop); }
-loop();
-window.onresize = init;
+float hash31(vec3 p){
+  p = fract(p*0.1031);
+  p += dot(p, p.yzx + 33.33);
+  return fract((p.x + p.y) * p.z);
+}
+
+float noise(vec3 x){
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f*f*(3.0-2.0*f);
+
+  float n000 = hash31(i + vec3(0,0,0));
+  float n100 = hash31(i + vec3(1,0,0));
+  float n010 = hash31(i + vec3(0,1,0));
+  float n110 = hash31(i + vec3(1,1,0));
+  float n001 = hash31(i + vec3(0,0,1));
+  float n101 = hash31(i + vec3(1,0,1));
+  float n011 = hash31(i + vec3(0,1,1));
+  float n111 = hash31(i + vec3(1,1,1));
+
+  float n00 = mix(n000, n100, f.x);
+  float n10 = mix(n010, n110, f.x);
+  float n01 = mix(n001, n101, f.x);
+  float n11 = mix(n011, n111, f.x);
+
+  float n0 = mix(n00, n10, f.y);
+  float n1 = mix(n01, n11, f.y);
+
+  return mix(n0, n1, f.z);
+}
+
+float fbm(vec3 p){
+  float a = 0.5;
+  float s = 0.0;
+  for(int i=0;i<5;i++){
+    s += a * noise(p);
+    p *= 2.02;
+    a *= 0.5;
+  }
+  return s;
+}
+
+vec3 fbm3(vec3 p){
+  return vec3(
+    fbm(p + vec3(17.1, 0.0, 0.0)),
+    fbm(p + vec3(0.0, 29.7, 0.0)),
+    fbm(p + vec3(0.0, 0.0, 41.3))
+  );
+}
+
+/* ---------- Mandelbox distance estimator ---------- */
+
+float mandelbox(vec3 p){
+
+  vec3 z = p;
+  float scale = 2.0;
+  float fixedRadius = 1.0;
+  float minRadius = 0.5;
+  float dr = 1.0;
+
+  for(int i=0;i<10;i++){
+
+    z = clamp(z,-1.0,1.0)*2.0 - z;
+
+    float r2 = dot(z,z);
+
+    if(r2 < minRadius)
+      z *= fixedRadius/minRadius;
+    else if(r2 < fixedRadius)
+      z *= fixedRadius/r2;
+
+    z = scale*z + p;
+    dr = dr*abs(scale) + 1.0;
+  }
+
+  return length(z)/abs(dr);
+}
+
+/* ---------- SCENE (map) ---------- */
+
+float map(vec3 p){
+
+  // base object rotation (keep it subtle)
+  p *= rotY(t*0.16);
+  p *= rotX(sin(t*0.21)*0.40);
+
+  // entropic translation (NOT a clean orbit)
+  vec3 drift = (fbm3(vec3(t*0.45, 0.0, 0.0)) - 0.5) * 2.0;
+  p -= vec3(0.55,0.40,0.55) * drift;
+
+  // domain warping: makes the fractal feel alive
+  vec3 w = fbm3(p*0.85 + vec3(0.0, t*0.35, 0.0));
+  p += (w - 0.5) * 0.55;
+
+  // "breathing" scale but irregular
+  float s = 1.0 + 0.20*(fbm(vec3(t*0.6, 1.7, 9.2)) - 0.5);
+  p /= s;
+
+  return mandelbox(p);
+}
+
+/* ---------- surface normal ---------- */
+
+vec3 normal(vec3 p){
+  float e = 0.002;
+  vec2 h = vec2(e,0);
+  return normalize(vec3(
+    map(p+h.xyy)-map(p-h.xyy),
+    map(p+h.yxy)-map(p-h.yxy),
+    map(p+h.yyx)-map(p-h.yyx)
+  ));
+}
+
+/* ---------- palette ---------- */
+
+vec3 palette(float x){
+  vec3 a = vec3(0.45,0.42,0.40);
+  vec3 b = vec3(0.55,0.55,0.55);
+  vec3 c = vec3(1.0,0.85,0.65);
+  vec3 d = vec3(0.0,0.18,0.42);
+  return a + b*cos(6.283*(c*x + d));
+}
+
+/* ---------- shading ---------- */
+
+void main(){
+
+  vec2 uv = (gl_FragCoord.xy/r - 0.1)*3.34;
+  uv.x *= r.x/r.y;
+
+  // entropic camera position (smooth random walk)
+  vec3 camJ = (fbm3(vec3(t*0.22, 4.1, 8.3)) - 0.5) * 2.0;
+  vec3 ro = vec3(-2.0,0.1,-3.5) + camJ * vec3(1.4, 0.9, 1.2);
+
+  // entropic look target (camera "hunts" around)
+  vec3 taJ = (fbm3(vec3(t*0.18, 11.7, 2.9)) - 0.5) * 2.0;
+  vec3 ta = vec3(0.0,0.0,0.0) + taJ * vec3(0.9, 0.6, 0.9);
+
+  mat3 cam = lookAt(ro, ta);
+
+  vec3 rd = normalize(cam * vec3(uv, 1.5));
+
+  float d = 0.0;
+  float hit = 0.0;
+
+  // slightly more steps because warp can create thinner features
+  for(int i=0;i<150;i++){
+    vec3 p = ro + rd*d;
+    float h = map(p);
+    if(h < 0.0008){ hit = 1.0; break; }
+    d += h;
+    if(d > 22.0) break;
+  }
+
+  vec3 col = vec3(0.06);
+
+  if(hit > 0.5){
+
+    vec3 p = ro + rd*d;
+    vec3 n = normal(p);
+
+    // light direction also slowly wanders (subtle)
+    vec3 lj = (fbm3(vec3(t*0.12, 21.0, 1.0)) - 0.5) * 2.0;
+    vec3 light = normalize(vec3(-1.5,0.6,-0.1) + lj*vec3(0.5,0.3,0.5));
+
+    float diff = max(dot(n,light),0.08);
+    float rim  = pow(1.0 - max(dot(n,-rd),0.0), 2.2);
+
+    float glow = exp(-0.85*d);
+
+    // hue drift driven by fbm, not linear time
+    float hue = d*0.30 + 2.2*fbm(vec3(t*0.9, d*0.2, 3.7));
+
+    col = palette(hue);
+
+    float ambient = 0.33;
+
+    col *= (ambient + diff*1.55 + rim*1.65);
+    col *= glow;
+  }
+
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+function compile(type,src){
+  const s = gl.createShader(type);
+  gl.shaderSource(s,src);
+  gl.compileShader(s);
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog,compile(gl.VERTEX_SHADER,vert));
+gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,frag));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,
+  new Float32Array([-1,-1,3,-1,-1,3]),
+  gl.STATIC_DRAW);
+
+const loc = gl.getAttribLocation(prog,"p");
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+const ur = gl.getUniformLocation(prog,"r");
+const ut = gl.getUniformLocation(prog,"t");
+
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  gl.viewport(0,0,canvas.width,canvas.height);
+}
+addEventListener("resize",resize);
+resize();
+
+/* slow time scale */
+function frame(ms){
+  gl.uniform2f(ur, canvas.width, canvas.height);
+  gl.uniform1f(ut, ms*0.00001);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  requestAnimationFrame(frame);
+}
+frame(0);
 </script>
 </body>
 </html>

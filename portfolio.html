@@ -284,23 +284,29 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(cloneAudio);
     container.appendChild(cloneFilms);
 
-    // INIT SCROLL POSITION
-    let totalH = 0;
-    const recalculateHeight = () => {
-        totalH = originalAudio.offsetHeight + originalFilms.offsetHeight;
-        if (window.scrollY < 50) {
-            window.scrollTo(0, totalH); 
+    // FIX: ROBUST SCROLL INITIALIZATION
+    const initScroll = () => {
+        // Use scrollHeight / 2 to find exact middle (start of clone)
+        // This is safer than offsetHeight which can change if images load late
+        const totalScroll = document.documentElement.scrollHeight;
+        const middlePoint = totalScroll / 2;
+        
+        // Start in the middle so you can scroll UP immediately
+        if (window.scrollY < 100) {
+            window.scrollTo(0, middlePoint);
         }
     };
-    setTimeout(recalculateHeight, 100); 
-    window.addEventListener('resize', recalculateHeight);
+    
+    // Attempt init immediately and again after a delay to catch layout shifts
+    initScroll();
+    setTimeout(initScroll, 200);
+    window.addEventListener('resize', initScroll);
 
     helpIcon.onmouseenter = () => { tip.style.display = 'block'; };
     helpIcon.onmouseleave = () => { tip.style.display = 'none'; };
 
     // VIDEO SYNC AND DRAG LOGIC
     function initVideoEvents(videoElement) {
-        // Sync Helper: Find all videos with the same ID
         function getClones() {
             return Array.from(document.querySelectorAll(`video[id="${videoElement.id}"]`));
         }
@@ -323,10 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
             customCursor.innerHTML = detail; 
             customCursor.style.display = 'block'; 
             bgCanvasText.innerHTML = detail; 
-            
-            // Play clones too
             getClones().forEach(v => {
-                v.muted = (v !== videoElement); // mute others to avoid echo
+                v.muted = (v !== videoElement);
                 v.play();
             });
         };
@@ -434,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation(); 
             initVisuals();
             const src = btn.dataset.src;
-            
             if (player.src.includes(src) && !player.paused) { 
                 player.pause(); 
             } else { 
@@ -467,30 +470,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (curD) { 
             const parent = curD.closest('.films-section');
             const rect = parent.getBoundingClientRect();
-            // Sync movement across all instances of this video
             const id = curD.id;
             const clones = document.querySelectorAll(`video[id="${id}"]`);
             const x = e.clientX - oX - rect.left;
             const y = e.clientY - oY - rect.top;
-            
             clones.forEach(clone => {
                 clone.style.left = `${x}px`;
                 clone.style.top = `${y}px`;
             });
-            
             bgCanvasText.innerHTML = ""; 
         } 
     });
     document.addEventListener('mouseup', () => { if (curD) { curD.classList.remove('dragging'); curD = null; } });
 
-    // INFINITE SCROLL
+    // FIX: INFINITE SCROLL LOGIC
     window.addEventListener('scroll', () => {
-        const viewH = window.innerHeight;
-        if (window.scrollY >= (totalH * 2) - viewH) {
-            window.scrollTo(0, window.scrollY - totalH);
+        const totalHeight = document.documentElement.scrollHeight;
+        const halfHeight = totalHeight / 2;
+        
+        // Loop Down (Past Bottom) -> Jump to Middle
+        if (window.scrollY >= totalHeight - window.innerHeight - 50) {
+            window.scrollTo(0, window.scrollY - halfHeight);
         } 
+        // Loop Up (Past Top) -> Jump to Middle
         else if (window.scrollY <= 0) {
-            window.scrollTo(0, window.scrollY + totalH);
+            window.scrollTo(0, window.scrollY + halfHeight);
         }
     });
 });
@@ -505,20 +509,15 @@ async function loadCV(e) {
         const t = await r.text(); 
         const cleanText = t.trim(); 
         c.textContent = cleanText; 
-        
         c.style.fontSize = '12px';
         c.style.lineHeight = '1';
         c.style.transform = 'none';
-        
         o.style.display = 'flex'; 
-        
         const lines = cleanText.split(/\r\n|\r|\n/).length;
         const safeZoneHeight = window.innerHeight - 320; 
         const newSize = safeZoneHeight / lines; 
-        
         c.style.fontSize = `${newSize}px`;
         c.style.lineHeight = `${newSize}px`;
-        
         const contentWidth = c.offsetWidth;
         const viewportWidth = window.innerWidth;
         if (contentWidth > viewportWidth) {
@@ -532,15 +531,25 @@ async function loadCV(e) {
 }
 
 function openGallery(e) { e.stopPropagation(); const overlay = document.getElementById('artGalleryOverlay'); const container = document.getElementById('artGalleryContent'); overlay.style.display = 'block'; overlay.style.backgroundColor = 'transparent'; container.innerHTML = ''; TetrisGallery.isSpawning = true; TetrisGallery.isLandscape = window.innerWidth >= window.innerHeight; TetrisGallery.map = TetrisGallery.isLandscape ? new Array(window.innerHeight).fill(window.innerWidth) : new Array(window.innerWidth).fill(window.innerHeight); TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; spawnSequence(); const closeHandler = () => { overlay.style.display = 'none'; TetrisGallery.isSpawning = false; container.innerHTML = ''; window.removeEventListener('click', closeHandler); }; setTimeout(() => { window.addEventListener('click', closeHandler); }, 50); }
+
+// FIX: UPDATED TETRIS SIZING (19-21% Width, 40% Max Height)
 async function spawnSequence() {
     if (!TetrisGallery.isSpawning) return; const STAGE = document.getElementById('artGalleryContent'); const screenWidth = window.innerWidth; const screenHeight = window.innerHeight;
     if (TetrisGallery.availableIndices.length === 0) { TetrisGallery.availableIndices = [...Array(galleryImages.length).keys()]; }
     const randomIndex = Math.floor(Math.random() * TetrisGallery.availableIndices.length); const imageIndex = TetrisGallery.availableIndices.splice(randomIndex, 1)[0]; const url = galleryImages[imageIndex];
     const img = new Image(); img.src = url; await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
     if (!img.complete || img.naturalWidth === 0) { spawnSequence(); return; }
-    const ratio = img.naturalHeight / img.naturalWidth; const baseWidth = screenWidth * (Math.random() * 0.04 + 0.12); let width = baseWidth; let height = width * ratio;
-    const maxHeight = TetrisGallery.isLandscape ? screenHeight * 0.4 : screenHeight * 0.35;
+    
+    const ratio = img.naturalHeight / img.naturalWidth; 
+    
+    // TIGHT SIZE CONTROL: 19% to 21%
+    const baseWidth = screenWidth * (Math.random() * 0.02 + 0.19); 
+    let width = baseWidth; let height = width * ratio;
+    
+    // MAX HEIGHT CAP: 40%
+    const maxHeight = screenHeight * 0.40;
     if (height > maxHeight) { height = maxHeight; width = height / ratio; }
+    
     let bestImpactX = -Infinity; let bestX, bestY; const buffer = 15;
     for (let i = 0; i < 400; i++) {
         if (TetrisGallery.isLandscape) {
