@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Void City</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#000}
+  canvas#c{position:fixed;inset:0;display:block;width:100vw;height:100vh;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script id="simFrag" type="x-shader/x-fragment">
+precision highp float;
+uniform sampler2D u_prev;
+uniform sampler2D u_window;
+uniform vec2  u_resolution;
+uniform float u_time;
+uniform float u_dt;
+
+float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float hash1(float x){ return fract(sin(x*127.1)*43758.5); }
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec4 win = texture2D(u_window, uv);
+  float isGlass = 1.0 - clamp(win.a, 0.0, 1.0);
+  if(isGlass < 0.1){ gl_FragColor = vec4(0.0); return; }
+
+  vec2 texel = 1.0 / u_resolution;
+  vec4 prev = texture2D(u_prev, uv);
+  float h    = prev.r;
+  float vel  = prev.g;
+  float seed = prev.b;
+
+  float spawnRnd = hash(uv + vec2(floor(u_time * 3.0)));
+  float colId    = floor(uv.x * 60.0);
+  float spawnT   = hash1(colId + floor(u_time * 0.4) * 97.0);
+float spawnCol = step(0.92, spawnRnd) * step(0.5, isGlass);
+float newDrop  = spawnCol * 1.4;
+  vec4 above = texture2D(u_prev, uv + vec2(0.0, texel.y * 2.0));
+  float flowIn = above.r * 0.35;
+
+  h = h * 0.92 + flowIn + newDrop * 0.06;
+  h = clamp(h, 0.0, 1.0);
+  h *= 0.985;
+  float flowOut = smoothstep(0.3, 0.9, h) * 0.3;
+  h -= flowOut;
+  h = clamp(h, 0.0, 1.0);
+  h *= isGlass;
+
+  gl_FragColor = vec4(h, vel, seed, 1.0);
+}
+</script>
+
+<script id="frag" type="x-shader/x-fragment">
+precision highp float;
+
+uniform vec2  u_resolution;
+uniform float u_time;
+uniform vec2  u_mouse;
+uniform float u_blink;
+uniform int   u_mode;
+uniform float u_flash;
+uniform float u_shake;
+
+uniform sampler2D u_texB1,u_texB2,u_texB3,u_texB4,u_texB5,u_texB6;
+uniform sampler2D u_texSkyline,u_texWindow;
+uniform sampler2D u_texBH;
+uniform sampler2D u_water;
+
+#define PI 3.14159265359
+
+float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+mat2 rot(float a){ float s=sin(a),c=cos(a); return mat2(c,-s,s,c); }
+
+float sdBox(vec3 p,vec3 b){
+  vec3 q=abs(p)-b;
+  return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+float rain(vec2 uv,float density,float speed,float opacity){
+  float depth=clamp((uv.y+1.0)*0.5,0.0,1.0);
+  float cols=mix(22.0,120.0,depth);
+  vec2 p=uv*vec2(cols,1.0);
+  vec2 id=floor(p);
+  float rnd=hash2(id);
+  float y=fract(fract(p).y+u_time*speed*(0.6+rnd));
+  float w=mix(0.030,0.004,depth);
+  float core=smoothstep(w,0.0,abs(fract(p).x-0.5));
+  float drop=core*(0.22*smoothstep(0.12,0.0,y)+(smoothstep(0.0,0.30,y)*smoothstep(1.0,0.62,y)));
+  
+  // FIXED: Replaced hard 'step' with 'smoothstep' and added rnd variance for soft transparency
+  float softMask = smoothstep(1.0-density, 1.0-(density*0.5), rnd);
+  return drop * softMask * opacity * (0.4 + 0.6 * rnd);
+}
+
+float snow(vec2 uv,float size,float speed,float opacity){
+  vec2 grid=uv*size;
+  vec2 id=floor(grid);
+  vec2 f=fract(grid)-0.5;
+  f.y+=fract(u_time*speed+hash2(id)*15.0)-0.5;
+  f.x+=sin(u_time*0.5+hash2(id)*6.2831)*0.2;
+  return smoothstep(.05,0.0,length(f))*hash2(id)*opacity;
+}
+
+vec2 mapScene(vec3 p){
+  vec2 res=vec2(1000.0,-1.0);
+  float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
+  float d2=sdBox(p-vec3(-4.2,0.0,7.0), vec3(1.2,12.0,1.5)); if(d2<res.x) res=vec2(d2,2.0);
+  float d3=sdBox(p-vec3(-5.4,0.0,12.0),vec3(1.2,12.0,1.5)); if(d3<res.x) res=vec2(d3,3.0);
+  float d4=sdBox(p-vec3( 3.0,0.0,2.5), vec3(1.2,12.0,1.5)); if(d4<res.x) res=vec2(d4,4.0);
+  float d5=sdBox(p-vec3( 4.2,0.0,7.5), vec3(1.2,12.0,1.5)); if(d5<res.x) res=vec2(d5,5.0);
+  float d6=sdBox(p-vec3( 5.4,0.0,12.5),vec3(1.2,12.0,1.5)); if(d6<res.x) res=vec2(d6,6.0);
+  return res;
+}
+
+vec3 sampleBuilding(float id,vec2 texUV){
+  vec2 uv=abs(fract(texUV*0.25)*2.0-1.0);
+  if(id<1.5) return texture2D(u_texB1,uv).rgb;
+  if(id<2.5) return texture2D(u_texB2,uv).rgb;
+  if(id<3.5) return texture2D(u_texB3,uv).rgb;
+  if(id<4.5) return texture2D(u_texB4,uv).rgb;
+  if(id<5.5) return texture2D(u_texB5,uv).rgb;
+  return texture2D(u_texB6,uv).rgb;
+}
+
+vec2 waterNormal(vec2 uv){
+  vec2 texel = 1.0 / u_resolution;
+  float hL = texture2D(u_water, uv - vec2(texel.x, 0.0)).r;
+  float hR = texture2D(u_water, uv + vec2(texel.x, 0.0)).r;
+  float hD = texture2D(u_water, uv - vec2(0.0, texel.y)).r;
+  float hU = texture2D(u_water, uv + vec2(0.0, texel.y)).r;
+  return vec2(hL - hR, hD - hU) * 8.0;
+}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-0.5*u_resolution.xy)/u_resolution.y;
+  vec2 screenUV=gl_FragCoord.xy/u_resolution.xy;
+  vec2 m=u_mouse*0.35;
+
+  vec3 ro=vec3(0.0,0.0,-4.5);
+  vec3 rd=normalize(vec3(uv,1.4));
+  rd.yz*=rot(-m.y*0.5);
+  rd.xz*=rot(-m.x*0.6);
+
+  if(u_mode==3){
+    float sx=(hash2(vec2(floor(u_time*40.0),1.7))-0.5)*0.020*u_shake;
+    float sy=(hash2(vec2(floor(u_time*40.0),8.3))-0.5)*0.016*u_shake;
+    rd.xz*=rot(sx); rd.yz*=rot(sy);
+  }
+
+  float t=0.0; vec2 hit=vec2(0.0);
+  for(int i=0;i<90;i++){
+    hit=mapScene(ro+rd*t);
+    if(hit.x<0.001||t>70.0) break;
+    t+=hit.x;
+  }
+  bool isSky=(t>=70.0);
+
+  vec3 colorStorm=vec3(0.008,0.018,0.040);
+  vec3 skyTone=(u_mode==3)
+    ? mix(colorStorm,vec3(0.015,0.030,0.060),exp(-max(rd.y,0.0)*3.5))
+    : mix(vec3(0.01,0.02,0.04),vec3(0.35,0.20,0.08),exp(-max(rd.y,0.0)*4.0));
+
+  vec3 sceneCol=vec3(0.0);
+
+  if(!isSky){
+    vec3 p=ro+rd*t;
+    vec3 n=normalize(vec3(
+      mapScene(p+vec3(0.01,0,0)).x-mapScene(p-vec3(0.01,0,0)).x,
+      mapScene(p+vec3(0,0.01,0)).x-mapScene(p-vec3(0,0.01,0)).x,
+      mapScene(p+vec3(0,0,0.01)).x-mapScene(p-vec3(0,0,0.01)).x
+    ));
+    vec2 texUV=(abs(n.x)>abs(n.y))?p.zy:p.xy;
+    sceneCol=mix(sampleBuilding(hit.y,texUV)*0.12,skyTone,1.0-exp(-0.015*t*t));
+    if(u_mode==3) sceneCol+=vec3(0.55,0.78,1.0)*u_flash*0.35;
+  } else {
+    if(u_mode==3){
+      vec2 bhUV=vec2(1.0-screenUV.x, screenUV.y);
+      sceneCol=texture2D(u_texBH, bhUV).rgb;
+      
+      // 3 transparent depth layers, thinner volume (lower density)
+      float r = rain(uv,        0.006, 5.5, 0.12)  // Close, fast
+              + rain(uv + 0.12, 0.004, 3.8, 0.06)  // Mid, medium
+              + rain(uv - 0.25, 0.002, 2.2, 0.03); // Far, slow, faint
+      sceneCol += vec3(0.45,0.65,1.0) * r;
+    } else {
+      vec2 skyUV=fract(rd.xy*0.5+0.5+vec2(u_time*0.002,0.0));
+      sceneCol=texture2D(u_texSkyline,skyUV).rgb*0.3+skyTone*0.5;
+      sceneCol+=snow(vec2(atan(rd.z,rd.x)*2.0,rd.y*2.0),15.0,0.3,0.3);
+    }
+  }
+
+  // Window overlay
+  float dWin=(-1.5-ro.z)/rd.z;
+  if(dWin>0.0){
+    vec3 pW=ro+rd*dWin;
+    if(abs(pW.x)<4.0&&abs(pW.y)<3.0){
+      vec2 wuv=vec2(pW.x*0.25+0.5,0.5-pW.y*0.25);
+      vec4 txW=texture2D(u_texWindow,wuv);
+      float frameA=clamp(txW.a,0.0,1.0);
+      float isGlass=1.0-frameA;
+
+      if(isGlass>0.1 && u_mode==3){
+        float waterH = texture2D(u_water, wuv).r;
+        vec2  wNorm  = waterNormal(wuv);
+        vec2 refractUV = vec2(1.0-screenUV.x, screenUV.y) + wNorm * 0.018;
+refractUV = clamp(refractUV, 0.001, 0.999);
+vec3 refracted = texture2D(u_texBH, refractUV).rgb;
+        float highlight = clamp(dot(normalize(wNorm), normalize(vec2(0.3,0.7))), 0.0, 1.0);
+        highlight = pow(highlight, 6.0) * waterH * 1.5;
+        float wetness = clamp(waterH * 3.0, 0.0, 0.35);
+        sceneCol = mix(sceneCol, refracted, clamp(waterH * 6.0, 0.0, 0.85));
+        sceneCol += vec3(0.6,0.75,1.0) * highlight;
+        sceneCol = mix(sceneCol, sceneCol * 0.7, wetness);
+      } else if(isGlass>0.1 && u_mode==0){
+        float frost = hash2(wuv*80.0)*0.04;
+        sceneCol = mix(sceneCol, vec3(0.6,0.7,0.8), frost*0.3);
+      }
+
+      vec3 frameCol=txW.rgb*0.50;
+      if(u_mode==3) frameCol+=vec3(0.55,0.78,1.0)*u_flash*0.55;
+      sceneCol=mix(sceneCol,frameCol,frameA);
+    }
+  }
+
+  gl_FragColor=vec4(sceneCol*(1.0-u_blink),1.0);
+}
+</script>
+
+<script>
+const canvas = document.getElementById("c");
+const gl = canvas.getContext("webgl", { antialias:false, alpha:false });
+gl.getExtension("OES_texture_float") || gl.getExtension("OES_texture_half_float");
+
+const fit = () => {
+  const dpr = Math.min(2, devicePixelRatio||1);
+  canvas.width  = Math.floor(innerWidth  * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  gl.viewport(0,0,canvas.width,canvas.height);
+};
+addEventListener("resize", () => { fit(); rebuildFBOs(); }); fit();
+
+const compile = (type, src) => {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh));
+  return sh;
+};
+
+const vsrc = `attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }`;
+
+const simProg = gl.createProgram();
+gl.attachShader(simProg, compile(gl.VERTEX_SHADER, vsrc));
+gl.attachShader(simProg, compile(gl.FRAGMENT_SHADER, document.getElementById("simFrag").textContent));
+gl.linkProgram(simProg);
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vsrc));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, document.getElementById("frag").textContent));
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(prog));
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+
+function bindVAO(program){
+  const loc = gl.getAttribLocation(program, "p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+}
+
+let fbos = [], texs = [];
+function makeFBO(){
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,canvas.width,canvas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  const fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return {fbo, tex};
+}
+function rebuildFBOs(){
+  fbos = [makeFBO(), makeFBO()];
+  texs = [fbos[0].tex, fbos[1].tex];
+}
+rebuildFBOs();
+let ping = 0;
+
+const loadTex = (url, unit, p, name) => {
+  const tex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0+unit);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,0]));
+  gl.useProgram(p);
+  gl.uniform1i(gl.getUniformLocation(p, name), unit);
+  const img = new Image();
+  img.crossOrigin="anonymous";
+  img.onload = () => {
+    gl.activeTexture(gl.TEXTURE0+unit);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  };
+  img.src = url;
+  return tex;
+};
+
+gl.useProgram(prog);
+["01","09","08","07","06","05"].forEach((n,i) =>
+  loadTex(`files/img/void/building${n}.png`, i, prog, `u_texB${i+1}`));
+loadTex("files/img/void/skyline.png",        6, prog, "u_texSkyline");
+loadTex("files/img/void/canalport-mask.png", 7, prog, "u_texWindow");
+
+gl.useProgram(simProg);
+gl.uniform1i(gl.getUniformLocation(simProg,"u_window"), 7);
+gl.uniform1i(gl.getUniformLocation(simProg,"u_prev"),   10);
+
+const bhTex = gl.createTexture();
+gl.activeTexture(gl.TEXTURE0+8);
+gl.bindTexture(gl.TEXTURE_2D, bhTex);
+gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+gl.useProgram(prog);
+gl.uniform1i(gl.getUniformLocation(prog,"u_texBH"), 8);
+gl.uniform1i(gl.getUniformLocation(prog,"u_water"), 9);
+
+const video = document.createElement("video");
+video.loop=true; video.muted=true; video.playsInline=true;
+const srcWebm=document.createElement("source"); srcWebm.src="files/mov/bh2.webm"; srcWebm.type="video/webm";
+const srcMp4=document.createElement("source");  srcMp4.src="files/mov/bh.mp4";  srcMp4.type="video/mp4";
+video.appendChild(srcWebm); video.appendChild(srcMp4);
+video.play().catch(()=>{});
+let videoReady=false;
+video.addEventListener("playing",()=>{ videoReady=true; });
+
+function uploadVideoTexture(){
+  if(!videoReady||video.readyState<2) return;
+  gl.activeTexture(gl.TEXTURE0+8);
+  gl.bindTexture(gl.TEXTURE_2D, bhTex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+}
+
+const U = {
+  res:   gl.getUniformLocation(prog,"u_resolution"),
+  time:  gl.getUniformLocation(prog,"u_time"),
+  mouse: gl.getUniformLocation(prog,"u_mouse"),
+  mode:  gl.getUniformLocation(prog,"u_mode"),
+  blink: gl.getUniformLocation(prog,"u_blink"),
+  flash: gl.getUniformLocation(prog,"u_flash"),
+  shake: gl.getUniformLocation(prog,"u_shake"),
+};
+const SU = {
+  res:  gl.getUniformLocation(simProg,"u_resolution"),
+  time: gl.getUniformLocation(simProg,"u_time"),
+  dt:   gl.getUniformLocation(simProg,"u_dt"),
+};
+
+let mx=0,my=0,cx=0,cy=0,mode=0,blink=0,flash=0,shake=0,
+    phase="open",timer=0,start=0,lastNow=0;
+
+addEventListener("mousemove",e=>{
+  mx=(e.clientX/innerWidth)*2-1;
+  my=-(e.clientY/innerHeight)*2+1;
+});
+addEventListener("click",()=>{
+  video.play().catch(()=>{});
+  if(phase==="open"){ phase="closing"; start=performance.now(); }
+});
+
+function simStep(now){
+  const dt = Math.min((now - lastNow) * 0.001, 0.05);
+  gl.activeTexture(gl.TEXTURE0+10);
+  gl.bindTexture(gl.TEXTURE_2D, texs[ping]);
+  const next = 1 - ping;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbos[next].fbo);
+  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.useProgram(simProg);
+  bindVAO(simProg);
+  gl.uniform2f(SU.res, canvas.width, canvas.height);
+  gl.uniform1f(SU.time, now * 0.001);
+  gl.uniform1f(SU.dt, dt);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  ping = next;
+}
+
+function render(now){
+  if(phase==="open" && now-timer>4500){ phase="closing"; start=now; }
+  else if(phase==="closing"){
+    blink=Math.min((now-start)/80,1);
+    if(blink>=1){ phase="black"; start=now; mode=(mode===3)?0:3; }
+  }
+  else if(phase==="black" && now-start>130){ phase="opening"; start=now; }
+  else if(phase==="opening"){
+    blink=1.0-Math.min((now-start)/80,1);
+    if(blink<=0){ phase="open"; timer=now; blink=0; }
+  }
+
+  cx+=(mx-cx)*0.05; cy+=(my-cy)*0.05;
+
+  if(mode===3){
+    if(Math.random()<0.018) flash=1.0;
+    flash*=0.86;
+    shake=Math.max(flash,0.10*Math.sin(now*0.02)+0.06*Math.sin(now*0.06));
+    uploadVideoTexture();
+    simStep(now);
+  } else {
+    flash*=0.80; shake*=0.80;
+  }
+
+  gl.activeTexture(gl.TEXTURE0+9);
+  gl.bindTexture(gl.TEXTURE_2D, texs[ping]);
+
+  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.useProgram(prog);
+  bindVAO(prog);
+
+  gl.uniform2f(U.res,  canvas.width,canvas.height);
+  gl.uniform1f(U.time, now*0.001);
+  gl.uniform2f(U.mouse,cx,cy);
+  gl.uniform1i(U.mode, mode);
+  gl.uniform1f(U.blink,blink);
+  gl.uniform1f(U.flash,flash);
+  gl.uniform1f(U.shake,shake);
+
+  gl.drawArrays(gl.TRIANGLES,0,3);
+
+  lastNow = now;
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

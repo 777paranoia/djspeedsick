@@ -2,20 +2,15 @@
 <html>
 <body style="margin:0;background:black;overflow:hidden">
 <canvas id="c"></canvas>
-
 <script>
 const canvas = document.getElementById("c");
 const gl = canvas.getContext("webgl");
 if(!gl) document.body.textContent="WebGL unavailable";
 
-/* ========= FULLSCREEN TRIANGLE ========= */
-
 const vert = `
 attribute vec2 p;
 void main(){ gl_Position = vec4(p,0.0,1.0); }
 `;
-
-/* ========= 3D FRACTAL ========= */
 
 const frag = `
 precision highp float;
@@ -23,148 +18,51 @@ precision highp float;
 uniform vec2 r;
 uniform float t;
 
-/* ---------- rotations ---------- */
+/* ---- Mandelbrot escape — used only for surface coloring ---- */
+float mandel(vec2 c){
+  vec2 z = vec2(0.0);
+  float it = 0.0;
+  for(int i=0;i<64;i++){
+    z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+    if(dot(z,z) > 4.0){ it = float(i); break; }
+  }
+  return it / 64.0;
+}
 
+/* ---- Rotations ---- */
 mat3 rotY(float a){
   float c=cos(a), s=sin(a);
-  return mat3(
-    c,0.0,-s,
-    0.0,1.0,0.0,
-    s,0.0,c
-  );
+  return mat3(c,0,s, 0,1,0, -s,0,c);
 }
-
 mat3 rotX(float a){
   float c=cos(a), s=sin(a);
-  return mat3(
-    1.0,0.0,0.0,
-    0.0,c,-s,
-    0.0,s,c
-  );
+  return mat3(1,0,0, 0,c,-s, 0,s,c);
 }
 
-/* ---------- util ---------- */
-
-mat3 lookAt(vec3 ro, vec3 ta){
-  vec3 f = normalize(ta - ro);
-  vec3 up = vec3(0.0,1.0,0.0);
-  vec3 rgt = normalize(cross(f, up));
-  vec3 up2 = cross(rgt, f);
-  return mat3(rgt, up2, f);
-}
-
-/* ---------- noise (smooth random) ---------- */
-
-float hash11(float p){
-  p = fract(p*0.1031);
-  p *= p + 33.33;
-  p *= p + p;
-  return fract(p);
-}
-
-float hash31(vec3 p){
-  p = fract(p*0.1031);
-  p += dot(p, p.yzx + 33.33);
-  return fract((p.x + p.y) * p.z);
-}
-
-float noise(vec3 x){
-  vec3 i = floor(x);
-  vec3 f = fract(x);
-  f = f*f*(3.0-2.0*f);
-
-  float n000 = hash31(i + vec3(0,0,0));
-  float n100 = hash31(i + vec3(1,0,0));
-  float n010 = hash31(i + vec3(0,1,0));
-  float n110 = hash31(i + vec3(1,1,0));
-  float n001 = hash31(i + vec3(0,0,1));
-  float n101 = hash31(i + vec3(1,0,1));
-  float n011 = hash31(i + vec3(0,1,1));
-  float n111 = hash31(i + vec3(1,1,1));
-
-  float n00 = mix(n000, n100, f.x);
-  float n10 = mix(n010, n110, f.x);
-  float n01 = mix(n001, n101, f.x);
-  float n11 = mix(n011, n111, f.x);
-
-  float n0 = mix(n00, n10, f.y);
-  float n1 = mix(n01, n11, f.y);
-
-  return mix(n0, n1, f.z);
-}
-
-float fbm(vec3 p){
-  float a = 0.5;
-  float s = 0.0;
-  for(int i=0;i<5;i++){
-    s += a * noise(p);
-    p *= 2.02;
-    a *= 0.5;
-  }
-  return s;
-}
-
-vec3 fbm3(vec3 p){
-  return vec3(
-    fbm(p + vec3(17.1, 0.0, 0.0)),
-    fbm(p + vec3(0.0, 29.7, 0.0)),
-    fbm(p + vec3(0.0, 0.0, 41.3))
-  );
-}
-
-/* ---------- Mandelbox distance estimator ---------- */
-
+/* ---- Mandelbox DE ---- */
 float mandelbox(vec3 p){
-
   vec3 z = p;
   float scale = 2.0;
-  float fixedRadius = 1.0;
-  float minRadius = 0.5;
   float dr = 1.0;
-
-  for(int i=0;i<10;i++){
-
+  for(int i=0;i<12;i++){
     z = clamp(z,-1.0,1.0)*2.0 - z;
-
     float r2 = dot(z,z);
-
-    if(r2 < minRadius)
-      z *= fixedRadius/minRadius;
-    else if(r2 < fixedRadius)
-      z *= fixedRadius/r2;
-
+    if(r2 < 0.25)      z *= 4.0;
+    else if(r2 < 1.0)  z *= 1.0/r2;
     z = scale*z + p;
     dr = dr*abs(scale) + 1.0;
   }
-
   return length(z)/abs(dr);
 }
 
-/* ---------- SCENE (map) ---------- */
-
+/* ---- Scene: pure 3D Mandelbox with slow rotation ---- */
 float map(vec3 p){
-
-  // base object rotation (keep it subtle)
-  p *= rotY(t*0.16);
-  p *= rotX(sin(t*0.21)*0.40);
-
-  // entropic translation (NOT a clean orbit)
-  vec3 drift = (fbm3(vec3(t*0.45, 0.0, 0.0)) - 0.5) * 2.0;
-  p -= vec3(0.55,0.40,0.55) * drift;
-
-  // domain warping: makes the fractal feel alive
-  vec3 w = fbm3(p*0.85 + vec3(0.0, t*0.35, 0.0));
-  p += (w - 0.5) * 0.55;
-
-  // "breathing" scale but irregular
-  float s = 1.0 + 0.20*(fbm(vec3(t*0.6, 1.7, 9.2)) - 0.5);
-  p /= s;
-
+  p *= rotY(t * 0.08);
+  p *= rotX(t * 0.05);
   return mandelbox(p);
 }
 
-/* ---------- surface normal ---------- */
-
+/* ---- Normal ---- */
 vec3 normal(vec3 p){
   float e = 0.002;
   vec2 h = vec2(e,0);
@@ -175,117 +73,111 @@ vec3 normal(vec3 p){
   ));
 }
 
-/* ---------- palette ---------- */
-
+/* ---- Plasma palette (from bak_) ---- */
 vec3 palette(float x){
-  vec3 a = vec3(0.45,0.42,0.40);
-  vec3 b = vec3(0.55,0.55,0.55);
-  vec3 c = vec3(1.0,0.85,0.65);
-  vec3 d = vec3(0.0,0.18,0.42);
-  return a + b*cos(6.283*(c*x + d));
+  return 0.5 + 0.5*cos(6.283*(x + vec3(0.0, 0.33, 0.67)));
 }
-
-/* ---------- shading ---------- */
 
 void main(){
 
-  vec2 uv = (gl_FragCoord.xy/r - 0.1)*3.34;
-  uv.x *= r.x/r.y;
+  /* Clean UV — no distortion */
+  vec2 uv = (gl_FragCoord.xy / r - 0.5) * 2.0;
+  uv.x *= r.x / r.y;
 
-  // entropic camera position (smooth random walk)
-  vec3 camJ = (fbm3(vec3(t*0.22, 4.1, 8.3)) - 0.5) * 2.0;
-  vec3 ro = vec3(-2.0,0.1,-3.5) + camJ * vec3(1.4, 0.9, 1.2);
+  /* Camera slowly orbits the fractal */
+  float camAngle = t * 0.04;
+  vec3 ro = vec3(sin(camAngle)*4.5, -1.5 + sin(t*0.03)*0.8, cos(camAngle)*4.5);
+  vec3 fwd = normalize(-ro);
+  vec3 right = normalize(cross(vec3(0,1,0), fwd));
+  vec3 up = cross(fwd, right);
+  vec3 rd = normalize(fwd*1.5 + uv.x*right + uv.y*up);
 
-  // entropic look target (camera "hunts" around)
-  vec3 taJ = (fbm3(vec3(t*0.18, 11.7, 2.9)) - 0.5) * 2.0;
-  vec3 ta = vec3(0.0,0.0,0.0) + taJ * vec3(0.9, 0.6, 0.9);
+  /* Raymarch */
+  float dist = 0.1;
+  float hit = -1.0;
+  float steps = 0.0;
 
-  mat3 cam = lookAt(ro, ta);
-
-  vec3 rd = normalize(cam * vec3(uv, 1.5));
-
-  float d = 0.0;
-  float hit = 0.0;
-
-  // slightly more steps because warp can create thinner features
-  for(int i=0;i<150;i++){
-    vec3 p = ro + rd*d;
+  for(int i=0;i<120;i++){
+    vec3 p = ro + rd * dist;
     float h = map(p);
-    if(h < 0.0008){ hit = 1.0; break; }
-    d += h;
-    if(d > 22.0) break;
+    if(h < 0.001){ hit = 1.0; break; }
+    dist += h;
+    steps += 1.0;
+    if(dist > 30.0) break;
   }
 
-  vec3 col = vec3(0.06);
+  vec3 col = vec3(0.0);
 
   if(hit > 0.5){
-
-    vec3 p = ro + rd*d;
+    vec3 p = ro + rd * dist;
     vec3 n = normal(p);
 
-    // light direction also slowly wanders (subtle)
-    vec3 lj = (fbm3(vec3(t*0.12, 21.0, 1.0)) - 0.5) * 2.0;
-    vec3 light = normalize(vec3(-1.5,0.6,-0.1) + lj*vec3(0.5,0.3,0.5));
+    /* Sample Mandelbrot at surface XZ projection — drives hue variation */
+    vec2 surfUV = p.xz * 0.28 + vec2(-0.5, 0.0);
+    float mVal = mandel(surfUV);
 
-    float diff = max(dot(n,light),0.08);
-    float rim  = pow(1.0 - max(dot(n,-rd),0.0), 2.2);
+    vec3 light = normalize(vec3(0.6, 1.0, -0.4));
+    float diff = max(dot(n, light), 0.0);
+    float rim  = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
 
-    float glow = exp(-0.85*d);
-
-    // hue drift driven by fbm, not linear time
-    float hue = d*0.30 + 2.2*fbm(vec3(t*0.9, d*0.2, 3.7));
+    /* Hue = depth + mandelbrot surface reading + slow time */
+    float hue = dist * 0.12 + mVal * 0.8 + t * 0.02;
 
     col = palette(hue);
+    col *= diff * 1.4 + 0.25;
+    col += palette(hue + 0.5) * rim * 0.4;
+    col *= exp(-0.05 * dist);
 
-    float ambient = 0.33;
-
-    col *= (ambient + diff*1.55 + rim*1.65);
-    col *= glow;
+    /* AO approximation from step count */
+    col *= 0.5 + 0.5*(1.0 - steps/120.0);
   }
 
   gl_FragColor = vec4(col, 1.0);
 }
 `;
 
-function compile(type,src){
+function compile(type, src){
   const s = gl.createShader(type);
-  gl.shaderSource(s,src);
+  gl.shaderSource(s, src);
   gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+    console.error(gl.getShaderInfoLog(s));
   return s;
 }
 
 const prog = gl.createProgram();
-gl.attachShader(prog,compile(gl.VERTEX_SHADER,vert));
-gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,frag));
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vert));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, frag));
 gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog, gl.LINK_STATUS))
+  console.error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
 
 const buf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 gl.bufferData(gl.ARRAY_BUFFER,
-  new Float32Array([-1,-1,3,-1,-1,3]),
+  new Float32Array([-1,-1, 3,-1, -1,3]),
   gl.STATIC_DRAW);
 
-const loc = gl.getAttribLocation(prog,"p");
+const loc = gl.getAttribLocation(prog, "p");
 gl.enableVertexAttribArray(loc);
-gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-const ur = gl.getUniformLocation(prog,"r");
-const ut = gl.getUniformLocation(prog,"t");
+const ur = gl.getUniformLocation(prog, "r");
+const ut = gl.getUniformLocation(prog, "t");
 
 function resize(){
-  canvas.width = innerWidth;
+  canvas.width  = innerWidth;
   canvas.height = innerHeight;
-  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 }
-addEventListener("resize",resize);
+addEventListener("resize", resize);
 resize();
 
-/* slow time scale */
 function frame(ms){
   gl.uniform2f(ur, canvas.width, canvas.height);
-  gl.uniform1f(ut, ms*0.00001);
-  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.uniform1f(ut, ms * 0.001);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
   requestAnimationFrame(frame);
 }
 frame(0);

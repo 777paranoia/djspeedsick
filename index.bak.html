@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<script>
+if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  window.location.href = "https://m.djspeedsick.com";
+}
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJSPEEDSICK.COM</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+
+<!-- INTRO SPLASH -->
+<div id="splash-screen">
+  <img id="background-image" src="files/img/aerial.png">
+  <img id="enter-button"
+       src="files/img/enter-transparency2.png"
+       onclick="handleEnterClick()">
+</div>
+
+<!-- VOID WORLD -->
+<audio id="audioPlayer" crossorigin="anonymous"></audio>
+<canvas id="canvas"></canvas>3
+
+<!-- WEBSITE WALL -->
+<div id="website-wall">
+
+  <div id="conky-sidebar">
+    <div class="conky-line" id="host-val"></div>
+    <div class="conky-line" id="system-ip"></div>
+    <div class="separator"></div><br>
+
+    <div class="conky-line">CONTACT</div>
+    <div class="separator">-----------------------</div>
+
+    <div class="conky-line">
+      <a href="mailto:boettke@gdjspeedsick.com" class="conky-link">>> BOOKING</a>
+    </div>
+    <div class="conky-line">
+      <a href="mailto:dj@djspeedsick.com" class="conky-link">>> PRESS</a>
+    </div>
+    <div class="conky-line">
+      <a href="mailto:777paranoia@gmail.com" class="conky-link">>> COMMISSIONS</a>
+    </div>
+  </div>
+
+  <div id="video-stack-container">
+    <img id="hands-bg" src="files/img/hands.png">
+
+    <video class="draggable-video pos-1" autoplay muted loop>
+      <source src="files/mov/yfpmms.webm">
+    </video>
+    <video class="draggable-video pos-2" autoplay muted loop>
+      <source src="files/mov/chemlove.webm">
+    </video>
+    <video class="draggable-video pos-3" autoplay muted loop>
+      <source src="files/mov/grate.webm">
+    </video>
+    <video class="draggable-video pos-4" autoplay muted loop>
+      <source src="files/mov/smtiaie.webm">
+    </video>
+  </div>
+
+</div>
+
+<script src="lodash.js"></script>
+<script src="butterchurn.js"></script>
+<script src="butterchurnPresets.min.js"></script>
+<script src="player.js"></script>
+<script src="script.js"></script>
+<script src="void-wall.js"></script>
+
+</body>
+</html>
