@@ -144,7 +144,8 @@ float sdFractal(vec3 pos, float power, float rotA, float rotB){
   vec3 z = pos;
   float dr = 1.0;
   float r  = 0.0;
-  for(int i = 0; i < 10; i++){
+  // Lowered from 10 to 4. Huge performance gain.
+  for(int i = 0; i < 4; i++){
     r = length(z);
     if(r > 2.0) break;
     float theta = acos(clamp(z.z / r, -1.0, 1.0));
@@ -257,6 +258,7 @@ float worldRain(vec2 uv, float t){
 }
 
 /* --- Scene --- */
+/* --- Scene --- */
 vec2 mapScene(vec3 p){
   vec2 res=vec2(1000.0,-1.0);
   float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
@@ -268,28 +270,35 @@ vec2 mapScene(vec3 p){
 
   if(u_mode == 1 || u_mode == 2){
     float seed = floor(u_time * 0.015);
-    float num  = floor(hash1(seed * 31.1) * 3.0) + 1.0; // 1, 2, or 3
+    float num  = floor(hash1(seed * 31.1) * 3.0) + 1.0; 
 
     float id0 = seed * 7.0;
     float sc0 = fractalScale(id0);
     vec3  fp0 = (p - fractalAnchor(id0)) / sc0;
-    float df0 = max(length(fp0) - 3.0, sdFractal(fp0, fractalPower(id0), fractalRotA(id0), fractalRotB(id0))) / sc0;
-    if(df0 < res.x) res = vec2(df0, 10.0);
+    float bound0 = length(fp0) - 3.0;
+    float df0 = bound0;
+    // Only run the trig math if the ray is physically near the fractal
+    if(bound0 < 0.1) df0 = max(bound0, sdFractal(fp0, fractalPower(id0), fractalRotA(id0), fractalRotB(id0)));
+    if(df0 / sc0 < res.x) res = vec2(df0 / sc0, 10.0);
 
     if(num >= 2.0){
       float id1 = seed * 7.0 + 1.0;
       float sc1 = fractalScale(id1);
       vec3  fp1 = (p - fractalAnchor(id1)) / sc1;
-      float df1 = max(length(fp1) - 3.0, sdFractal(fp1, fractalPower(id1), fractalRotA(id1), fractalRotB(id1))) / sc1;
-      if(df1 < res.x) res = vec2(df1, 10.0);
+      float bound1 = length(fp1) - 3.0;
+      float df1 = bound1;
+      if(bound1 < 0.1) df1 = max(bound1, sdFractal(fp1, fractalPower(id1), fractalRotA(id1), fractalRotB(id1)));
+      if(df1 / sc1 < res.x) res = vec2(df1 / sc1, 10.0);
     }
 
     if(num >= 3.0){
       float id2 = seed * 7.0 + 2.0;
       float sc2 = fractalScale(id2);
       vec3  fp2 = (p - fractalAnchor(id2)) / sc2;
-      float df2 = max(length(fp2) - 3.0, sdFractal(fp2, fractalPower(id2), fractalRotA(id2), fractalRotB(id2))) / sc2;
-      if(df2 < res.x) res = vec2(df2, 10.0);
+      float bound2 = length(fp2) - 3.0;
+      float df2 = bound2;
+      if(bound2 < 0.1) df2 = max(bound2, sdFractal(fp2, fractalPower(id2), fractalRotA(id2), fractalRotB(id2)));
+      if(df2 / sc2 < res.x) res = vec2(df2 / sc2, 10.0);
     }
   }
 
@@ -345,28 +354,31 @@ void main(){
     ? mix(colorStorm,vec3(0.015,0.030,0.060),exp(-max(rd.y,0.0)*3.5))
     : mix(vec3(0.01,0.02,0.04),vec3(0.35,0.20,0.08),exp(-max(rd.y,0.0)*4.0));
 
-  vec3 sceneCol=vec3(0.0);
+ vec3 sceneCol=vec3(0.0);
 
   if(!isSky){
     vec3 p=ro+rd*t;
-    vec3 n=normalize(vec3(
-      mapScene(p+vec3(0.01,0,0)).x-mapScene(p-vec3(0.01,0,0)).x,
-      mapScene(p+vec3(0,0.01,0)).x-mapScene(p-vec3(0,0.01,0)).x,
-      mapScene(p+vec3(0,0,0.01)).x-mapScene(p-vec3(0,0,0.01)).x
-    ));
-    vec2 texUV=(abs(n.x)>abs(n.y))?p.zy:p.xy;
-
     float fogAmt = (u_mode == 3) ? (1.0-exp(-0.004*t*t)) : (1.0-exp(-0.015*t*t));
-    float buildAmt = (u_mode == 3) ? 0.08 : 0.09;
-    sceneCol=mix(sampleBuilding(hit.y,texUV)*buildAmt, skyTone, fogAmt);
+
+    if(hit.y <= 9.0){
+      // We hit a building, calculate 3D normals for lighting
+      vec3 n=normalize(vec3(
+        mapScene(p+vec3(0.01,0,0)).x-mapScene(p-vec3(0.01,0,0)).x,
+        mapScene(p+vec3(0,0.01,0)).x-mapScene(p-vec3(0,0.01,0)).x,
+        mapScene(p+vec3(0,0,0.01)).x-mapScene(p-vec3(0,0,0.01)).x
+      ));
+      vec2 texUV=(abs(n.x)>abs(n.y))?p.zy:p.xy;
+      float buildAmt = (u_mode == 3) ? 0.08 : 0.09;
+      sceneCol=mix(sampleBuilding(hit.y,texUV)*buildAmt, skyTone, fogAmt);
+    }
 
     if(hit.y > 9.0){
-      vec3 p2 = ro + rd * t;
+      // We hit a fractal. Bypass the heavy normal math entirely.
+      vec3 p2 = p; 
 
       // Find closest fractal center for localized fog
       float seed = floor(u_time * 0.015);
-      float num  = floor(hash1(seed * 31.1) * 3.0) + 1.0;
-      float closestDist = 1e10;
+      float num  = floor(hash1(seed * 31.1) * 3.0) + 1.0;     float closestDist = 1e10;
       float closestFogD = 0.015;
 
       vec3 a0 = fractalAnchor(seed * 7.0);
