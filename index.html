@@ -53,6 +53,88 @@
     cursor: pointer;
     z-index: 2;
   }
+
+  /* --- NEW CONKY STYLES --- */
+  #secret-button {
+    position: fixed;
+    top: 25px;
+    left: 25px;
+    width: 35px;
+    height: auto;
+    opacity: 0.1;
+    z-index: 900;
+    cursor: pointer;
+    mix-blend-mode: screen;
+    transition: opacity 0.3s ease;
+  }
+  #secret-button:hover {
+    opacity: 0.7;
+  }
+
+  #conky-sidebar {
+    position: fixed;
+    top: 100px;
+    left: 80px;
+    width: 260px;
+    background: transparent;
+    color: #00ff00;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.8rem;
+    padding: 0;
+    border: none;
+    z-index: 700;
+    text-align: left;
+    pointer-events: auto;
+    display: none;
+    text-shadow: 0 0 4px rgba(0, 255, 0, 0.4); /* Glow effect */
+  }
+
+  .conky-line { margin: 2px 0; }
+  .conky-link { color: #00ff00 !important; text-decoration: none; }
+  .conky-link:hover { opacity: 0.7; }
+  .conky-invert {
+    background-color: #00ff00;
+    color: #000 !important;
+    padding: 0 4px;
+    display: inline-block;
+    font-weight: bold;
+    line-height: 1.1;
+  }
+  .separator { font-family: monospace; white-space: nowrap; }
+  .conky-dim { opacity: 0.6; margin-top: 5px; line-height: 1.2; }
+
+  /* --- ABOUT OVERLAY STYLES --- */
+  #aboutOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: none; 
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+  #aboutContent {
+    background-color: transparent;
+    color: white;
+    text-align: center;
+    width: 90%;
+    max-width: 600px;
+    max-height: 95vh;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #aboutText { font-family: 'GGX88 Book', sans-serif; margin: 0; color: white; }
+  #legalNotice {
+    margin-top: 1rem; padding-top: 0.4rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.45rem; line-height: 1.2;
+    color: rgba(200,200,200,0.6);
+  }
 </style>
 </head>
 <body>
@@ -67,12 +149,142 @@
        src="files/img/enter button.png"
        onclick="enterSite()">
 </div>
+
+<img id="secret-button" src="files/img/buttin.jpg" onclick="toggleConky()">
+
 <canvas id="c"></canvas>
+
+<div id="conky-sidebar">
+    <div class="conky-line" id="host-val">SCANNING...</div>
+    <div class="conky-line" id="system-ip">SCANNING...</div>
+    <div class="separator"></div><br>
+    <div class="conky-line">NEAREST PLACE TO BUY CIGARETTES:</div>
+    <div id="cig-display" class="conky-invert">SCANNING...</div><br>  
+    <div id="cig-link" class="conky-line"></div><br>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line">UPCOMING SHOWS</div>
+    <div class="separator">-----------------------</div>
+    (n/a)
+    <br><br><br><br>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line">CONTACT</div>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line"><a href="mailto:boettke@gdjspeedsick.com" class="conky-link">>> BOOKING</a></div>
+    <div class="conky-line"><a href="mailto:dj@djspeedsick.com" class="conky-link">>> PRESS</a></div>
+    <div class="conky-line"><a href="mailto:777paranoia@gmail.com" class="conky-link">>> COMMISSIONS</a></div>
+    <div class="separator">-----------------------</div><BR>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line"><a href="http://escalation.ist" class="conky-link">>> ESCALATIONIST</a></div>
+    <div class="separator">-----------------------</div><BR>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line"><a href="adhd.html" class="conky-link">>> PORTFOLIO</a></div>
+    <div class="separator">-----------------------</div><br>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line">EXTERNAL LINKS</div>
+    <div class="separator">-----------------------</div>
+    <div class="conky-line"><a href="https://www.soundcloud.com/speedsick" class="conky-link">> SOUNDCLOUD</a></div>
+    <div class="conky-line"><a href="https://djspeedsick.bandcamp.com" class="conky-link">> BANDCAMP</a></div>
+    <div class="conky-line"><a href="https://www.instagram.com/djspeedsick" class="conky-link">> INSTAGRAM</a></div>
+    <div class="conky-line"><a href="https://www.x.com/djspeedsick" class="conky-link">> X</a></div>
+    <div class="conky-line"><a href="https://en.wikipedia.org/wiki/DJ_Speedsick" class="conky-link">> WIKIPEDIA</a></div>
+    <div class="conky-line"><a href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX" class="conky-link">> SPOTIFY</a></div>
+    <div class="conky-line"><a href="https://www.discogs.com/artist/5782732-DJ-Speedsick" class="conky-link">> DISCOGS</a></div><br>
+    <div class="separator">------------------------</div>
+    <div class="conky-link" style="cursor: pointer;" onclick="toggleAbout()">>> ABOUT</div>
+    <div class="separator">------------------------</div>
+    <div class="conky-line conky-dim">
+      PRIVACY NOTE:<br>
+      IP ADDRESSES NOT LOGGED
+    </div>
+    <div class="separator">------------------------</div>
+</div>
+
+<div id="aboutOverlay">
+    <div id="aboutContent">
+        <div id="aboutText">DJ SPEEDSICK<br><br>Chicago, IL</div>
+        <div id="legalNotice">PRIVACY NOTE:<br>IP ADDRESSES NOT LOGGED</div>
+    </div>
+</div>
 
 <audio id="audioPlayer"></audio>
 <script src="player.js"></script>
 
 <script>
+// --- CONKY SYSTEM LOGIC ---
+const IPINFO_TOKEN = '4b45867ce7c229';
+
+function toggleConky() {
+    const sidebar = document.getElementById('conky-sidebar');
+    if (sidebar.style.display === 'none' || sidebar.style.display === '') {
+        sidebar.style.display = 'block';
+        updateSystemParams(); // Fetch the data when opened
+    } else {
+        sidebar.style.display = 'none';
+    }
+}
+
+function toggleAbout() {
+    const overlay = document.getElementById('aboutOverlay');
+    overlay.style.display = 'flex';
+    const closeHandler = () => {
+        overlay.style.display = 'none';
+        window.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => { window.addEventListener('click', closeHandler); }, 50);
+}
+
+async function updateSystemParams() {
+    const hostEl = document.getElementById('host-val');
+    const ipEl = document.getElementById('system-ip');
+    const cigDisplay = document.getElementById('cig-display');
+    try {
+        const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
+        const data = await response.json();
+        if (hostEl) hostEl.innerText = data.loc || "0.000, 0.000";
+        if (ipEl) ipEl.innerText = data.ip || "UNKNOWN_IP";
+        if (data.loc && cigDisplay) {
+            const [lat, lng] = data.loc.split(',').map(Number);
+            getNearestSmokes(lat, lng);
+        }
+    } catch (error) {
+        if (hostEl) hostEl.innerText = "SENSOR_FAIL";
+        if (ipEl) ipEl.innerText = "NETWORK_ERROR";
+        if (cigDisplay) cigDisplay.innerText = "SENSOR_OFFLINE";
+    }
+}
+
+function getNearestSmokes(lat, lng) {
+    const display = document.getElementById('cig-display');
+    const linkDiv = document.getElementById('cig-link');
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+        if (display) display.innerText = "API_LOAD_FAIL";
+        return;
+    }
+    try {
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        const request = {
+            location: new google.maps.LatLng(lat, lng),
+            radius: 5000,
+            keyword: 'cigarettes tobacco convenience'
+        };
+        const failSafe = setTimeout(() => {
+            if (display.innerText === "SCANNING...") display.innerText = "TIMEOUT";
+        }, 8000);
+        service.nearbySearch(request, (results, status) => {
+            clearTimeout(failSafe);
+            if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+                const store = results[0];
+                display.innerText = store.name.toUpperCase();
+                linkDiv.innerHTML = `<a href="http://googleusercontent.com/maps.google.com/?q=${store.geometry.location.lat()},${store.geometry.location.lng()}" target="_blank" class="conky-link">>> NAVIGATE</a>`;
+            } else {
+                display.innerText = "NONE_FOUND";
+            }
+        });
+    } catch (e) {
+        if (display) display.innerText = "SCAN_ERROR";
+    }
+}
+
 const totalFrames = 7;
 const loadingImg = document.getElementById("loading-strobe");
 
@@ -219,6 +431,7 @@ void main(){
   gl_FragColor = vec4(h, 0.0, depthRd, 1.0);
 }
 </script>
+
 <script id="frag" type="x-shader/x-fragment">
 precision highp float;
 
@@ -471,25 +684,20 @@ void main(){
   }
   bool isSky=(t>=70.0);
 
-  // --- SICKLY NEON CLASHING LIGHT POLLUTION ---
-  // Core colors defining the cinematic palette
-  vec3 cGreen = vec3(0.15, 0.9, 0.4); // Toxic industrial green
-  vec3 cRed   = vec3(0.9, 0.05, 0.15); // Deep neon red
-  vec3 cAmber = vec3(1.0, 0.5, 0.0); // Bright sodium vapor
+  vec3 cGreen = vec3(0.15, 0.9, 0.4); 
+  vec3 cRed   = vec3(0.9, 0.05, 0.15); 
+  vec3 cAmber = vec3(1.0, 0.5, 0.0); 
   
   float lookDown = smoothstep(0.0, -0.8, rd.y); 
   float cityPulse = noise1(u_time * 0.2 - rd.x * 3.0) * 0.5 + 0.5; 
   float trafficSweep = smoothstep(0.7, 1.0, sin(rd.x * 6.0 + u_time * 1.5)) * 0.4; 
   
-  // Spatially mix the green and red so different sides of the city glow differently
   float colorMix = sin(rd.x * 4.0 + u_time * 0.5) * 0.5 + 0.5;
   vec3 baseGlowCol = mix(cGreen, cRed, colorMix);
-  // Cut through with sharp amber sweeps for passing traffic below
   baseGlowCol = mix(baseGlowCol, cAmber, trafficSweep); 
   
   vec3 deepCityGlow = baseGlowCol * (cityPulse * 0.5 + trafficSweep) * lookDown * 0.6;
 
-  // Dark, gritty, slightly green-cast night sky base
   vec3 skyTone=(u_mode==3)
     ? mix(vec3(0.008,0.018,0.040),vec3(0.015,0.030,0.060),exp(-max(rd.y,0.0)*3.5))
     : mix(vec3(0.005, 0.01, 0.015), vec3(0.05, 0.08, 0.06), exp(-max(rd.y,0.0)*4.0)); 
@@ -511,21 +719,16 @@ void main(){
       vec2 texUV=(abs(n.x)>abs(n.y))?p.zy:p.xy;
       
       vec3 bTex = sampleBuilding(hit.y,texUV);
-      
-      // WINDOW POP: Extract the bright spots and drastically overexpose them 
-      // so the building lights punch through the fog
       float windowPop = smoothstep(0.5, 0.9, max(bTex.r, max(bTex.g, bTex.b)));
       bTex += bTex * windowPop * 2.5; 
       
       sceneCol=mix(bTex*((u_mode==3)?0.08:0.25), skyTone, fogAmt);
       
-      // CLASHING UPLIGHT ON BUILDINGS
       if (u_mode != 3 && u_mode != 4) {
         float heightShadow = smoothstep(2.0, -20.0, p.y); 
         float basePulse = noise1(u_time * 0.3 + p.x * 0.1) * 0.4 + 0.6;
         float passLight = smoothstep(0.8, 1.0, sin(p.z * 0.8 + u_time * 2.0)) * 0.2; 
         
-        // Buildings take on the shifting neon tones based on their X position
         float bMix = sin(p.x * 0.4) * 0.5 + 0.5;
         vec3 bGlowTint = mix(cGreen, cRed, bMix);
         
@@ -568,23 +771,15 @@ void main(){
   }
 
   if(u_mode != 3 && u_mode != 4) sceneCol += snow(vec2(atan(rd.z,rd.x)*2.0,rd.y*2.0), 15.0, 0.3, 0.3);
-  
   if(u_mode==3){
     float wr = worldRain(gl_FragCoord.xy/u_resolution.xy, u_time);
     sceneCol += vec3(0.62,0.72,0.85) * wr * (isSky ? 0.65 : 0.0);
   }
-
   if(u_mode==4){
-    vec2 mirUV = vec2(0.5) + vec2(-rd.x, rd.y) * 1.5; 
-    sceneCol = texture2D(u_texMirror, clamp(mirUV, 0.0, 1.0)).rgb;
+    sceneCol = texture2D(u_texMirror, clamp(vec2(0.5) + vec2(-rd.x, rd.y) * 1.5, 0.0, 1.0)).rgb;
     float h = hash2(gl_FragCoord.xy/u_resolution.xy * 50.0 + u_time * 2.0) * 0.15;
     sceneCol = mix(sceneCol, vec3(0.05, 0.05, 0.06), 0.3 + h);
     sceneCol *= mix(0.1, 1.0, sin(u_time * 0.5) * 0.5 + 0.5);
-
-    float fog = sin(mirUV.x * 8.0 + u_time * 1.2) * cos(mirUV.y * 7.0 - u_time * 0.8) +
-                sin(mirUV.x * 4.0 - u_time * 0.5) * cos(mirUV.y * 5.0 + u_time * 0.9);
-    fog = smoothstep(-0.5, 1.5, fog * 0.5 + 0.5);
-    sceneCol = mix(sceneCol, vec3(0.3, 0.32, 0.35), fog * 0.65);
   }
 
   float dWin=(-1.5-ro.z)/clean_rd.z;
@@ -620,12 +815,11 @@ void main(){
     
     vec3 fCol = txW.rgb * 0.50 + ((u_mode==3)?vec3(0.55,0.78,1.0)*u_flash*0.55 : vec3(0.0));
     
-    // TINTED ROOM BLEED: Faint interior bounce light inherits the shifting neon tones
     if(u_mode != 3 && u_mode != 4) {
       float roomPulse = noise1(u_time * 0.5) * 0.05;
       float roomSweep = smoothstep(0.8, 1.0, sin(u_time * 1.2)) * 0.04;
       float rMix = sin(u_time * 0.6) * 0.5 + 0.5;
-      vec3 roomTint = mix(cGreen, cRed, rMix); // Shift between toxic green and red
+      vec3 roomTint = mix(cGreen, cRed, rMix); 
       fCol += roomTint * (roomPulse + roomSweep) * txW.a * 1.5; 
     }
 
@@ -808,6 +1002,9 @@ let lastDragX = 0;
 let lastDragY = 0;
 
 const startDrag = (x, y) => {
+  // Prevent drag from triggering if clicking the sidebar or secret button
+  if (event.target.id === 'secret-button' || event.target.closest('#conky-sidebar')) return;
+  
   isDragging = true;
   lastDragX = x;
   lastDragY = y;
@@ -973,4 +1170,4 @@ function render(now){
 requestAnimationFrame(render);
 </script>
 </body>
-</html>
+</html>ß
