@@ -86,7 +86,7 @@
     border-radius: 50%; 
   }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBdCATEbK-IG7f_8SXtqe1IhWSiARQCPHw&libraries=places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCprDCcZDIqfl92MoMDv_OAJ2bxBSkQ0JA=places"></script>
 </head>
 <body>
 
@@ -493,6 +493,7 @@ window.enterSite = function() {
 <script src="engine.js"></script>
 
 <script>
+<script>
 window.makeUI = function() {
   if(!__debugAllowed) return;
   if(document.getElementById('debug-menu-box')) return; 
@@ -536,7 +537,7 @@ window.makeUI = function() {
   const btnNext = box.querySelector("#next");
 
   function setMode(n){
-    n = Math.max(0, Math.min(9, n|0)); 
+    n = Math.max(0, Math.min(7, n|0)); 
     if(typeof currentEngine !== 'undefined' && currentEngine) currentEngine.destroy() 
     if (typeof phase !== 'undefined') phase = "open";
     if (typeof blink !== 'undefined') blink = 0;
@@ -547,23 +548,21 @@ window.makeUI = function() {
     mode = n;
     modeSeed++;
     
-    if (mode !== 8) sel.value = mode; 
+    sel.value = mode; 
     currentEngine = new ActiveMode(mode);
   }
 
   sel.onchange = () => setMode(+sel.value);
 
-  // EXPLICITLY SKIP 8
   btnPrev.onclick = () => {
     let prevMode = mode - 1;
-    if (prevMode === 7) prevMode = 6;
-    if (prevMode < 0) prevMode = 9;
+    if (prevMode < 0) prevMode = 7;
     setMode(prevMode);
   };
 
   btnNext.onclick = () => {
     let nextMode = mode + 1;
-    if (nextMode === 7) nextMode = 0;
+    if (nextMode > 7) nextMode = 0;
     setMode(nextMode);
   };
 
@@ -571,7 +570,7 @@ window.makeUI = function() {
     try {
       box.querySelector("#mode").textContent = mode;
       box.querySelector("#pov").textContent = activePOV; 
-      if (sel.value != mode && mode <= 7 && mode !== 8) {
+      if (sel.value != mode && mode <= 7) {
           sel.value = mode;
       }
     } catch(e) {} 
