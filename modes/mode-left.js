@@ -12,10 +12,10 @@ uniform sampler2D u_texEnv3;
 uniform sampler2D u_texEnv4; 
 uniform sampler2D u_texEnv6; 
 uniform float u_trip;
-uniform float u_modeSeed; // NEW
+uniform float u_modeSeed;
 
 float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
-float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); } // NEW
+float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); }
 
 float noise2(vec2 p) {
     vec2 i = floor(p); vec2 f = fract(p);
@@ -34,7 +34,6 @@ float fbm(vec2 p) {
     return v;
 }
 
-// DATAMOSH GLITCH ADDED TO LEFT ROOM
 vec3 digitalGlitch(vec3 col, vec2 uv) {
   float burstSlot = floor(u_time * 12.0); 
   float isBurst = step(0.94, hash1(burstSlot * 13.7 + u_modeSeed)); 
@@ -103,7 +102,6 @@ void main() {
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
     
-    // RESTORED CORRECT WAVE AMPLITUDE
     tuv += (r - 0.5) * 0.012 * u_trip; 
 
     tuv = clamp(tuv, 0.0, 1.0);
@@ -120,22 +118,22 @@ void main() {
 
         if (px < 465.0) {
             if (py < 935.0) {
-                bMin = vec2(110.0/1437.0, 800.0/2048.0);
-                bMax = vec2(455.0/1437.0, 935.0/2048.0);
+                bMin = vec2(100.0/1437.0, 790.0/2048.0);
+                bMax = vec2(465.0/1437.0, 945.0/2048.0);
                 finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             } else {
-                bMin = vec2(110.0/1437.0, 935.0/2048.0);
-                bMax = vec2(460.0/1437.0, 1075.0/2048.0);
+                bMin = vec2(100.0/1437.0, 925.0/2048.0);
+                bMax = vec2(470.0/1437.0, 1085.0/2048.0);
                 finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             }
         } else {
             if (px > 650.0) {
-                bMin = vec2(670.0/1437.0, 790.0/2048.0);
-                bMax = vec2(1050.0/1437.0, 945.0/2048.0);
+                bMin = vec2(660.0/1437.0, 780.0/2048.0);
+                bMax = vec2(1060.0/1437.0, 955.0/2048.0);
                 finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             } else {
-                bMin = vec2(465.0/1437.0, 970.0/2048.0);
-                bMax = vec2(630.0/1437.0, 1085.0/2048.0);
+                bMin = vec2(455.0/1437.0, 960.0/2048.0);
+                bMax = vec2(640.0/1437.0, 1095.0/2048.0);
                 finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             }
         }

@@ -5,7 +5,6 @@ gl.getExtension("OES_texture_float") || gl.getExtension("OES_texture_half_float"
 window.__ALL_VIDEOS = window.__ALL_VIDEOS || [];
 window.__mappedVidIndex = 0;
 
-// PRELOAD LARGE ASSETS INTO BROWSER RAM TO PREVENT POP-IN DELAY
 (new Image()).src = "files/img/void/skyline.png";
 
 (function(){
@@ -29,19 +28,20 @@ window.__mappedVidIndex = 0;
     v.autoplay = true;
     v.setAttribute("playsinline", "");
     v.setAttribute("webkit-playsinline", "");
-    v.src = src 
+    v.src = src;
     const bin = ensureBin();
     if (bin) bin.appendChild(v);
     const p = v.play(); if (p && p.catch) p.catch(()=>{});
     window.__ALL_VIDEOS.push(v);
     return v;
   }  
+
   window.__primeVideoPool = function() {
-    const pool = { fixed: {}, mapped: [] } 
+    const pool = { fixed: {}, mapped: [] };
     pool.fixed["files/mov/bh2.webm"]   = [makePoolVid("files/mov/bh2.webm",  true),
                                            makePoolVid("files/mov/bh2.webm",  true)];
     pool.fixed["files/mov/earth.webm"] = [makePoolVid("files/mov/earth.webm", true)];
-    pool.fixed["files/mov/fly.webm"]   = [makePoolVid("files/mov/fly.webm",  false)] 
+    pool.fixed["files/mov/fly.webm"]   = [makePoolVid("files/mov/fly.webm",  false)];
     
     const mappedFiles = window.MAPPED_VIDEOS || [];
     if (mappedFiles.length) {
@@ -116,7 +116,6 @@ function loadStaticTex(url) {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
   
-  // MODE-9 FIX: opaque placeholder (no visible pop)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -128,7 +127,7 @@ function loadStaticTex(url) {
   tex._w = 1; tex._h = 1;
   img.onload = () => {
     tex._w = img.naturalWidth || img.width || 1;
-    tex._h = img.naturalHeight || img.height || 1  
+    tex._h = img.naturalHeight || img.height || 1;  
     gl.activeTexture(gl.TEXTURE15);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
@@ -224,10 +223,13 @@ function drawBacklight(now, strength, audio){
   gl.disable(gl.BLEND);
 }
 
-// THE REBOOT SEQUENCE
 window.triggerMattMode = function() {
     const loader = document.getElementById("loading-screen");
     if (loader) loader.style.display = "flex"; 
+    
+    window.startWakeSequence = false;
+    window.startSecretFlySequence = false;
+    phase = "suspended";
     
     setTimeout(() => {
         const splash = document.getElementById('splash-screen');
@@ -235,8 +237,11 @@ window.triggerMattMode = function() {
         const enterBtn = document.getElementById('enter-button');
         
         if(layerPng) layerPng.src = 'files/boettke/aerial-boettke.png';
-        if(enterBtn) enterBtn.src = 'files/boettke/enter-button-boettke.png';
-        if(splash) splash.style.display = 'flex';
+        if(enterBtn) {
+            enterBtn.src = 'files/boettke/enter-button-boettke.png';
+            enterBtn.classList.remove('glow-active');
+        }
+        if(splash) splash.style.display = 'block'; 
         
         const cont = document.getElementById('container');
         if(cont) cont.style.visibility = 'hidden';
@@ -258,16 +263,21 @@ window.triggerMattMode = function() {
         staticAssets.oobMask = loadStaticTex("files/boettke/oob-boettke.png");
         window.__mirrorVariants = ["files/boettke/mirror-boettke.png"];
         
-        _entered = false;
+        if (typeof _entered !== 'undefined') _entered = false;
         window._siteEntered = false;
         window.splashStartTime = Date.now(); 
         
-        phase = "sleeping";
-        if(currentEngine) currentEngine.destroy();
-        currentEngine = null; leftEngine = null; rightEngine = null;
+        if(currentEngine) { currentEngine.destroy(); currentEngine = null; }
+        if(leftEngine) { leftEngine.destroy(); leftEngine = null; }
+        if(rightEngine) { rightEngine.destroy(); rightEngine = null; }
+        
         activePOV = 'center';
+        slideState = 'idle';
+        slideOffset = 0;
         canvas.style.transform = '';
         mx = 0; my = 0; cx = 0; cy = 0;
+
+        phase = "sleeping";
 
         setTimeout(() => {
             if (loader) loader.style.display = "none";
@@ -282,7 +292,6 @@ class ActiveMode {
         const map = { 0:'city', 1:'fractal', 2:'bh', 3:'mirror', 4:'city', 5:'ocean', 6:'earth', 7:'deadcity', 8:'fly', 10:'room_left', 11:'room_right' };
         let fragKey = map[this.id];
 
-        // HARD BLOCK BACK-TO-BACK OOB, DECREASE CHANCE TO 25%
         if (fragKey === 'mirror' || fragKey === 'room_left' || fragKey === 'room_right') {
             this.isOOB = false;
         } else {
@@ -371,7 +380,7 @@ class ActiveMode {
 
     _makeMappedVideo() {  
         const poolVid = window.__claimMappedPoolVid && window.__claimMappedPoolVid();
-        if (poolVid) return poolVid 
+        if (poolVid) return poolVid; 
         
         const mappedFiles = window.MAPPED_VIDEOS || [];
         const src = 'files/mov/mapped/' + mappedFiles[window.__mappedVidIndex % mappedFiles.length];
@@ -404,7 +413,7 @@ class ActiveMode {
     loadVideo(srcFile) {
         const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
-        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR) 
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); 
         let vid = window.__claimPoolVid && window.__claimPoolVid(srcFile);
         if (vid) { 
             vid.loop = !srcFile.includes("fly");
@@ -491,7 +500,7 @@ class ActiveMode {
     destroy() {
         const stopVid = (v) => {
             if (!v) return;
-            v.pause() 
+            v.pause(); 
             while (v.firstChild) v.removeChild(v.firstChild);
             v.removeAttribute('src');
             try { v.load(); } catch(_) {}
@@ -622,6 +631,8 @@ function render(now){
           currentEngine = new ActiveMode(mode); 
           initSideEngines(); 
       }
+  } else if (phase === "suspended") {
+      wakeVal = 0.0;
   } else if(phase === "waking"){ let t = Math.min((now - start) / 3000, 1.0); wakeVal = 1.0 - Math.pow(1.0 - t, 3); if(t >= 1.0){ phase = "open"; timer = now; } }
 
   if (activePOV === 'center') {

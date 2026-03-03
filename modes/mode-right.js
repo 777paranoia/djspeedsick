@@ -6,17 +6,17 @@ precision mediump float;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
 uniform float u_time;
-uniform sampler2D u_texEnv1; // right-mobile.png
-uniform sampler2D u_texEnv2; // Video 0 — Tall Left
-uniform sampler2D u_texEnv3; // Video 1 — Top Center
-uniform sampler2D u_texEnv4; // Video 2 — Bottom Center
-uniform sampler2D u_texEnv6; // Video 3 — Small Bottom-L
-uniform sampler2D u_texEnv5; // Mirror — mode shader
+uniform sampler2D u_texEnv1; 
+uniform sampler2D u_texEnv2; 
+uniform sampler2D u_texEnv3; 
+uniform sampler2D u_texEnv4; 
+uniform sampler2D u_texEnv6; 
+uniform sampler2D u_texEnv5; 
 uniform float u_trip;
-uniform float u_modeSeed; // NEW
+uniform float u_modeSeed; 
 
 float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
-float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); } // NEW
+float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); } 
 
 float noise2(vec2 p) {
     vec2 i = floor(p); vec2 f = fract(p);
@@ -35,7 +35,6 @@ float fbm(vec2 p) {
     return v;
 }
 
-// DATAMOSH GLITCH ADDED TO RIGHT ROOM
 vec3 digitalGlitch(vec3 col, vec2 uv) {
   float burstSlot = floor(u_time * 12.0); 
   float isBurst = step(0.94, hash1(burstSlot * 13.7 + u_modeSeed)); 
@@ -101,7 +100,6 @@ void main() {
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
     
-    // RESTORED CORRECT WAVE AMPLITUDE
     tuv += (r - 0.5) * 0.012 * u_trip; 
     
     tuv = clamp(tuv, 0.0, 1.0);
@@ -117,13 +115,13 @@ void main() {
         vec2 bMin, bMax;
 
         if (px < 330.0) {
-            bMin = vec2(155.0/1243.0, 875.0/2048.0);
-            bMax = vec2(300.0/1243.0, 1115.0/2048.0);
+            bMin = vec2(145.0/1243.0, 865.0/2048.0);
+            bMax = vec2(310.0/1243.0, 1125.0/2048.0);
             finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
         } 
         else if (px > 720.0) {
-            bMin = vec2(780.0/1243.0, 935.0/2048.0);
-            bMax = vec2(1010.0/1243.0, 1055.0/2048.0);
+            bMin = vec2(770.0/1243.0, 925.0/2048.0);
+            bMax = vec2(1020.0/1243.0, 1065.0/2048.0);
             vec2 mirrorUV = clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0);
             mirrorUV.y = 1.0 - mirrorUV.y; 
             vec4 mirrorCol = texture2D(u_texEnv5, mirrorUV);
@@ -131,16 +129,16 @@ void main() {
         } 
         else {
             if (px < 460.0) {
-                bMin = vec2(355.0/1243.0, 1010.0/2048.0);
-                bMax = vec2(445.0/1243.0, 1120.0/2048.0);
+                bMin = vec2(345.0/1243.0, 1000.0/2048.0);
+                bMax = vec2(455.0/1243.0, 1130.0/2048.0);
                 finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             } else if (py < 980.0) {
-                bMin = vec2(465.0/1243.0, 875.0/2048.0);
-                bMax = vec2(655.0/1243.0, 975.0/2048.0);
+                bMin = vec2(455.0/1243.0, 865.0/2048.0);
+                bMax = vec2(665.0/1243.0, 985.0/2048.0);
                 finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             } else {
-                bMin = vec2(485.0/1243.0, 990.0/2048.0);
-                bMax = vec2(670.0/1243.0, 1095.0/2048.0);
+                bMin = vec2(475.0/1243.0, 980.0/2048.0);
+                bMax = vec2(680.0/1243.0, 1105.0/2048.0);
                 finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
             }
         }
