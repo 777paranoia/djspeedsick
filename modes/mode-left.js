@@ -1,4 +1,3 @@
-
 // MODE LEFT ROOM
 
 window.GLSL = window.GLSL || {};
@@ -44,19 +43,23 @@ vec4 getScreenCol(vec2 tuv) {
 
     vec2 bMin, bMax; vec4 finalCol = room;
 
-    if (tuv.x < 0.35) {
-        if (tuv.y < 0.45) {
-            bMin = vec2(-0.05, 0.25); bMax = vec2(0.40, 0.55);
+    if (tuv.x < 0.38) {
+        if (tuv.y < 0.482) {
+            // upper-left monitor
+            bMin = vec2(0.245, 0.455); bMax = vec2(0.375, 0.485);
             finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
         } else {
-            bMin = vec2(-0.05, 0.35); bMax = vec2(0.40, 0.65);
+            // lower-left monitor
+            bMin = vec2(0.245, 0.480); bMax = vec2(0.375, 0.515);
             finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
         }
-    } else if (tuv.x > 0.43) {
-        bMin = vec2(0.35, 0.30); bMax = vec2(0.75, 0.55);
+    } else if (tuv.x > 0.45) {
+        // right monitor
+        bMin = vec2(0.450, 0.453); bMax = vec2(0.575, 0.485);
         finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
     } else {
-        bMin = vec2(0.25, 0.40); bMax = vec2(0.45, 0.60);
+        // laptop / center small screen
+        bMin = vec2(0.390, 0.490); bMax = vec2(0.460, 0.512);
         finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
     }
     return finalCol;
