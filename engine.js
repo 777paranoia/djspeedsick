@@ -687,7 +687,7 @@ function render(now){
           currentEngine = new ActiveMode(mode); 
           initSideEngines(); 
         } else if (window.startTestSequence && !currentEngine) {
-    mode = 1; // or whichever mode you want to default to
+    mode = 1;
     phase = "open";
     start = now;
     timer = now;
@@ -698,7 +698,7 @@ function render(now){
 }
 
       }
-  } else if (phase === "suspended") {
+   else if (phase === "suspended") {
       wakeVal = 0.0;
   } else if(phase === "waking"){ let t = Math.min((now - start) / 3000, 1.0); wakeVal = 1.0 - Math.pow(1.0 - t, 3); if(t >= 1.0){ phase = "open"; timer = now; } }
 
@@ -791,4 +791,3 @@ function __frameGovernor(now){
 }
 
 requestAnimationFrame(__frameGovernor);
-
