@@ -1,3 +1,6 @@
+
+// MODES_CORE
+
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -143,6 +146,16 @@ float worldRain(vec2 uv, float t){
 
 vec2 mapScene(vec3 p, bool renderFractals){
   vec2 res=vec2(1000.0,-1.0);
+  if(u_mode==8){
+    float d1=sdBox(p-vec3(-4.5,0.0, 6.0),vec3(1.6,20.0,2.0)); if(d1<res.x) res=vec2(d1,1.0);
+    float d2=sdBox(p-vec3(-6.5,0.0,16.0),vec3(2.0,24.0,2.5)); if(d2<res.x) res=vec2(d2,2.0);
+    float d3=sdBox(p-vec3(-8.5,0.0,28.0),vec3(2.6,28.0,3.2)); if(d3<res.x) res=vec2(d3,3.0);
+    float d4=sdBox(p-vec3( 4.5,0.0, 7.0),vec3(1.6,20.0,2.0)); if(d4<res.x) res=vec2(d4,4.0);
+    float d5=sdBox(p-vec3( 6.5,0.0,17.0),vec3(2.0,24.0,2.5)); if(d5<res.x) res=vec2(d5,5.0);
+    float d6=sdBox(p-vec3( 8.5,0.0,29.0),vec3(2.6,28.0,3.2)); if(d6<res.x) res=vec2(d6,6.0);
+    float floorD=p.y+9.5; if(floorD<res.x) res=vec2(floorD,20.0);
+    return res;
+  }
   if (u_mode != 6 && u_mode != 7) {
       float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
       float d2=sdBox(p-vec3(-4.2,0.0,7.0), vec3(1.2,12.0,1.5)); if(d2<res.x) res=vec2(d2,2.0);
@@ -169,6 +182,11 @@ vec2 mapScene(vec3 p, bool renderFractals){
 
 vec3 sampleBuilding(float id,vec2 texUV){
   vec2 uv=abs(fract(texUV*0.25)*2.0-1.0);
+  if(u_mode==8){
+    if(id<2.5) return texture2D(u_texB1,uv).rgb;
+    if(id<4.5) return texture2D(u_texB2,uv).rgb;
+    return texture2D(u_texB3,uv).rgb;
+  }
   if(id<1.5) return texture2D(u_texB1,uv).rgb; if(id<2.5) return texture2D(u_texB2,uv).rgb;
   if(id<3.5) return texture2D(u_texB3,uv).rgb; if(id<4.5) return texture2D(u_texB4,uv).rgb;
   if(id<5.5) return texture2D(u_texB5,uv).rgb; return texture2D(u_texB6,uv).rgb;

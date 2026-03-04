@@ -59,7 +59,6 @@
   #legalNotice { margin-top: 1rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.45rem; line-height: 1.2; color: rgba(200,200,200,0.6);opacity: 0.7}
   .responsive-image { max-width: 100%; height: auto; margin-bottom: 15px; opacity: 0.7}
   
-  /* Perimeter RSS Tickers */
   .ticker-wrap { position: fixed; z-index: 750; overflow: hidden; background: transparent; color: #ff00ff; font-family: 'Courier New', monospace; font-size: 0.75rem; text-shadow: 0 0 5px rgba(255, 0, 255, 0.6); pointer-events: none; display: none; }
   .ticker-wrap.top { top: 0; left: 0; width: 100vw; height: 18px; line-height: 18px; }
   .ticker-wrap.bottom { bottom: 0; left: 0; width: 100vw; height: 18px; line-height: 18px; }
@@ -121,9 +120,9 @@
     <div class="separator">-----------------------</div>
     <div class="conky-line">CONTACT</div>
     <div class="separator">-----------------------</div>
-    <div class="conky-line"><a href="mailto:boettke@djspeedsick.com" class="conky-link">>> BOOKING</a></div>
-    <div class="conky-line"><a href="mailto:dj@djspeedsick.com" class="conky-link">>> PRESS</a></div>
-    <div class="conky-line"><a href="mailto:777paranoia@gmail.com" class="conky-link">>> COMMISSIONS</a></div>
+    <div class="conky-line"><a href="/cdn-cgi/l/email-protection#e88a878d9c9c838da88c829b988d8d8c9b818b83c68b8785" class="conky-link">>> BOOKING</a></div>
+    <div class="conky-line"><a href="/cdn-cgi/l/email-protection#0d69674d69677e7d6868697e646e66236e6260" class="conky-link">>> PRESS</a></div>
+    <div class="conky-line"><a href="/cdn-cgi/l/email-protection#6b5c5c5c1b0a190a0504020a2b0c060a020745080406" class="conky-link">>> COMMISSIONS</a></div>
     <div class="separator">-----------------------</div><BR>
     <div class="separator">-----------------------</div>
     <div class="conky-line"><a href="http://escalation.ist" class="conky-link">>> ESCALATIONIST</a></div>
@@ -180,7 +179,7 @@
 
 <audio id="audioPlayer"></audio>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 const IPINFO_TOKEN = '4b45867ce7c229';
 const RSS_SOURCES = [
     "https://thegrayzone.com/feed/",
@@ -364,14 +363,19 @@ splashScreen.addEventListener('touchstart', startSplashDrag, {passive: false});
 window.addEventListener('touchmove', doSplashDrag, {passive: false});
 window.addEventListener('touchend', endSplashDrag);
 
-let __dHeld=false;
-let __debugAllowed=false;
+var __dHeld = false;
+var __debugAllowed = false;
 
-window.addEventListener("keydown",e=>{
-  if(e.key==="d"||e.key==="D") __dHeld=true;
+window.addEventListener("keydown", e => {
+  if (e.key === "d" || e.key === "D") {
+    __dHeld = true;
+  }
 });
-window.addEventListener("keyup",e=>{
-  if(e.key==="d"||e.key==="D") __dHeld=false;
+
+window.addEventListener("keyup", e => {
+  if (e.key === "d" || e.key === "D") {
+    __dHeld = false;
+  }
 });
 
 let _entered = false;
@@ -380,8 +384,8 @@ window.enterSite = function() {
   if (_entered) return;
   _entered = true;
 
-  if(__dHeld) {
-      __debugAllowed=true;
+  if (__dHeld) {
+      __debugAllowed = true;
       if (typeof window.makeUI === 'function') window.makeUI(); 
   }
 
@@ -425,6 +429,31 @@ window.enterSite = function() {
         
         dryGain.connect(audioCtx.destination); wetGain.connect(audioCtx.destination);
         window.__audioCtx = audioCtx;
+        
+        window.bcCanvas = document.createElement('canvas');
+        window.bcCanvas.width = 512; 
+        window.bcCanvas.height = 512;
+        
+        const bcLib = typeof butterchurn !== 'undefined' && butterchurn.default ? butterchurn.default : (typeof butterchurn !== 'undefined' ? butterchurn : null);
+        const bcPresetsLib = typeof butterchurnPresets !== 'undefined' && butterchurnPresets.default ? butterchurnPresets.default : (typeof butterchurnPresets !== 'undefined' ? butterchurnPresets : null);
+        
+        if (bcLib && bcPresetsLib) {
+            window.butterchurnVisualizer = bcLib.createVisualizer(window.__audioCtx, window.bcCanvas, {
+                width: 512,
+                height: 512
+            });
+            window.butterchurnVisualizer.connectAudio(source);
+            
+            const presets = bcPresetsLib.getPresets();
+            const presetKeys = Object.keys(presets);
+            const randomPreset = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+            window.butterchurnVisualizer.loadPreset(presets[randomPreset], 0.0);
+
+            setInterval(() => {
+                const nextPreset = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+                window.butterchurnVisualizer.loadPreset(presets[nextPreset], 2.0); 
+            }, 15000);
+        }
     }
     
     if (window.__audioCtx && window.__audioCtx.state === 'suspended') window.__audioCtx.resume();
@@ -478,8 +507,12 @@ window.enterSite = function() {
 };
 </script>
 
+<script src="lodash.js"></script>
+<script src="butterchurn.js"></script>
+<script src="butterchurnPresets.min.js"></script>
 <script src="player.js"></script>
 <script src="modes/modes_core.js"></script>
+<script src="modes/mode0.js"></script>
 <script src="modes/mode1.js"></script>
 <script src="modes/mode2.js"></script>
 <script src="modes/mode3.js"></script>
@@ -488,28 +521,23 @@ window.enterSite = function() {
 <script src="modes/mode6.js"></script>
 <script src="modes/mode7.js"></script>
 <script src="modes/mode8.js"></script>
+<script src="modes/mode9.js"></script>
+<script src="modes/mode10.js"></script>
 <script src="modes/mode-right.js"></script>
 <script src="modes/mode-left.js"></script>
 <script src="engine.js"></script>
 
 <script>
-<script>
 window.makeUI = function() {
-  if(!__debugAllowed) return;
-  if(document.getElementById('debug-menu-box')) return; 
+  if (!__debugAllowed) return;
+  if (document.getElementById('debug-menu-box')) return; 
 
   const box = document.createElement("div");
   box.id = "debug-menu-box";
   box.style.cssText = `
-    position:fixed;
-    top:10px;
-    left:10px;
-    z-index:2147483647;
-    background:rgba(0,0,0,.85);
-    color:#0f0;
-    font:12px monospace;
-    padding:8px;
-    border:1px solid #0f0;
+    position:fixed; top:10px; left:10px; z-index:2147483647;
+    background:rgba(0,0,0,.85); color:#0f0; font:12px monospace;
+    padding:8px; border:1px solid #0f0;
   `;
   box.innerHTML = `
     <div>POV: <span id="pov">?</span></div>
@@ -517,65 +545,62 @@ window.makeUI = function() {
     <div style="margin-top:6px">
       <button id="prev">◀</button>
       <select id="sel">
-        <option value="0">0: City</option>
-        <option value="1">1: Fractal</option>
-        <option value="2">2: BH</option>
-        <option value="3">3: Mirror</option>
-        <option value="4">4: City 2</option>
-        <option value="5">5: Ocean</option>
-        <option value="6">6: Earth</option>
-        <option value="7">7: Deadcity</option>
+        <option value="0">0: Fly Intro</option>
+        <option value="1">1: City</option>
+        <option value="2">2: Fractal</option>
+        <option value="3">3: BH</option>
+        <option value="4">4: Mirror</option>
+        <option value="5">5: City 2</option>
+        <option value="6">6: Ocean</option>
+        <option value="7">7: Earth</option>
+        <option value="8">8: Goreville</option>
+        <option value="9">9: Plane</option>
+        <option value="10">10: City.Sky</option>
+        <option value="98">98: Left Room</option>
+        <option value="99">99: Right Room</option>
       </select>
       <button id="next">▶</button>
     </div>
   `;
 
   document.body.appendChild(box);
-
   const sel = box.querySelector("#sel");
   const btnPrev = box.querySelector("#prev");
   const btnNext = box.querySelector("#next");
 
   function setMode(n){
-    n = Math.max(0, Math.min(7, n|0)); 
-    if(typeof currentEngine !== 'undefined' && currentEngine) currentEngine.destroy() 
+    n = parseInt(n);
+    if (n !== 98 && n !== 99) n = Math.max(0, Math.min(9, n|0)); 
+    if (typeof currentEngine !== 'undefined' && currentEngine) currentEngine.destroy(); 
     if (typeof phase !== 'undefined') phase = "open";
     if (typeof blink !== 'undefined') blink = 0;
-    if (typeof flash !== 'undefined') flash = 0;
-    if (typeof shake !== 'undefined') shake = 0;
-
     if (typeof lastMode !== 'undefined' && typeof mode !== 'undefined') lastMode = mode;
-    mode = n;
-    modeSeed++;
-    
-    sel.value = mode; 
+    mode = n; modeSeed++;
+    if (mode !== 0) sel.value = mode; 
     currentEngine = new ActiveMode(mode);
   }
 
   sel.onchange = () => setMode(+sel.value);
-
   btnPrev.onclick = () => {
-    let prevMode = mode - 1;
-    if (prevMode < 0) prevMode = 7;
-    setMode(prevMode);
+    let p = mode - 1; if (p < 0) p = 9; if (mode === 98 || mode === 99) p = 9;
+    setMode(p);
   };
-
   btnNext.onclick = () => {
-    let nextMode = mode + 1;
-    if (nextMode > 7) nextMode = 0;
-    setMode(nextMode);
+    let n = mode + 1; if (n > 9) n = 1; if (mode === 98 || mode === 99) n = 1;
+    setMode(n);
   };
 
-  setInterval(()=>{
+  setInterval(() => {
     try {
-      box.querySelector("#mode").textContent = mode;
-      box.querySelector("#pov").textContent = activePOV; 
-      if (sel.value != mode && mode <= 7) {
-          sel.value = mode;
+      if (document.getElementById("pov")) {
+        document.getElementById("pov").innerText = window.modeSeed || "?";
       }
-    } catch(e) {} 
-  }, 100);
-}
+      if (document.getElementById("mode")) {
+        document.getElementById("mode").innerText = window.mode !== undefined ? window.mode : "?";
+      }
+    } catch(err) {}
+  }, 500);
+};
 </script>
 </body>
 </html>

@@ -1,3 +1,6 @@
+
+// MODE 4 - MIRROR
+
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 

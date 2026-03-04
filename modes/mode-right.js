@@ -1,3 +1,6 @@
+
+// MODE - RIGHT ROOM
+
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -35,43 +38,35 @@ float fbm(vec2 p) {
     return v;
 }
 
-vec3 digitalGlitch(vec3 col, vec2 uv) {
-  float burstSlot = floor(u_time * 12.0); 
-  float isBurst = step(0.94, hash1(burstSlot * 13.7 + u_modeSeed)); 
-  float flicker = step(0.5, hash1(floor(u_time * 60.0) * 9.1)); 
-  float activeG = isBurst * flicker * clamp(u_trip, 0.0, 1.5);
-  
-  if (activeG < 0.01) return col;
+vec4 getScreenCol(vec2 tuv) {
+    vec4 room = texture2D(u_texEnv1, tuv);
+    bool isGreen = room.g > 0.4 && room.r < 0.25 && room.b < 0.25;
+    if (!isGreen) return room;
 
-  float rndG = hash1(burstSlot + u_modeSeed);
-  float gridSize = (rndG < 0.33) ? 64.0 : ((rndG < 0.66) ? 128.0 : 256.0);
-  
-  vec2 blockUV = floor(uv * gridSize) / gridSize;
-  float blockRnd = hash2(blockUV + floor(u_time * 30.0)); 
-  
-  vec2 motionVector = (vec2(hash1(blockRnd), hash1(blockRnd * 2.0)) - 0.5) * 0.15;
-  vec2 moshUV = fract(blockUV + motionVector * activeG);
-  
-  vec3 moshCol = texture2D(u_texEnv1, moshUV).rgb;
-  
-  float doMosh = step(0.9, blockRnd) * activeG;
-  col = mix(col, moshCol, doMosh);
-  
-  float doDegrade = step(0.92, hash2(blockUV + 9.3)) * activeG; 
-  vec3 degradedCol = floor(col * 3.0) / 3.0;
-  
-  float tintRnd = hash1(blockRnd * 3.0);
-  vec3 yuvTint = (tintRnd > 0.5) ? vec3(0.9, 0.1, 0.8) : vec3(0.1, 0.8, 0.3);
-  col = mix(col, degradedCol * yuvTint, doDegrade);
+    vec2 bMin, bMax; vec2 mapUV; vec4 finalCol = room;
 
-  float miniGrid = gridSize * 2.0;
-  vec2 miniBlockUV = floor(uv * miniGrid) / miniGrid;
-  float miniRnd = hash2(miniBlockUV + floor(u_time * 60.0));
-  float doMini = step(0.95, miniRnd) * activeG; 
-  
-  col = mix(col, vec3(col.b, col.r, col.g), doMini); 
-
-  return col;
+    if (tuv.x > 0.55) {
+        bMin = vec2(0.50, 0.40); bMax = vec2(0.95, 0.65);
+        mapUV = clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0);
+        mapUV.y = 1.0 - mapUV.y;
+        vec4 mirrorCol = texture2D(u_texEnv5, mapUV);
+        finalCol = vec4(mirrorCol.rgb * 3.0, 1.0);
+    } else if (tuv.x < 0.26) {
+        bMin = vec2(0.00, 0.35); bMax = vec2(0.35, 0.65);
+        finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
+    } else if (tuv.x < 0.35) {
+        bMin = vec2(0.15, 0.40); bMax = vec2(0.40, 0.65);
+        finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
+    } else {
+        if (tuv.y < 0.49) {
+            bMin = vec2(0.25, 0.35); bMax = vec2(0.60, 0.55);
+            finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
+        } else {
+            bMin = vec2(0.25, 0.40); bMax = vec2(0.60, 0.65);
+            finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
+        }
+    }
+    return finalCol;
 }
 
 void main() {
@@ -99,52 +94,37 @@ void main() {
     vec2 r = vec2(0.0);
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
-    
     tuv += (r - 0.5) * 0.012 * u_trip; 
-    
     tuv = clamp(tuv, 0.0, 1.0);
 
-    vec4 room = texture2D(u_texEnv1, tuv);
-    bool isGreen = room.g > 0.4 && room.r < 0.25 && room.b < 0.25;
+    float burstSlot = floor(u_time * 12.0); 
+    float isBurst = step(0.94, hash1(burstSlot * 13.7 + u_modeSeed)); 
+    float flicker = step(0.5, hash1(floor(u_time * 60.0) * 9.1)); 
+    float activeG = isBurst * flicker * clamp(u_trip, 0.0, 1.5);
+    float rndG = hash1(burstSlot + u_modeSeed);
+    float gridSize = (rndG < 0.33) ? 64.0 : ((rndG < 0.66) ? 128.0 : 256.0);
+    vec2 blockUV = floor(tuv * gridSize) / gridSize;
+    float blockRnd = hash2(blockUV + floor(u_time * 30.0)); 
+    vec2 motionVector = (vec2(hash1(blockRnd), hash1(blockRnd * 2.0)) - 0.5) * 0.15;
+    float doMosh = step(0.9, blockRnd) * activeG;
+    vec2 moshUV = mix(tuv, fract(blockUV + motionVector * activeG), doMosh);
 
-    vec4 finalCol = room;
+    vec3 col = getScreenCol(tuv).rgb;
+    vec3 moshCol = getScreenCol(moshUV).rgb;
+    col = mix(col, moshCol, doMosh);
 
-    if (isGreen) {
-        float px = tuv.x * 1243.0;
-        float py = tuv.y * 2048.0; 
-        vec2 bMin, bMax;
+    float doDegrade = step(0.92, hash2(blockUV + 9.3)) * activeG; 
+    vec3 degradedCol = floor(col * 3.0) / 3.0;
+    float tintRnd = hash1(blockRnd * 3.0);
+    vec3 yuvTint = (tintRnd > 0.5) ? vec3(0.9, 0.1, 0.8) : vec3(0.1, 0.8, 0.3);
+    col = mix(col, degradedCol * yuvTint, doDegrade);
 
-        if (px < 330.0) {
-            bMin = vec2(145.0/1243.0, 865.0/2048.0);
-            bMax = vec2(310.0/1243.0, 1125.0/2048.0);
-            finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
-        } 
-        else if (px > 720.0) {
-            bMin = vec2(770.0/1243.0, 925.0/2048.0);
-            bMax = vec2(1020.0/1243.0, 1065.0/2048.0);
-            vec2 mirrorUV = clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0);
-            mirrorUV.y = 1.0 - mirrorUV.y; 
-            vec4 mirrorCol = texture2D(u_texEnv5, mirrorUV);
-            finalCol = vec4(mirrorCol.rgb * 3.0, 1.0);
-        } 
-        else {
-            if (px < 460.0) {
-                bMin = vec2(345.0/1243.0, 1000.0/2048.0);
-                bMax = vec2(455.0/1243.0, 1130.0/2048.0);
-                finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
-            } else if (py < 980.0) {
-                bMin = vec2(455.0/1243.0, 865.0/2048.0);
-                bMax = vec2(665.0/1243.0, 985.0/2048.0);
-                finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
-            } else {
-                bMin = vec2(475.0/1243.0, 980.0/2048.0);
-                bMax = vec2(680.0/1243.0, 1105.0/2048.0);
-                finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
-            }
-        }
-    }
-    
-    finalCol.rgb = digitalGlitch(finalCol.rgb, gl_FragCoord.xy / u_resolution.xy);
-    gl_FragColor = finalCol;
+    float miniGrid = gridSize * 2.0;
+    vec2 miniBlockUV = floor(tuv * miniGrid) / miniGrid;
+    float miniRnd = hash2(miniBlockUV + floor(u_time * 60.0));
+    float doMini = step(0.95, miniRnd) * activeG; 
+    col = mix(col, vec3(col.b, col.r, col.g), doMini); 
+
+    gl_FragColor = vec4(col, 1.0);
 }
 `;

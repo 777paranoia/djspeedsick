@@ -3,7 +3,6 @@ const gl = canvas.getContext("webgl", { antialias: false, alpha: false, preserve
 gl.getExtension("OES_texture_float") || gl.getExtension("OES_texture_half_float");
 
 window.__ALL_VIDEOS = window.__ALL_VIDEOS || [];
-window.__mappedVidIndex = 0;
 
 (new Image()).src = "files/img/void/skyline.png";
 
@@ -45,9 +44,9 @@ window.__mappedVidIndex = 0;
     
     const mappedFiles = window.MAPPED_VIDEOS || [];
     if (mappedFiles.length) {
+      let shuffled = [...mappedFiles].sort(() => Math.random() - 0.5);
       for (let i = 0; i < 4; i++) {
-        const src = "files/mov/mapped/" + mappedFiles[window.__mappedVidIndex % mappedFiles.length];
-        window.__mappedVidIndex++;
+        const src = "files/mov/mapped/" + shuffled[i % shuffled.length];
         pool.mapped.push(makePoolVid(src, true));
       }
     }
@@ -289,7 +288,21 @@ window.triggerMattMode = function() {
 class ActiveMode {
     constructor(modeID) {
         this.id = modeID;
-        const map = { 0:'city', 1:'fractal', 2:'bh', 3:'mirror', 4:'city', 5:'ocean', 6:'earth', 7:'deadcity', 8:'fly', 10:'room_left', 11:'room_right' };
+const map = {
+  0:'fly',
+  1:'city',
+  2:'fractal',
+  3:'bh',
+  4:'mirror',
+  5:'city',
+  6:'ocean',
+  7:'earth',
+  8:'goreville',
+  9:'plane',
+  10:'city_bc',
+  98:'room_left',
+  99:'room_right'
+};
         let fragKey = map[this.id];
 
         if (fragKey === 'mirror' || fragKey === 'room_left' || fragKey === 'room_right') {
@@ -341,7 +354,7 @@ class ActiveMode {
             this.textures.push(this.env1);
             this.galleryTex = [0,1,2,3].map(() => this._makeBlackTex());
             this.galleryTex.forEach(t => this.textures.push(t));
-            [0,1,2,3].forEach(i => this._loadGallerySlot(i));
+            [0,1,2].forEach(i => this._loadGallerySlot(i));
         } else if (fragKey === 'room_right') {
             this.env1 = loadStaticTex("files/img/rooms/right-mobile.png");
             this.textures.push(this.env1);
@@ -349,8 +362,18 @@ class ActiveMode {
             this.vidObjs = [0,1,2,3].map(() => this._makeMappedVideo());
             this.vidTexs.forEach(t => this.textures.push(t));
         } else {
-            if (fragKey === 'city' || fragKey === 'fractal') this.env1 = loadStaticTex("files/img/void/skyline.png");
-            else if (fragKey === 'mirror') {
+         if (fragKey === 'city_bc') {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    this.env1 = tex;
+    this.isButter = true;
+}
+else if (fragKey === 'city' || fragKey === 'fractal' || fragKey === 'plane')
+    this.env1 = loadStaticTex("files/img/void/skyline.png");            else if (fragKey === 'mirror') {
                 const mirrorVariants = window.__mirrorVariants || [
                     "files/img/mirror.png",
                     "files/img/mirrorv1.png",
@@ -360,12 +383,20 @@ class ActiveMode {
                 ];
                 this.env1 = loadStaticTex(mirrorVariants[Math.floor(Math.random() * mirrorVariants.length)]);
             }
+            else if (fragKey === 'goreville') {
+                this.env1 = loadStaticTex("files/img/void/goresky.png");
+                this.env2 = loadStaticTex("files/img/void/gorebuilding01.png");
+                this.env3 = loadStaticTex("files/img/void/gorebuilding02.png");
+                this.env4 = loadStaticTex("files/img/void/gorebuilding03.png");
+                this.env5 = loadStaticTex("files/img/void/gorewater.png");
+                this.textures.push(this.env1, this.env2, this.env3, this.env4, this.env5);
+            }
             else if (fragKey === 'ocean') this.env1 = loadStaticTex("files/img/ocean.jpg");
             else if (fragKey === 'deadcity') { this.env1 = this.loadVideo("files/mov/bh2.webm"); this.env2 = loadStaticTex("files/img/deadcity.png"); this.textures.push(this.env2); }
             else if (fragKey === 'bh') this.env1 = this.loadVideo("files/mov/bh2.webm");
             else if (fragKey === 'earth') this.env1 = this.loadVideo("files/mov/earth.webm");
             else if (fragKey === 'fly') this.env1 = this.loadVideo("files/mov/fly.webm"); 
-            if (this.env1 && !['deadcity','bh','earth','fly'].includes(fragKey)) this.textures.push(this.env1);
+            if (this.env1 && !['deadcity','bh','earth','fly','goreville'].includes(fragKey)) this.textures.push(this.env1);
         }
     }
 
@@ -383,8 +414,7 @@ class ActiveMode {
         if (poolVid) return poolVid; 
         
         const mappedFiles = window.MAPPED_VIDEOS || [];
-        const src = 'files/mov/mapped/' + mappedFiles[window.__mappedVidIndex % mappedFiles.length];
-        window.__mappedVidIndex++;
+        const src = 'files/mov/mapped/' + mappedFiles[Math.floor(Math.random() * mappedFiles.length)];
         
         const vid = document.createElement("video");
         vid.muted = true; vid.playsInline = true; vid.loop = true;
@@ -445,6 +475,19 @@ class ActiveMode {
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.videoObj);
         }
 
+        if (this.id === 10 && window.bcCanvas) {
+            gl.activeTexture(gl.TEXTURE8);
+            gl.bindTexture(gl.TEXTURE_2D, this.env1);
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,
+                gl.RGBA,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                window.bcCanvas
+            );
+        }
+
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b1);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b2);
         gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b3);
@@ -461,16 +504,26 @@ class ActiveMode {
         gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
         gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
 
-        if (this.id === 7 && this.env2) { gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, this.env2); }
+        if (this.id === 8 && this.env2) {
+            gl.activeTexture(gl.TEXTURE9);  gl.bindTexture(gl.TEXTURE_2D, this.env2);
+            gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, this.env3 || DUMMY_BLACK);
+            gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, this.env4 || DUMMY_BLACK);
+            gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, this.env5 || DUMMY_BLACK);
+        }
 
-        if (this.id === 10 && this.galleryTex) {
+        if (this.id === 98 && this.galleryTex) {
             gl.activeTexture(gl.TEXTURE9);  gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[0]);
             gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[1]);
             gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[2]);
-            gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[3]);
+            
+            gl.activeTexture(gl.TEXTURE12); 
+            gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[3]);
+            if (window.butterchurnVisualizer && window.bcCanvas) {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, window.bcCanvas);
+            }
         }
 
-        if (this.id === 11) {
+        if (this.id === 99) {
             this.vidObjs.forEach((vid, i) => {
                 if (vid.readyState >= 2) {
                     gl.activeTexture(gl.TEXTURE9 + i);
@@ -512,7 +565,7 @@ class ActiveMode {
     }
 }
 
-let currentEngine = null, mx=0, my=0, cx=0, cy=0, mode=0, blink=0, flash=0, shake=0, phase="sleeping", timer=-9999, start=0, lastNow=0, blinkCount=0, targetBlinks=1, modeSeed=0, lastMode=-1, tripIntensity=1.0;
+let currentEngine = null, mx=0, my=0, cx=0, cy=0, mode=1, blink=0, flash=0, shake=0, phase="sleeping", timer=-9999, start=0, lastNow=0, blinkCount=0, targetBlinks=1, modeSeed=0, lastMode=-1, tripIntensity=1.0;
 let leftEngine = null, rightEngine = null, activePOV = 'center'; 
 const SLIDE_MS = 340, EDGE_SNAP_MS = 80;
 let slideState = 'idle', slideStart = 0, slideDir = 0, slideOffset = 0, pendingPOV = null, povSwitchTime = -9999;
@@ -602,16 +655,18 @@ function simStep(now){
 function advanceMode(){
   let nextMode = mode;
   let attempts = 0;
-  while((nextMode === mode || nextMode === lastMode || (mode < 7 && nextMode < 7)) && attempts < 20){ nextMode = Math.floor(Math.random() * 8); attempts++; }
+  while((nextMode === mode || nextMode === lastMode || (mode < 8 && nextMode < 8)) && attempts < 20){ nextMode = Math.floor(Math.random() * 9) + 1; attempts++; }
   lastMode = mode; mode = nextMode; modeSeed++;
   tripIntensity = 0.2 + Math.random() * 1.5; 
   if(currentEngine) currentEngine.destroy();
   currentEngine = new ActiveMode(mode);
 }
 
-function initSideEngines() { if (!leftEngine) leftEngine = new ActiveMode(10); if (!rightEngine) rightEngine = new ActiveMode(11); }
+function initSideEngines() { if (!leftEngine) leftEngine = new ActiveMode(98); if (!rightEngine) rightEngine = new ActiveMode(99); }
 
 function render(now){
+  if (window.butterchurnVisualizer) window.butterchurnVisualizer.render();
+
   let audioIntensity = 0;
   if (window.audioAnalyser) { window.audioAnalyser.getByteFrequencyData(window.audioData); let sum = 0; for (let i=0; i<6; i++) sum += window.audioData[i]; audioIntensity = sum / (6 * 255); }
   let wakeVal = 1.0;
@@ -619,13 +674,14 @@ function render(now){
   if(phase === "sleeping"){
       wakeVal = 0.0;
       if(window.startSecretFlySequence && !currentEngine){ 
-          mode = 8;
+          mode = 0;
           phase = "waking"; 
           start = now; 
           currentEngine = new ActiveMode(mode); 
           initSideEngines(); 
           if(window.playFlyAudio) window.playFlyAudio();
       } else if(window.startWakeSequence && !currentEngine){ 
+          mode = 1;
           phase = "waking"; 
           start = now; 
           currentEngine = new ActiveMode(mode); 
@@ -637,7 +693,7 @@ function render(now){
 
   if (activePOV === 'center') {
     
-    if (mode === 8 && phase === "open") {
+    if (mode === 0 && phase === "open") {
         if (currentEngine && currentEngine.videoObj && currentEngine.videoObj.ended) {
             phase = "waking"; 
             start = now; 
@@ -676,11 +732,11 @@ function render(now){
     drawBacklight(now, 0.35, audioIntensity);
     simStep(now);
 
-    if(mode === 2 || mode === 7){ 
+    if(mode === 3 || mode === 9){ 
         if(Math.random()<0.08) flash=1.2; 
         flash*=0.86; 
         shake=Math.max(flash, audioIntensity*0.07); 
-    } else if (mode === 8) {
+    } else if (mode === 0) {
         flash *= 0.8; 
         let windGust = Math.random() < 0.2 ? Math.random() * 0.8 : 0.0;
         shake = 0.07 + (audioIntensity * 0.8) + windGust;
