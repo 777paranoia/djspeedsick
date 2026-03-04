@@ -686,6 +686,17 @@ function render(now){
           start = now; 
           currentEngine = new ActiveMode(mode); 
           initSideEngines(); 
+        } else if (window.startTestSequence && !currentEngine) {
+    mode = 1; // or whichever mode you want to default to
+    phase = "open";
+    start = now;
+    timer = now;
+    wakeVal = 1.0;
+    currentEngine = new ActiveMode(mode);
+    initSideEngines();
+    if (window.unmuteMainAudio) window.unmuteMainAudio();
+}
+
       }
   } else if (phase === "suspended") {
       wakeVal = 0.0;
