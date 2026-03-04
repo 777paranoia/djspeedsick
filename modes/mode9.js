@@ -1,11 +1,8 @@
-
-// MODE 9 - PLANE 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
 GLSL.modules['plane'] = `
 
-// --- HELPER FUNCTIONS ---
 float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
   vec3 ab=b-a, ap=p-a;
   return length(ap-ab*clamp(dot(ap,ab)/dot(ab,ab),0.0,1.0))-r;
@@ -17,7 +14,6 @@ float smin(float a, float b, float k) {
   float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0); return mix(b,a,h)-k*h*(1.0-h);
 }
 
-// --- PLANE SDF ---
 vec2 sdJet(vec3 p) {
   vec2 res=vec2(1e10,-1.0);
   float fuse=sdCapsule(p,vec3(0,0,-5.6),vec3(0,0,3.0),0.40);
@@ -52,7 +48,6 @@ vec2 sdJet(vec3 p) {
   return res;
 }
 
-// --- PLANE NORMAL ---
 vec3 jetNormal(vec3 p) {
   const float e=0.004;
   return normalize(vec3(
@@ -64,17 +59,6 @@ vec3 jetNormal(vec3 p) {
 void main() {
   vec3 ro, rd, clean_rd; setupCamera(ro, rd, clean_rd, 0.0);
 
-  // --- PLANE OVERLAY (COLLISION SEQUENCE) ---
-  float rawA = clamp(u_modeTime / 8.0, 0.0, 1.0);
-  float approach = pow(rawA, 2.0);
-
-  float close = smoothstep(0.8, 1.0, approach);
-  float planeZ = mix(90.0, 0.1, approach);
-  vec3 planePos = vec3(0.0, -0.6, planeZ);
-
-  // --- DIMMING FACTOR ---
-  float dimFactor = mix(1.0, 0.1, approach);
-
   // --- CITY RAYMARCH ---
   float t=0.0; vec2 hit=vec2(0.0);
   for(int i=0;i<90;i++){ 
@@ -85,12 +69,10 @@ void main() {
 
   float cityDepth = (t < 70.0) ? t : 9999.0;
 
-  // --- BACKGROUND & SKY (DIMMABLE) ---
+  // --- BACKGROUND & SKY ---
   vec3 cGreen = vec3(0.15, 0.9, 0.4); vec3 cRed = vec3(0.9, 0.05, 0.15); vec3 cAmber = vec3(1.0, 0.5, 0.0); 
   float traffic = smoothstep(0.7, 1.0, sin(rd.x * 6.0 + u_time * 1.5)) * 0.4;
   vec3 skyTone = mix(vec3(0.005, 0.01, 0.015), vec3(0.05, 0.08, 0.06), exp(-max(rd.y,0.0)*4.0)) + mix(mix(cGreen, cRed, sin(rd.x * 4.0 + u_time * 0.5) * 0.5 + 0.5), cAmber, traffic) * (noise1(u_time * 0.2 - rd.x * 3.0) * 0.5 + 0.5 + traffic) * smoothstep(0.0, -0.8, rd.y) * 0.6 * 0.8;
-  
-  skyTone *= dimFactor;
   vec3 col = vec3(0.0);
   
   if(t<70.0){
@@ -98,12 +80,19 @@ void main() {
     vec3 n=normalize(vec3(mapScene(p+vec3(0.01,0,0),false).x-mapScene(p-vec3(0.01,0,0),false).x, mapScene(p+vec3(0,0.01,0),false).x-mapScene(p-vec3(0,0.01,0),false).x, mapScene(p+vec3(0,0,0.01),false).x-mapScene(p-vec3(0,0,0.01),false).x));
     vec3 bTex = sampleBuilding(hit.y, (abs(n.x)>abs(n.y))?p.zy:p.xy); bTex += bTex * smoothstep(0.5, 0.9, max(bTex.r, max(bTex.g, bTex.b))) * 2.5;
     col=mix(bTex*0.25, skyTone, 1.0-exp(-0.015*t*t)) + mix(cGreen, cRed, sin(p.x * 0.4) * 0.5 + 0.5) * (noise1(u_time * 0.3 + p.x * 0.1) * 0.4 + 0.6 + smoothstep(0.8, 1.0, sin(p.z * 0.8 + u_time * 2.0)) * 0.2) * smoothstep(2.0, -20.0, p.y) * 0.4 * exp(-0.005 * t * t);
-    col *= dimFactor;
   } else col=texture2D(u_texEnv1,fract(rd.xy*0.5+0.5+vec2(u_time*0.002,0.0))).rgb*0.3+skyTone*0.5;
 
   col += snow(vec2(atan(rd.z,rd.x)*2.0, rd.y*2.0), 15.0, 0.3, 0.3);
 
-  // --- PLANE OVERLAY AND CRASH OVERWHELM ---
+  // --- PLANE OVERLAY ---
+  float rawA = clamp(u_modeTime / 8.0, 0.0, 1.0);
+  float approach = pow(rawA, 1.5);
+  float close = smoothstep(0.8, 1.0, approach);
+  
+  // Z stops at 3.5. Nose is 3.0 units long, so it physically cannot touch the camera.
+  float planeZ = mix(90.0, 3.5, approach);
+  vec3 planePos = vec3(0.0, -0.6, planeZ);
+
   vec3 oc2=ro-planePos;
   float bB2=dot(rd,oc2), bC2=dot(oc2,oc2)-81.0, disc2=bB2*bB2-bC2;
   bool planeHit=false; float pd=0.01; vec2 pi=vec2(0.0);
@@ -142,23 +131,6 @@ void main() {
     if(partId>2.5&&partId<3.5) baseCol=vec3(0.60,0.62,0.68);
     if(partId>3.5) baseCol=vec3(0.70,0.72,0.78);
 
-    vec3 emission = vec3(0.0);
-    if(partId>2.5&&partId<3.5){
-      float eY2=-0.36-1.90*dih;
-      vec3 ep=vec3(abs(hp.x)-1.90,hp.y-eY2,hp.z);
-      float rD=length(ep.xy);
-      
-      baseCol=mix(baseCol,vec3(0.03,0.03,0.05),smoothstep(0.27,0.15,rD));
-      baseCol=mix(baseCol,vec3(1.0, 0.7, 0.2), smoothstep(0.25, 0.1, rD)*2.0*close); 
-
-      float blades=abs(sin(atan(ep.y,ep.x)*9.0+u_time*8.0))*0.5+0.5;
-      baseCol=mix(baseCol,vec3(0.14,0.14,0.17)*blades,smoothstep(0.14,0.04,rD)*step(0.04,rD)*0.7);
-      
-      float plume = smoothstep(0.35, 0.1, length(ep.xy)) * step(-3.0, ep.z) * step(ep.z, -0.4);
-      float turb = noise1(u_time * 15.0 + ep.z * 10.0) * 0.5 + 0.5; 
-      emission = vec3(1.0, 0.5, 0.1) * plume * turb * 8.0 * close; 
-    }
-    
     if(partId<1.5){
       float wY=smoothstep(0.055,0.018,abs(hp.y-0.06));
       float wX=step(0.50,fract(hp.z*2.6+0.12));
@@ -174,58 +146,36 @@ void main() {
       float stripe=smoothstep(0.014,0.004,abs(hp.y-0.01))*step(abs(hp.x),0.40)*notNose;
       baseCol=mix(baseCol,vec3(0.10,0.18,0.42),stripe*0.5);
     }
+    if(partId>2.5&&partId<3.5){
+      float eY2=-0.36-1.90*dih;
+      vec3 ep=vec3(abs(hp.x)-1.90,hp.y-eY2,hp.z);
+      float rD=length(ep.xy);
+      baseCol=mix(baseCol,vec3(0.03,0.03,0.05),smoothstep(0.27,0.15,rD));
+      float blades=abs(sin(atan(ep.y,ep.x)*9.0+u_time*8.0))*0.5+0.5;
+      baseCol=mix(baseCol,vec3(0.14,0.14,0.17)*blades,smoothstep(0.14,0.04,rD)*step(0.04,rD)*0.7);
+      baseCol=mix(baseCol,vec3(0.7,0.35,0.08),smoothstep(0.06,0.0,rD)*0.5);
+    }
 
     vec3 cityCol=mix(cGreen,cRed,sin(hp.x*0.4+u_time*0.3)*0.5+0.5)*0.6+vec3(0.2,0.1,0.0);
-    vec3 lit = baseCol*(kCity*cityCol*dimFactor + kTop*vec3(0.2,0.3,0.5)*dimFactor + 0.05) + vec3(0.8,0.85,1.0)*(kRim+spec);
-    lit += emission;
+    vec3 lit=baseCol*(kCity*cityCol+kTop*vec3(0.2,0.3,0.5)+0.05)+vec3(0.8,0.85,1.0)*(kRim+spec);
 
     float fog=exp(-pd*0.003);
     col=mix(col,lit,fog);
 
-    float projS=1.0/max((planeZ-ro.z)*1.4,0.1);
+    float projS=1.0/max((planeZ-ro.z)*1.4,0.5);
     vec2 fUV=(gl_FragCoord.xy-0.5*u_resolution.xy)/u_resolution.y;
+    float nGlare=exp(-dot(fUV,fUV)*mix(8000.0,20.0,approach*approach));
+    col+=vec3(0.9,0.88,0.80)*nGlare*smoothstep(0.1,0.8,approach)*mix(0.2,2.0,close);
     
-    // Engine Glows
-    float eY3=-0.6 + (-0.36-1.90*dih); 
+    float eY3=-0.6 + (-0.36-1.90*dih);
     vec2 eL=fUV-vec2(-1.90*projS,eY3*projS);
     vec2 eR=fUV-vec2( 1.90*projS,eY3*projS);
-    float eGlow=exp(-dot(eL,eL)*mix(5000.0,40.0,approach*approach))+exp(-dot(eR,eR)*mix(5000.0,40.0,approach*approach));
-    col+=vec3(1.0,0.6,0.3)*eGlow*smoothstep(0.05,0.7,approach)*1.5;
+    float eGlow=exp(-dot(eL,eL)*mix(5000.0,50.0,approach*approach))+exp(-dot(eR,eR)*mix(5000.0,50.0,approach*approach));
+    col+=vec3(0.3,0.5,1.0)*eGlow*smoothstep(0.05,0.7,approach)*0.7;
     
-    // Emergency Strobe
-    float strobeFreq = mix(1.4, 5.0, approach);
-    float strobe=step(0.8,fract(u_time*strobeFreq))*smoothstep(0.1,0.5,approach);
+    float strobe=step(0.92,fract(u_time*1.4))*smoothstep(0.1,0.5,approach);
     vec2 sPos=fUV-vec2(0.0,(-0.6 + 0.42)*projS); 
-    col+=vec3(1.0,0.1,0.05)*exp(-dot(sPos,sPos)*mix(20000.0,500.0,approach*approach))*strobe*2.0;
-
-    // --- 4. PORTAL TO HELL / EXPLOSION IMPACT ---
-    float doomTime = smoothstep(0.85, 1.0, approach);
-    if (doomTime > 0.0) {
-      vec2 pUV = fUV;
-      float radius = length(pUV);
-      float angle = atan(pUV.y, pUV.x);
-      
-      // Chaotic fiery turbulence
-      float turbulence = abs(sin(angle * 12.0 + u_time * 30.0) * sin(radius * 40.0 - u_time * 50.0));
-      
-      // The Sauron-style slit (Vertical pinch expanding)
-      float eyeSlit = exp(-abs(pUV.x) * (30.0 - doomTime * 25.0) - abs(pUV.y) * 4.0);
-      
-      // Expanding blast shockwave
-      float blast = exp(-abs(radius - doomTime * 1.5) * 10.0);
-      
-      // Mix the hellish colors
-      vec3 hellCol = vec3(0.8, 0.05, 0.0) * (turbulence + 0.5) * 2.0; // Dark intense red fire
-      hellCol += vec3(1.0, 0.6, 0.0) * blast * 2.0; // Orange shockwave ring
-      hellCol += vec3(1.0, 0.9, 0.2) * eyeSlit * 4.0; // Blinding yellow core
-      
-      // Add shrapnel / soot to break it up
-      float soot = step(0.9, fract(sin(dot(pUV, vec2(12.9898, 78.233))) * 43758.5453 + u_time * 20.0));
-      hellCol -= soot * 0.8; 
-      
-      // Violently overtake the entire screen
-      col = mix(col, hellCol, pow(doomTime, 4.0));
-    }
+    col+=vec3(1.0,0.2,0.1)*exp(-dot(sPos,sPos)*mix(20000.0,500.0,approach*approach))*strobe*0.7;
   }
 
   // --- WINDOW MASK ---
