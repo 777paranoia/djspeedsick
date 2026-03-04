@@ -1,1 +1,787 @@
-const fs=require('fs');const path=require('path');const IGNORE_DIRS=['node_modules','.git','dist','build'];const jsRegex=/("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(`(?:\\.|[^`\\])*`)|(\\/\\*[\\s\\S]*?\\*\\/)|(\\/\\/.*)/g;const htmlRegex=/<!--[\\s\\S]*?-->/g;function processFile(filePath){const ext=path.extname(filePath).toLowerCase();let content=fs.readFileSync(filePath,'utf8');let original=content;if(ext==='.js'){content=content.replace(jsRegex,(match,dq,sq,tl,multiline,singleline)=>{if(multiline||singleline)return '';return match;});content=content.replace(/^\\s*[\\r\\n]/gm,'');}else if(ext==='.html'){content=content.replace(htmlRegex,'');}if(content!==original){fs.writeFileSync(filePath,content,'utf8');console.log(`Cleaned: ${filePath}`);}}function walkDirectory(dir){const files=fs.readdirSync(dir);for(const file of files){const fullPath=path.join(dir,file);const stat=fs.statSync(fullPath);if(stat.isDirectory()){if(!IGNORE_DIRS.includes(file)){walkDirectory(fullPath);}}else if(stat.isFile()){const ext=path.extname(fullPath).toLowerCase();if(ext==='.js'||ext==='.html'){processFile(fullPath);}}}}const targetDir=process.argv[2]||__dirname;console.log(`Starting comment cleanup in: ${targetDir}...`);walkDirectory(targetDir);console.log('Done!');
+.
+├── A
+├── adhd.html
+├── butterchurn-presets
+│   └── lib
+│       ├── butterchurnPresetsExtra.min.js
+│       └── webpaack.config.js
+├── butterchurn.js
+├── butterchurnPresets.min.js
+├── clean.js
+├── CNAME
+├── compiled_output.txt
+├── engine.js
+├── files
+│   ├── aud
+│   │   ├── 03E3691536C6BA48AF8DFCC98E2F86B5.mp3
+│   │   ├── 0483134AF52BA2620ACEBB15DB3A915C.mp3
+│   │   ├── 064EBB45E969268D1D565945FD30349E.mp3
+│   │   ├── 07DEB83DB6B0B0A8D8D68A8E59997FBE.mp3
+│   │   ├── 08AD2547744653E97D82E9C817DE5743.mp3
+│   │   ├── 0AA968CC9BD87190A5B9B68B785D2279.mp3
+│   │   ├── 0ABFAF89FA92B3BB033896DE4E7FCA0D.mp3
+│   │   ├── 0DDE9002290A4E4B24ED7A3762742882.mp3
+│   │   ├── 0FC3589586CCC0BF1801003DA500D379.mp3
+│   │   ├── 11087AC44773380786D4C743B9A16255.mp3
+│   │   ├── 16D2D7DDC50EEA8DE22BC558FE94CA7C.mp3
+│   │   ├── 17928CB3FCBF55F83A4A8357997CFD86.mp3
+│   │   ├── 18487DFF8C4C2634163E432841DB0465.mp3
+│   │   ├── 18BE5DD7A3F6377EFBFC17C69B9B2D01.mp3
+│   │   ├── 1AE89282F333F68DE3E6E1E060267354.mp3
+│   │   ├── 2025.12.22.13.03.53.m4a
+│   │   ├── 2025.12.22.23.57.12.m4a
+│   │   ├── 20866A99F01106A03D3233F9C05D95A9.mp3
+│   │   ├── 243298B4071340A943CB0E7D017EA6C9.mp3
+│   │   ├── 247EE96D14D10CA14943FA7E4EEED939.mp3
+│   │   ├── 26980531EFFFF7ABD7AFDFE810F0FD82.mp3
+│   │   ├── 27A1B7EAFD0C4E57E3C40768BB650D9F.mp3
+│   │   ├── 27E4BEA66F762A27DE57848805EE54C7.mp3
+│   │   ├── 27F631709AB5D4B98EFEB2F2123B480E.mp3
+│   │   ├── 29673E60F28FEE11FDEF7CFD0649B322.mp3
+│   │   ├── 2A46CD871B3981D295AEC54A89510D1B.mp3
+│   │   ├── 2AA6F4B8AB6BB06453130DF8CBA94DA2.mp3
+│   │   ├── 2AE5178DB148A0BC8B526AF58DC01CE1.mp3
+│   │   ├── 2FA5970034ACE456608F2F131D294997.mp3
+│   │   ├── 310EE418F2292D7FD44699BFA2268F64.mp3
+│   │   ├── 317D2E7B4AC8260CC6C619AC1FF3608C.mp3
+│   │   ├── 318B51064AFC6C0670AD1763E03AD8F0.mp3
+│   │   ├── 33A5872F03C9054F4CEEA4AA4DBF521B.mp3
+│   │   ├── 33B7DD40813B21DD0EA08BBE9BF922A3.mp3
+│   │   ├── 35B0A8FA3022F14B19593E81836B46F9.mp3
+│   │   ├── 3602C77742718963398198A053F611ED.mp3
+│   │   ├── 36CE8795F7535025C147D1AE2E7BC797.mp3
+│   │   ├── 36F828D41D92B132B01A9040EE5F4BD8.mp3
+│   │   ├── 383D1BE8FB94587FB5E78769FFA91920.mp3
+│   │   ├── 39AAC690F5D2A33F910EEFCD1F45DECC.mp3
+│   │   ├── 39E0EE37FA1E5C181E12A468DE1FCBF3.mp3
+│   │   ├── 3BF8831733B842D93AE7D3AC005914AF.mp3
+│   │   ├── 3DC04F68AA24852F850E99253C107C87.mp3
+│   │   ├── 3E6ABE35DF44BD5379A027B14611B892.mp3
+│   │   ├── 3F53B00F9D7C777C854B87DF0DBE8763.mp3
+│   │   ├── 41620FFDDC404A9962F4FCBD731629DE.mp3
+│   │   ├── 44D0F06CA9A7920591A56CEB9357BE93.mp3
+│   │   ├── 45DDCD3C199CEE7B7895CE42B005AF7E.mp3
+│   │   ├── 45DE0E0F869545D7ACCC5962F37EC4ED.mp3
+│   │   ├── 45F757303B512D0F5F8FE7F4A45301A4.mp3
+│   │   ├── 46DE77E391118E57584A1DA6E9958D26.mp3
+│   │   ├── 4918199D0DD98EA88A451374A35FF02E.mp3
+│   │   ├── 49451AF9739EA82CA89B82DA9813F664.mp3
+│   │   ├── 4ABE709D3D395A34A5BEABB3DD9502C5.mp3
+│   │   ├── 4B728F3BB5865F52379DADAA48C05A6B.mp3
+│   │   ├── 4C7F53B035D9C03BA0ECEF1384815D66.mp3
+│   │   ├── 4DEB3179BC24D20C751AC18E9701A89F.mp3
+│   │   ├── 4F9087DF4AF056BE34FAC03C5AF429DD.mp3
+│   │   ├── 5073A74FCB39AD8C70E05761DC0C5D4A.mp3
+│   │   ├── 50B13137C26D06A5BDE0E3949508A48B.mp3
+│   │   ├── 5304069DE9E031CBFFCF66988EAEF9A5.mp3
+│   │   ├── 536145E15D9D84BC8DA695A54BD7AADF.mp3
+│   │   ├── 57CD756692E1C3D8EC7D58D0561F4D57.mp3
+│   │   ├── 580BF7E11A76214A6EC18D19E8999358.mp3
+│   │   ├── 58B5AD1EBFAC1AC6D5C89D7601658BAD.mp3
+│   │   ├── 592DF673F62D2DB2739ACAD11CB4EE21.mp3
+│   │   ├── 5978BEEB0C05AB4BB95EF6D516582E7E.mp3
+│   │   ├── 606A2DDFC6009B4BBA8EC1F5CFA59F58.mp3
+│   │   ├── 6079450EC8B657B581FFAD9E6ED59805.mp3
+│   │   ├── 6463294F3707080DE8A0017E5405C1DC.mp3
+│   │   ├── 658119A498E107B76B899DB21BEDEE39.mp3
+│   │   ├── 66CF005781CC5028B7EAA90E6473944A.mp3
+│   │   ├── 68351EAB435ECCD04176CE819578B4F8.mp3
+│   │   ├── 69E8FAAD90E6D164367FF0A4B338EA72.mp3
+│   │   ├── 6ADD2F809E6430AFD07C77642ABCB0F1.mp3
+│   │   ├── 6E1B9287B01F96CFBD0695F8FF817A3B.mp3
+│   │   ├── 71BDD33125193A99F82CAE0E36C4DB9A.mp3
+│   │   ├── 798D5D4408E516A2BC2448FD17B04133.mp3
+│   │   ├── 7B1B519AF556B05F264968E28F6F0216.mp3
+│   │   ├── 7BE3A354CA509ACF10C8E3DD66C0083D.mp3
+│   │   ├── 7D0115E171D0091A56726E3A8B48B20F.mp3
+│   │   ├── 7FF2C0B5099003B7B5A33DFF3C6CF173.mp3
+│   │   ├── 84027A903956724A5651D39835072C18.mp3
+│   │   ├── 852B5DD09E041D31A9BAD05DE613B0D3.mp3
+│   │   ├── 86A0763644FADACCD0ACE940FDC857A9.mp3
+│   │   ├── 87D11F507509CDCD6510E9B4EB36D766.mp3
+│   │   ├── 8945F0A3756272267754771554554B34.mp3
+│   │   ├── 894E931B2B56F0C9376E163D2F75F729.mp3
+│   │   ├── 8E4D1BC45A0BCC05E87D9C36A8E79920.mp3
+│   │   ├── 92CA78BF53C61B648E29C7BDDE5B87D3.mp3
+│   │   ├── 950B4C997A71FCB7277210530A0E3FA3.mp3
+│   │   ├── 9607A8A32512A63B537219951FF54E01.mp3
+│   │   ├── 97BEBB8CF7A87669D088FFEB5716E5BC.mp3
+│   │   ├── 986C35305171DCF5A5C5FD9C7EBD53CA.mp3
+│   │   ├── 98752B0343A31FB430B5801A29109D11.mp3
+│   │   ├── 9BEBE2CEE7580C18835DE13E3076C8AC.mp3
+│   │   ├── 9D6AF0426F8C4A4E2BF7ADC86098739B.mp3
+│   │   ├── 9F1540711B6930B1192C45480087020F.mp3
+│   │   ├── A16EAA32BE2AFAC1ADFE0610990BEFF1.mp3
+│   │   ├── A4201865185110C75FD3FCF5DB4EF6C5.mp3
+│   │   ├── A441328B6F4C0EB0119F4F3D7497A002.mp3
+│   │   ├── A582DC5DD937E6DC0467BA640F20ADE9.mp3
+│   │   ├── ABAF59CC8FE88766AE1A09408BB8E0E6.mp3
+│   │   ├── ACEE449D4A3802F6B6CA78323DE93F81.mp3
+│   │   ├── ACNE_COATEDDENIM_CUT4.m4a
+│   │   ├── ACNE_DARKSIDE_CUT5V2.m4a
+│   │   ├── ACNE_SHERLING_CUT2.m4a
+│   │   ├── ACNE_SHERLING_CUT3.m4a
+│   │   ├── ACNE_TEASER_CUT1.m4a
+│   │   ├── AD5EAB71FC2017FDD3D4CB0BB127637D.mp3
+│   │   ├── AF7B79C1ED865E92E6F00DE6D043B72B.mp3
+│   │   ├── audio.txt
+│   │   ├── B06E0D03F4A18158C1A0A49C765DB3F4.mp3
+│   │   ├── B07202F69BAF3D0B6A393851400FE363.mp3
+│   │   ├── B1B6C3D02B454C96C26497A7021F2B38.mp3
+│   │   ├── B1D9EF2694B6B789FFD09529FF5DCA66.mp3
+│   │   ├── B25914335C15F242C4848CFD373F5108.mp3
+│   │   ├── B53CA04AE89538F8DA6D4304C27631C1.mp3
+│   │   ├── B55448D07B81CEB64624EDDE9D0C09B3.mp3
+│   │   ├── B7653D0543717E91971119FF899358A6.mp3
+│   │   ├── B834C893DC001DEDD88F98388BE98240.mp3
+│   │   ├── B9CF83C6B45D311908F303B6F8847BC8.mp3
+│   │   ├── BB4C7A5591802B4A22F8C48610B55D9E.mp3
+│   │   ├── BF9721AD910D20E777CD1D02280CEB99.mp3
+│   │   ├── C0919F3C7A7793289C84D4A7D025A65A.mp3
+│   │   ├── C0F75F93B9167870E9A9E91F27D6D8A2.mp3
+│   │   ├── C2B01E11AF2143A1E7D6924E7798357D.mp3
+│   │   ├── CE7E562CC8AE07796DF24DBEA80FFC8B.mp3
+│   │   ├── CFA3A3216F9E2814585A7D133F44F80C.mp3
+│   │   ├── D00235E5178CF482DDC0EF2EF3F8DF5D.mp3
+│   │   ├── D0B4E5FB6DBB45CEF4185F1928299F65.mp3
+│   │   ├── D25018ABDAC29E99948B33EE90BD4A25.mp3
+│   │   ├── D31410554C0EA38E4BD658AEA406752E.mp3
+│   │   ├── D66F22E8249C653DAB514FC1B99CB812.mp3
+│   │   ├── D730DC33143113BCDB943E23290D287F.mp3
+│   │   ├── DBA7B9853DCDCB3B78547B621A3BFC94.mp3
+│   │   ├── DC02F0B59DA4B9BBC6741B7C7BC5E0F9.mp3
+│   │   ├── DD7982EC064DFA0D0D56F777356563C8.mp3
+│   │   ├── DF4FB1E4144CF5BCE22D34B702C3A624.mp3
+│   │   ├── DF630276A33CB1FDE3E88099334444A6.mp3
+│   │   ├── E083277213AC239C15C30DC9EEAFA239.mp3
+│   │   ├── E2EECFB5DC17ADA9ADFB58FD98008A15.mp3
+│   │   ├── E7B8C874C5A8ADC357A6CC35DD363F47.mp3
+│   │   ├── E873A48981FB615E15E13F05602CE3F4.mp3
+│   │   ├── E8AAA8E839EAAB0C05B531F517521726.mp3
+│   │   ├── EE500C3F7134F2CD1E5B6CB00C964FAC.mp3
+│   │   ├── EEBD631AAAA8C8C9B3DD09DA1A4FD837.mp3
+│   │   ├── exiftool.aud.log
+│   │   ├── F51FF77FF3BBB4010BA767C5F55834DB.mp3
+│   │   ├── F5771CE81AA3E10A269575B79EF66944.mp3
+│   │   ├── F68EF9FCC92808BC50D293B2642824E4.mp3
+│   │   ├── F7548A5B5BABA9243DE25A998500951B.mp3
+│   │   ├── F7DCFAFC92AF08EBCC4BADA650126654.mp3
+│   │   ├── FB23415943B1729A5BC85D52F05E2DEE.mp3
+│   │   ├── FB543724C87E3692B510C82A3385AC44.mp3
+│   │   ├── FCCA915F20E7312DA37F901D3492E9B8.mp3
+│   │   ├── FCF058FAF0C222B57D8284AD3E4B29F5.mp3
+│   │   ├── FE739E5D62BBEE2652FA0B53231AA333.mp3
+│   │   ├── FF3292518DB2E5ADE279029997865575.mp3
+│   │   ├── FFC7E7F97F2936636B268947653D9068.mp3
+│   │   ├── GABBER_CLIP.m4a
+│   │   ├── jump.mp3
+│   │   ├── MARGIELA_V1.0.m4a
+│   │   ├── MARGIELA_V2.0.m4a
+│   │   ├── NIKE-1x.m4a
+│   │   ├── NIKE-2.m4a
+│   │   ├── NIKE-3.m4a
+│   │   ├── old
+│   │   │   ├── a_cut_001.mp3
+│   │   │   ├── a_cut_002.mp3
+│   │   │   ├── a_cut_003.mp3
+│   │   │   ├── a_cut_004.mp3
+│   │   │   ├── cl_sample_001.mp3
+│   │   │   ├── m-audio-001.mp3
+│   │   │   ├── m-audio-002.mp3
+│   │   │   ├── m-audio-003.mp3
+│   │   │   ├── m-audio-004.mp3
+│   │   │   ├── m-audio-005.mp3
+│   │   │   ├── m-audio-006.mp3
+│   │   │   ├── misc_unreleased_full_001.mp3
+│   │   │   ├── misc_unreleased_full_002.mp3
+│   │   │   ├── misc_unreleased_full_003.mp3
+│   │   │   ├── misc_unreleased_full_004.mp3
+│   │   │   ├── misc_unreleased_full_005.mp3
+│   │   │   ├── r&r_001.mp3
+│   │   │   ├── r&r_002.mp3
+│   │   │   └── r&r_003.mp3
+│   │   ├── OP3-v1.m4a
+│   │   ├── OP3-v2dubbed.m4a
+│   │   ├── POP_PUNK_CLIP.m4a
+│   │   ├── portfolio.html
+│   │   ├── prev
+│   │   ├── tracks.txt
+│   │   └── TRAP_FRAGMENT.m4a
+│   ├── boettke
+│   │   ├── aerial-boettke.png
+│   │   ├── aud
+│   │   │   ├── scant-beyond_a_single_breeding_cycle-01-a1_segregation.m4a
+│   │   │   ├── scant-beyond_a_single_breeding_cycle-02-b1_distancing.m4a
+│   │   │   ├── scant-celebrity_death_[cdr]-01-friends,_family,_fans.m4a
+│   │   │   ├── scant-celebrity_death_[cdr]-02-flawless.m4a
+│   │   │   ├── scant-celebrity_death_[cdr]-03-once_a_child.m4a
+│   │   │   ├── scant-circumstance_and_discovery_[cs]-01-side_a.m4a
+│   │   │   ├── scant-circumstance_and_discovery_[cs]-02-side_b.m4a
+│   │   │   ├── scant-contrary_to_reason-01-01.m4a
+│   │   │   ├── scant-contrary_to_reason-02-02.m4a
+│   │   │   ├── scant-diminishing_spirit-01-untitled.m4a
+│   │   │   ├── scant-diminishing_spirit-02-untitled.m4a
+│   │   │   ├── scant-not_guilty_by_reason_of_mental_disease_or_defect_[cs]-01-side_a.m4a
+│   │   │   ├── scant-not_guilty_by_reason_of_mental_disease_or_defect_[cs]-02-side_b.m4a
+│   │   │   ├── scant-prosopagnosia-01-prosopagnosia_a.m4a
+│   │   │   ├── scant-prosopagnosia-02-prosopagnosia_b.m4a
+│   │   │   ├── scant-skin_graft-scant_[rem_2020]-b1-untitled.m4a
+│   │   │   ├── scant-skin_graft-scant_[rem_2020]-b2-untitled_(remix_by_skin_graft).m4a
+│   │   │   ├── scant-skin_graft-scant_[rem_2020]-untitled_(remix_by_skin_graft).m4a
+│   │   │   ├── scant-skin_graft-scant_[rem_2020]-untitled.m4a
+│   │   │   ├── scant-wake_of_dissolution_[cs]-01-untitled.m4a
+│   │   │   ├── scant-wake_of_dissolution_[cs]-02-untitled.m4a
+│   │   │   ├── skin_graft-skin_graft-scant_[rem_2020]-a1-untitled.m4a
+│   │   │   ├── skin_graft-skin_graft-scant_[rem_2020]-a2-untitled_(remix_by_scant).m4a
+│   │   │   ├── skin_graft-skin_graft-scant_[rem_2020]-untitled_(remix_by_scant).m4a
+│   │   │   └── skin_graft-skin_graft-scant_[rem_2020]-untitled.m4a
+│   │   ├── enter-button-boettke.png
+│   │   ├── mirror-boettke.png
+│   │   ├── oob-boettke.png
+│   │   └── scant.js
+│   ├── font
+│   │   ├── exif.font.log
+│   │   ├── GGX88Bk-Italic.woff
+│   │   ├── GGX88Bk-Italic.woff2
+│   │   ├── GGX88Bk-Regular.woff
+│   │   ├── GGX88Bk-Regular.woff2
+│   │   ├── GGX88El-Italic.woff
+│   │   ├── GGX88El-Italic.woff2
+│   │   ├── GGX88El-Regular.woff
+│   │   ├── GGX88El-Regular.woff2
+│   │   ├── GGX88Hv-Italic.woff
+│   │   ├── GGX88Hv-Italic.woff2
+│   │   ├── GGX88Hv-Regular.woff
+│   │   ├── GGX88Hv-Regular.woff2
+│   │   ├── GGX88Lt-Italic.woff
+│   │   ├── GGX88Lt-Italic.woff2
+│   │   ├── GGX88Lt-Regular.woff
+│   │   ├── GGX88Lt-Regular.woff2
+│   │   ├── GGX88Rg-Bold.woff
+│   │   ├── GGX88Rg-Bold.woff2
+│   │   ├── GGX88Rg-BoldItalic.woff
+│   │   ├── GGX88Rg-BoldItalic.woff2
+│   │   ├── GGX88Rg-Italic.woff
+│   │   ├── GGX88Rg-Italic.woff2
+│   │   ├── GGX88Rg-Regular.woff
+│   │   ├── GGX88Rg-Regular.woff2
+│   │   ├── GGX88Ul-Italic.woff
+│   │   ├── GGX88Ul-Italic.woff2
+│   │   ├── GGX88Ul-Regular.woff
+│   │   ├── GGX88Ul-Regular.woff2
+│   │   ├── SymbolsNerdFont-Regular.woff
+│   │   ├── SymbolsNerdFont-Regular.woff2
+│   │   ├── SymbolsNerdFontMono-Regular.woff
+│   │   └── SymbolsNerdFontMono-Regular.woff2
+│   ├── gif
+│   │   ├── 1.gif
+│   │   ├── 10.gif
+│   │   ├── 11.gif
+│   │   ├── 2.gif
+│   │   ├── 3.gif
+│   │   ├── 4.gif
+│   │   ├── 5.gif
+│   │   ├── 7.gif
+│   │   ├── 8.gif
+│   │   ├── 9.gif
+│   │   ├── bh.gif
+│   │   └── manifest.json
+│   ├── img
+│   │   ├── 002.jpg
+│   │   ├── aerial-tp.png
+│   │   ├── aerial.gif
+│   │   ├── aerial.png
+│   │   ├── agbutton.mp4
+│   │   ├── attn.png
+│   │   ├── bpp-6004.jpg
+│   │   ├── buttin.jpg
+│   │   ├── buttin.png
+│   │   ├── deadcity.png
+│   │   ├── distant.png
+│   │   ├── djssdc.png
+│   │   ├── engine.mode10.butterchurn.js
+│   │   ├── enter button.png
+│   │   ├── enter-button.png
+│   │   ├── enter-transparency2.png
+│   │   ├── enter.gif
+│   │   ├── escbannerclick.png
+│   │   ├── exiftool.img.log
+│   │   ├── gallery
+│   │   │   ├── 00001.webp
+│   │   │   ├── 00002.webp
+│   │   │   ├── 00003.webp
+│   │   │   ├── 00004.webp
+│   │   │   ├── 00005.webp
+│   │   │   ├── 00006.webp
+│   │   │   ├── 00007.webp
+│   │   │   ├── 00008.webp
+│   │   │   ├── 00009.webp
+│   │   │   ├── 00010.webp
+│   │   │   ├── 000100.webp
+│   │   │   ├── 000101.webp
+│   │   │   ├── 000102.webp
+│   │   │   ├── 000103.webp
+│   │   │   ├── 000104.webp
+│   │   │   ├── 000105.webp
+│   │   │   ├── 000106.webp
+│   │   │   ├── 000107.webp
+│   │   │   ├── 000108.webp
+│   │   │   ├── 000109.webp
+│   │   │   ├── 00011.webp
+│   │   │   ├── 000110.webp
+│   │   │   ├── 000111.webp
+│   │   │   ├── 000112.webp
+│   │   │   ├── 000113.webp
+│   │   │   ├── 000114.webp
+│   │   │   ├── 000115.webp
+│   │   │   ├── 000116.webp
+│   │   │   ├── 000117.webp
+│   │   │   ├── 000118.webp
+│   │   │   ├── 000119.webp
+│   │   │   ├── 00012.webp
+│   │   │   ├── 000120.webp
+│   │   │   ├── 000121.webp
+│   │   │   ├── 000122.webp
+│   │   │   ├── 000123.webp
+│   │   │   ├── 000124.webp
+│   │   │   ├── 000125.webp
+│   │   │   ├── 000126.webp
+│   │   │   ├── 000127.webp
+│   │   │   ├── 000128.webp
+│   │   │   ├── 000129.webp
+│   │   │   ├── 00013.webp
+│   │   │   ├── 000130.webp
+│   │   │   ├── 000131.webp
+│   │   │   ├── 000132.webp
+│   │   │   ├── 000133.webp
+│   │   │   ├── 000134.webp
+│   │   │   ├── 000135.webp
+│   │   │   ├── 000136.webp
+│   │   │   ├── 000137.webp
+│   │   │   ├── 000138.webp
+│   │   │   ├── 000139.webp
+│   │   │   ├── 00014.webp
+│   │   │   ├── 000140.webp
+│   │   │   ├── 000141.webp
+│   │   │   ├── 000142.webp
+│   │   │   ├── 000143.webp
+│   │   │   ├── 000144.webp
+│   │   │   ├── 000145.webp
+│   │   │   ├── 000146.webp
+│   │   │   ├── 000147.webp
+│   │   │   ├── 000148.webp
+│   │   │   ├── 000149.webp
+│   │   │   ├── 00015.webp
+│   │   │   ├── 000150.webp
+│   │   │   ├── 000151.webp
+│   │   │   ├── 000152.webp
+│   │   │   ├── 000153.webp
+│   │   │   ├── 000154.webp
+│   │   │   ├── 000155.webp
+│   │   │   ├── 000156.webp
+│   │   │   ├── 000157.webp
+│   │   │   ├── 000158.webp
+│   │   │   ├── 000159.webp
+│   │   │   ├── 00016.webp
+│   │   │   ├── 000160.webp
+│   │   │   ├── 000161.webp
+│   │   │   ├── 000162.webp
+│   │   │   ├── 000163.webp
+│   │   │   ├── 000164.webp
+│   │   │   ├── 000165.webp
+│   │   │   ├── 000166.webp
+│   │   │   ├── 000167.webp
+│   │   │   ├── 000168.webp
+│   │   │   ├── 000169.webp
+│   │   │   ├── 00017.webp
+│   │   │   ├── 000170.webp
+│   │   │   ├── 000171.webp
+│   │   │   ├── 000172.webp
+│   │   │   ├── 000173.webp
+│   │   │   ├── 000174.webp
+│   │   │   ├── 000175.webp
+│   │   │   ├── 000176.webp
+│   │   │   ├── 000177.webp
+│   │   │   ├── 000178.webp
+│   │   │   ├── 000179.webp
+│   │   │   ├── 00018.webp
+│   │   │   ├── 000180.webp
+│   │   │   ├── 000181.webp
+│   │   │   ├── 000182.webp
+│   │   │   ├── 000183.webp
+│   │   │   ├── 000184.webp
+│   │   │   ├── 000185.webp
+│   │   │   ├── 000186.webp
+│   │   │   ├── 000187.webp
+│   │   │   ├── 000188.webp
+│   │   │   ├── 000189.webp
+│   │   │   ├── 00019.webp
+│   │   │   ├── 000190.webp
+│   │   │   ├── 000191.webp
+│   │   │   ├── 000192.webp
+│   │   │   ├── 000193.webp
+│   │   │   ├── 000194.webp
+│   │   │   ├── 000195.webp
+│   │   │   ├── 000196.webp
+│   │   │   ├── 000197.webp
+│   │   │   ├── 000198.webp
+│   │   │   ├── 000199.webp
+│   │   │   ├── 00020.webp
+│   │   │   ├── 000200.webp
+│   │   │   ├── 000201.webp
+│   │   │   ├── 000202.webp
+│   │   │   ├── 000203.webp
+│   │   │   ├── 000204.webp
+│   │   │   ├── 000205.webp
+│   │   │   ├── 000206.webp
+│   │   │   ├── 000207.webp
+│   │   │   ├── 000208.webp
+│   │   │   ├── 000209.webp
+│   │   │   ├── 00021.webp
+│   │   │   ├── 000210.webp
+│   │   │   ├── 000211.webp
+│   │   │   ├── 000212.webp
+│   │   │   ├── 000213.webp
+│   │   │   ├── 000214.webp
+│   │   │   ├── 000215.webp
+│   │   │   ├── 000216.webp
+│   │   │   ├── 000217.webp
+│   │   │   ├── 000218.webp
+│   │   │   ├── 000219.webp
+│   │   │   ├── 00022.webp
+│   │   │   ├── 000220.webp
+│   │   │   ├── 000221.webp
+│   │   │   ├── 000222.webp
+│   │   │   ├── 000223.webp
+│   │   │   ├── 000224.webp
+│   │   │   ├── 000225.webp
+│   │   │   ├── 000226.webp
+│   │   │   ├── 000227.webp
+│   │   │   ├── 000228.webp
+│   │   │   ├── 000229.webp
+│   │   │   ├── 00023.webp
+│   │   │   ├── 000230.webp
+│   │   │   ├── 000231.webp
+│   │   │   ├── 000232.webp
+│   │   │   ├── 000233.webp
+│   │   │   ├── 000234.webp
+│   │   │   ├── 000235.webp
+│   │   │   ├── 000236.webp
+│   │   │   ├── 000237.webp
+│   │   │   ├── 000238.webp
+│   │   │   ├── 000239.webp
+│   │   │   ├── 00024.webp
+│   │   │   ├── 000240.webp
+│   │   │   ├── 000241.webp
+│   │   │   ├── 000242.webp
+│   │   │   ├── 000243.webp
+│   │   │   ├── 000244.webp
+│   │   │   ├── 000245.webp
+│   │   │   ├── 000246.webp
+│   │   │   ├── 000247.webp
+│   │   │   ├── 000248.webp
+│   │   │   ├── 000249.webp
+│   │   │   ├── 00025.webp
+│   │   │   ├── 000250.webp
+│   │   │   ├── 000251.webp
+│   │   │   ├── 000252.webp
+│   │   │   ├── 000253.webp
+│   │   │   ├── 000254.webp
+│   │   │   ├── 000255.webp
+│   │   │   ├── 000256.webp
+│   │   │   ├── 000257.webp
+│   │   │   ├── 000258.webp
+│   │   │   ├── 000259.webp
+│   │   │   ├── 00026.webp
+│   │   │   ├── 000260.webp
+│   │   │   ├── 000261.webp
+│   │   │   ├── 000262.webp
+│   │   │   ├── 000263.webp
+│   │   │   ├── 000264.webp
+│   │   │   ├── 000265.webp
+│   │   │   ├── 000266.webp
+│   │   │   ├── 000267.webp
+│   │   │   ├── 000268.webp
+│   │   │   ├── 000269.webp
+│   │   │   ├── 00027.webp
+│   │   │   ├── 000270.webp
+│   │   │   ├── 000271.webp
+│   │   │   ├── 000272.webp
+│   │   │   ├── 000273.webp
+│   │   │   ├── 000277.webp
+│   │   │   ├── 000278.webp
+│   │   │   ├── 000279.webp
+│   │   │   ├── 00028.webp
+│   │   │   ├── 000280.webp
+│   │   │   ├── 000281.webp
+│   │   │   ├── 000282.webp
+│   │   │   ├── 000283.webp
+│   │   │   ├── 000284.webp
+│   │   │   ├── 000285.webp
+│   │   │   ├── 000286.webp
+│   │   │   ├── 000287.webp
+│   │   │   ├── 000288.webp
+│   │   │   ├── 000289.webp
+│   │   │   ├── 00029.webp
+│   │   │   ├── 000290.webp
+│   │   │   ├── 000291.webp
+│   │   │   ├── 000292.webp
+│   │   │   ├── 000293.webp
+│   │   │   ├── 000294.webp
+│   │   │   ├── 000295.webp
+│   │   │   ├── 000296.webp
+│   │   │   ├── 000297.webp
+│   │   │   ├── 000298.webp
+│   │   │   ├── 000299.webp
+│   │   │   ├── 00030.webp
+│   │   │   ├── 00031.webp
+│   │   │   ├── 00032.webp
+│   │   │   ├── 00033.webp
+│   │   │   ├── 00034.webp
+│   │   │   ├── 00035.webp
+│   │   │   ├── 00036.webp
+│   │   │   ├── 00037.webp
+│   │   │   ├── 00038.webp
+│   │   │   ├── 00039.webp
+│   │   │   ├── 00040.webp
+│   │   │   ├── 00041.webp
+│   │   │   ├── 00042.webp
+│   │   │   ├── 00043.webp
+│   │   │   ├── 00044.webp
+│   │   │   ├── 00045.webp
+│   │   │   ├── 00046.webp
+│   │   │   ├── 00047.webp
+│   │   │   ├── 00048.webp
+│   │   │   ├── 00049.webp
+│   │   │   ├── 00050.webp
+│   │   │   ├── 00051.webp
+│   │   │   ├── 00052.webp
+│   │   │   ├── 00053.webp
+│   │   │   ├── 00054.webp
+│   │   │   ├── 00055.webp
+│   │   │   ├── 00056.webp
+│   │   │   ├── 00057.webp
+│   │   │   ├── 00058.webp
+│   │   │   ├── 00059.webp
+│   │   │   ├── 00060.webp
+│   │   │   ├── 00061.webp
+│   │   │   ├── 00062.webp
+│   │   │   ├── 00063.webp
+│   │   │   ├── 00064.webp
+│   │   │   ├── 00065.webp
+│   │   │   ├── 00066.webp
+│   │   │   ├── 00067.webp
+│   │   │   ├── 00068.webp
+│   │   │   ├── 00069.webp
+│   │   │   ├── 00070.webp
+│   │   │   ├── 00071.webp
+│   │   │   ├── 00072.webp
+│   │   │   ├── 00073.webp
+│   │   │   ├── 00074.webp
+│   │   │   ├── 00075.webp
+│   │   │   ├── 00076.webp
+│   │   │   ├── 00077.webp
+│   │   │   ├── 00078.webp
+│   │   │   ├── 00079.webp
+│   │   │   ├── 00080.webp
+│   │   │   ├── 00081.webp
+│   │   │   ├── 00082.webp
+│   │   │   ├── 00083.webp
+│   │   │   ├── 00084.webp
+│   │   │   ├── 00085.webp
+│   │   │   ├── 00086.webp
+│   │   │   ├── 00087.webp
+│   │   │   ├── 00088.webp
+│   │   │   ├── 00089.webp
+│   │   │   ├── 00090.webp
+│   │   │   ├── 00091.webp
+│   │   │   ├── 00092.webp
+│   │   │   ├── 00093.webp
+│   │   │   ├── 00094.webp
+│   │   │   ├── 00095.webp
+│   │   │   ├── 00096.webp
+│   │   │   ├── 00097.webp
+│   │   │   ├── 00098.webp
+│   │   │   └── 00099.webp
+│   │   ├── hands copy.png
+│   │   ├── hands.png
+│   │   ├── img_8106 copy.jpg
+│   │   ├── index-inv.png
+│   │   ├── index.png
+│   │   ├── itp.jpg
+│   │   ├── key008.jpg
+│   │   ├── load
+│   │   │   ├── loading1.jpg
+│   │   │   ├── loading2.jpg
+│   │   │   ├── loading3.jpg
+│   │   │   ├── loading4.jpg
+│   │   │   ├── loading5.jpg
+│   │   │   ├── loading6.jpg
+│   │   │   └── loading7.png
+│   │   ├── load.gif
+│   │   ├── mansoncave.jpg
+│   │   ├── me.jpg
+│   │   ├── minicdr-small.png
+│   │   ├── mirror back.png
+│   │   ├── mirror.png
+│   │   ├── mirrorv1.png
+│   │   ├── mirrorv2.png
+│   │   ├── mirrorv3.png
+│   │   ├── na.jpg
+│   │   ├── nr.png
+│   │   ├── obs.jpg
+│   │   ├── ocean.jpg
+│   │   ├── ph008.jpg
+│   │   ├── preview.png
+│   │   ├── recycled.jpg
+│   │   ├── rooms
+│   │   │   ├── left-mobile.png
+│   │   │   └── right-mobile.png
+│   │   ├── tb207.jpg
+│   │   ├── tour.jpg
+│   │   ├── unix666-12.jpg
+│   │   ├── unix666-13.jpg
+│   │   ├── unix666-14.jpg
+│   │   ├── unix666-16.jpg
+│   │   ├── unix666-17.jpg
+│   │   ├── unix666-18.jpg
+│   │   ├── unix66605.jpg
+│   │   ├── unix66606.jpeg
+│   │   ├── unix66620.jpg
+│   │   └── void
+│   │       ├── across.png
+│   │       ├── building01.png
+│   │       ├── building02.png
+│   │       ├── building03.png
+│   │       ├── building04.png
+│   │       ├── building05.png
+│   │       ├── building06.png
+│   │       ├── building07.png
+│   │       ├── building08.png
+│   │       ├── building09.png
+│   │       ├── canalport-mask.png
+│   │       ├── gorebuilding01.png
+│   │       ├── gorebuilding02.png
+│   │       ├── gorebuilding03.png
+│   │       ├── goresky.jpg
+│   │       ├── goresky.png
+│   │       ├── gorewater.jpg
+│   │       ├── gorewater.png
+│   │       ├── hellbuilding1.png
+│   │       ├── hellbuilding2.png
+│   │       ├── hellsky.jpg
+│   │       ├── oob-mask.png
+│   │       ├── panorama-mask.png
+│   │       ├── panorama.png
+│   │       ├── skyline.png
+│   │       └── skyline2.png
+│   ├── master.modes.mode10.butterchurn.js
+│   ├── mov
+│   │   ├── acne1.mp4
+│   │   ├── acne1.webm
+│   │   ├── acne2.mp4
+│   │   ├── acne2.webm
+│   │   ├── acne3.mp4
+│   │   ├── acne3.webm
+│   │   ├── acne4.mp4
+│   │   ├── acne4.webm
+│   │   ├── agbutton.gif
+│   │   ├── bh2.webm
+│   │   ├── camper1.mp4
+│   │   ├── camper1.webm
+│   │   ├── camper2.mp4
+│   │   ├── camper2.webm
+│   │   ├── camper3.mp4
+│   │   ├── camper3.webm
+│   │   ├── chemlove.mp4
+│   │   ├── chemlove.webm
+│   │   ├── compreelnu1.mp4
+│   │   ├── compreelnu1.webm
+│   │   ├── compreelnu2.mp4
+│   │   ├── compreelnu2.webm
+│   │   ├── earth.webm
+│   │   ├── exiftool.mov.log
+│   │   ├── fly.webm
+│   │   ├── forcedenlightenment.mp4
+│   │   ├── forcedenlightenment.webm
+│   │   ├── grate.mp4
+│   │   ├── grate.webm
+│   │   ├── gstar1.mp4
+│   │   ├── gstar1.webm
+│   │   ├── gstar2.mp4
+│   │   ├── gstar2.webm
+│   │   ├── gstar3.mp4
+│   │   ├── gstar3.webm
+│   │   ├── gstar4.mp4
+│   │   ├── gstar4.webm
+│   │   ├── indexmov.gif
+│   │   ├── lotusmotel.mp4
+│   │   ├── lotusmotel.webm
+│   │   ├── mapped
+│   │   │   ├── albionhouse.webm
+│   │   │   ├── chemlove.webm
+│   │   │   ├── crywolf.webm
+│   │   │   ├── emptybottle.webm
+│   │   │   ├── forcedenlightenment_1.webm
+│   │   │   ├── forcedenlightenment_2.webm
+│   │   │   ├── grate.webm
+│   │   │   ├── lotusmotel.webm
+│   │   │   ├── mattlistendarkenlightenmenttrack.webm
+│   │   │   ├── smtiaie.webm
+│   │   │   ├── thom_1.webm
+│   │   │   ├── thom_2.webm
+│   │   │   ├── untitled.webm
+│   │   │   ├── uwmadison.webm
+│   │   │   ├── yfpmms.webm
+│   │   │   └── z-1.webm
+│   │   ├── marg1.mp4
+│   │   ├── marg1.webm
+│   │   ├── marg2.mp4
+│   │   ├── marg2.webm
+│   │   ├── mmxgm.mp4
+│   │   ├── mmxgm.webm
+│   │   ├── nthng.mp4
+│   │   ├── nthng.webm
+│   │   ├── RESCALED
+│   │   │   ├── chemlove.mp4
+│   │   │   └── forcedenlightenment.mp4
+│   │   ├── smtiaie.mp4
+│   │   ├── smtiaie.webm
+│   │   ├── tricky.mp4
+│   │   ├── tricky.webm
+│   │   ├── untitled.mp4
+│   │   ├── untitled.webm
+│   │   ├── vid.sh
+│   │   ├── yfpmms.mp4
+│   │   └── yfpmms.webm
+│   └── nfo
+│       └── cv.nfo
+├── gallery.js
+├── index.html
+├── jquery-3.1.1.min.js
+├── lib
+│   └── butterchurn.js
+├── lodash.js
+├── modes
+│   ├── mode-left.js
+│   ├── mode-right.js
+│   ├── mode0.js
+│   ├── mode1.js
+│   ├── mode10.js
+│   ├── mode2.js
+│   ├── mode3.js
+│   ├── mode4.js
+│   ├── mode5.js
+│   ├── mode6.js
+│   ├── mode7.js
+│   ├── mode8.js
+│   ├── mode9.js
+│   └── modes_core.js
+├── mrg.py
+├── player.js
+├── portfolio.html
+├── sc.py
+├── tree.log
+└── videos.js
+
+22 directories, 763 files

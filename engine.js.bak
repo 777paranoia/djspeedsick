@@ -761,23 +761,7 @@ function render(now){
     }
     if (rightEngine) rightEngine.render(now, cx, cy, audioIntensity, blink, 0, 0, wakeVal, modeSeed);
   }
-  lastNow = now; 
+  lastNow = now; requestAnimationFrame(render);
 }
 
-/* ===== FPS GOVERNOR (30 FPS) ===== */
-
-const TARGET_FPS = 30;
-const FRAME_INTERVAL = 1000 / TARGET_FPS;
-
-let __lastFrameTime = 0;
-
-function __frameGovernor(now){
-    if(now - __lastFrameTime >= FRAME_INTERVAL){
-        __lastFrameTime = now;
-        render(now);
-    }
-    requestAnimationFrame(__frameGovernor);
-}
-
-requestAnimationFrame(__frameGovernor);
-
+requestAnimationFrame(render);
