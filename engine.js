@@ -269,7 +269,7 @@ window.triggerMattMode = function() {
         document.body.appendChild(newPlayer);
 
         staticAssets.oobMask = loadStaticTex("files/boettke/oob-boettke.png");
-        window.__mirrorOverlay = "files/boettke/mirror-matt.pmg";
+        window.__mirrorVariants = ["files/boettke/mirror-boettke.png"];
         
         if (typeof _entered !== 'undefined') _entered = false;
         window._siteEntered = false;
@@ -303,11 +303,12 @@ const map = {
   2:'fractal',
   3:'bh',
   4:'mirror',
-  5:'deadcity',
+  5:'city',
   6:'ocean',
   7:'earth',
   8:'goreville',
   9:'plane',
+  10:'city_bc',
   98:'room_left',
   99:'room_right'
 };
@@ -370,15 +371,26 @@ const map = {
             this.vidObjs = [0,1,2,3].map(() => this._makeMappedVideo());
             this.vidTexs.forEach(t => this.textures.push(t));
         } else {
-         if (fragKey === 'city' || fragKey === 'fractal' || fragKey === 'plane')
+         if (fragKey === 'city_bc') {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    this.env1 = tex;
+    this.isButter = true;
+}
+else if (fragKey === 'city' || fragKey === 'fractal' || fragKey === 'plane')
     this.env1 = loadStaticTex("files/img/void/skyline.png");            else if (fragKey === 'mirror') {
-                this.env1 = loadStaticTex(window.__mirrorVariants ? window.__mirrorVariants[0] : "files/img/rooms/mirror-b.png");
-                const overlayPick = ["files/img/rooms/mirror-v1.png","files/img/rooms/mirror-v2.png","files/img/rooms/mirror-v3.png"];
-                this.env2 = loadStaticTex(window.__mirrorOverlay || overlayPick[Math.floor(Math.random() * overlayPick.length)]);
-                this.textures.push(this.env2);
-                // Pre-allocate texture slot for butterchurn canvas (TEXTURE9 / u_texEnv2 in shader = bcTex)
-                this.bcTex = this._makeBlackTex();
-                this.textures.push(this.bcTex);
+                const mirrorVariants = window.__mirrorVariants || [
+                    "files/img/mirror.png",
+                    "files/img/mirrorv1.png",
+                    "files/img/mirrorv2.png",
+                    "files/img/mirrorv3.png",
+                    "files/img/mirrorv5.png"
+                ];
+                this.env1 = loadStaticTex(mirrorVariants[Math.floor(Math.random() * mirrorVariants.length)]);
             }
             else if (fragKey === 'goreville') {
                 this.env1 = loadStaticTex("files/img/void/goresky.png");
@@ -501,31 +513,11 @@ const map = {
         gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
         gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
 
-        if (this.id === 5 && this.env2) {
-            gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, this.env2);
-        }
-
         if (this.id === 8 && this.env2) {
             gl.activeTexture(gl.TEXTURE9);  gl.bindTexture(gl.TEXTURE_2D, this.env2);
             gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, this.env3 || DUMMY_BLACK);
             gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, this.env4 || DUMMY_BLACK);
             gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, this.env5 || DUMMY_BLACK);
-        }
-
-        // Mirror (mode 4): butterchurn -> TEXTURE9, overlay PNG -> TEXTURE10
-        if (this.id === 4) {
-            if (window.butterchurnVisualizer && window.bcCanvas) {
-                gl.activeTexture(gl.TEXTURE9);
-                gl.bindTexture(gl.TEXTURE_2D, this.bcTex || DUMMY_BLACK);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, window.bcCanvas);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            }
-            if (this.env2) {
-                gl.activeTexture(gl.TEXTURE10);
-                gl.bindTexture(gl.TEXTURE_2D, this.env2);
-            }
         }
 
         if (this.id === 98 && this.galleryTex) {
@@ -672,7 +664,7 @@ function simStep(now){
 function advanceMode(){
   let nextMode = mode;
   let attempts = 0;
-  while((nextMode === mode || nextMode === lastMode || (mode < 8 && nextMode < 8)) && attempts < 20){ nextMode = Math.floor(Math.random() * 9) + 1; attempts++; }
+  while((nextMode === mode || nextMode === lastMode) && attempts < 20){ nextMode = Math.floor(Math.random() * 9) + 1; attempts++; }
   lastMode = mode; mode = nextMode; modeSeed++;
   tripIntensity = 0.2 + Math.random() * 1.5; 
   if(currentEngine) currentEngine.destroy();
@@ -728,10 +720,6 @@ function render(now){
             advanceMode();
             if(window.unmuteMainAudio) window.unmuteMainAudio();
         }
-    } else if (mode === 9 && phase === "open" && currentEngine &&
-               (now - currentEngine.startTime) * 0.001 >= 6.0) {
-        // Plane reaches camera at ~8s. If the normal blink shuffle hasn't fired yet, trigger it now.
-        phase = "closing_switch"; start = now; timer = now;
     } else if (phase === "open" && now - timer > 9000) {
         blinkCount++; 
         if(blinkCount >= targetBlinks){ phase="closing_switch"; start=now; timer=now; } 
@@ -761,9 +749,6 @@ function render(now){
   }
 
   if (activePOV === 'center') {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
     drawBacklight(now, 0.35, audioIntensity);
     simStep(now);
 
