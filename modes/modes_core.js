@@ -1,4 +1,3 @@
-
 // MODES_CORE
 
 window.GLSL = window.GLSL || {};
@@ -154,7 +153,7 @@ vec2 mapScene(vec3 p, bool renderFractals){
     float d5=sdBox(p-vec3( 6.5,0.0,17.0),vec3(2.0,24.0,2.5)); if(d5<res.x) res=vec2(d5,5.0);
     float d6=sdBox(p-vec3( 8.5,0.0,29.0),vec3(2.6,28.0,3.2)); if(d6<res.x) res=vec2(d6,6.0);
     float floorD=p.y+9.5; if(floorD<res.x) res=vec2(floorD,20.0);
-    return res;
+    // fall through to fractal block below
   }
   if (u_mode != 6 && u_mode != 7) {
       float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
@@ -169,7 +168,7 @@ vec2 mapScene(vec3 p, bool renderFractals){
     for(float i=0.0; i<2.0; i++){ 
       if(i >= num) break;
       float id = seed * 7.0 + i; 
-      float sc = mix(0.3, 0.6, hash1(id * 13.1)) * 0.7; 
+      float sc = mix(0.6, 1.1, hash1(id * 13.1)); 
       vec3 a = vec3(mix(-1.4,1.4,hash1(id*3.1+0.13)), mix(0.0,1.6,hash1(id*7.3+0.27)), mix(0.0,3.5,hash1(id*11.7+0.41)));
       vec3 fp = p - a; float bound = length(fp) - (sc * 1.5); float df = bound;
       

@@ -85,12 +85,12 @@ void main() {
   col += snow(vec2(atan(rd.z,rd.x)*2.0, rd.y*2.0), 15.0, 0.3, 0.3);
 
   // --- PLANE OVERLAY ---
-  float rawA = clamp(u_modeTime / 8.0, 0.0, 1.0);
+  float rawA = clamp(u_modeTime / 6.0, 0.0, 1.0);
   float approach = pow(rawA, 1.5);
   float close = smoothstep(0.8, 1.0, approach);
   
   // Z stops at 3.5. Nose is 3.0 units long, so it physically cannot touch the camera.
-  float planeZ = mix(90.0, 3.5, approach);
+  float planeZ = mix(90.0, 6.0, approach);
   vec3 planePos = vec3(0.0, -0.6, planeZ);
 
   vec3 oc2=ro-planePos;
@@ -176,6 +176,31 @@ void main() {
     float strobe=step(0.92,fract(u_time*1.4))*smoothstep(0.1,0.5,approach);
     vec2 sPos=fUV-vec2(0.0,(-0.6 + 0.42)*projS); 
     col+=vec3(1.0,0.2,0.1)*exp(-dot(sPos,sPos)*mix(20000.0,500.0,approach*approach))*strobe*0.7;
+
+    // --- LANDING LIGHTS (nose, center) — broad blinding white beams ---
+    vec2 llPos = fUV - vec2(0.0, (-0.6 + 0.08) * projS);
+    float landBeam = exp(-dot(llPos, llPos) * mix(6000.0, 80.0, approach * approach));
+    col += vec3(1.0, 0.98, 0.95) * landBeam * smoothstep(0.2, 0.7, approach) * 2.5;
+
+    // --- TAXI / WING ROOT LIGHTS — two slightly warm wide floods ---
+    vec2 txL = fUV - vec2(-0.55 * projS, (-0.6 - 0.05) * projS);
+    vec2 txR = fUV - vec2( 0.55 * projS, (-0.6 - 0.05) * projS);
+    float taxiBeam = exp(-dot(txL, txL) * mix(8000.0, 200.0, approach * approach))
+                   + exp(-dot(txR, txR) * mix(8000.0, 200.0, approach * approach));
+    col += vec3(1.0, 0.96, 0.88) * taxiBeam * smoothstep(0.15, 0.65, approach) * 1.4;
+
+    // --- WINGTIP NAV LIGHTS — red left, green right, constant small points ---
+    vec2 navL = fUV - vec2(-1.90 * projS * 2.6, (-0.6 - 1.90 * 0.11) * projS * 2.6);
+    vec2 navR = fUV - vec2( 1.90 * projS * 2.6, (-0.6 - 1.90 * 0.11) * projS * 2.6);
+    float navFade = smoothstep(0.05, 0.4, approach);
+    col += vec3(1.0, 0.05, 0.05) * exp(-dot(navL, navL) * mix(80000.0, 3000.0, approach * approach)) * navFade * 1.8;
+    col += vec3(0.05, 1.0, 0.15) * exp(-dot(navR, navR) * mix(80000.0, 3000.0, approach * approach)) * navFade * 1.8;
+
+    // --- ANTI-COLLISION STROBE (belly, bright white double-flash) ---
+    float tFrac = fract(u_time * 1.1);
+    float strobeAC = (step(0.0, tFrac) * step(tFrac, 0.06) + step(0.12, tFrac) * step(tFrac, 0.18)) * smoothstep(0.1, 0.5, approach);
+    vec2 acPos = fUV - vec2(0.0, (-0.6 - 0.42) * projS);
+    col += vec3(1.0, 1.0, 1.0) * exp(-dot(acPos, acPos) * mix(30000.0, 1200.0, approach * approach)) * strobeAC * 3.0;
   }
 
   // --- WINDOW MASK ---
