@@ -269,7 +269,7 @@ window.triggerMattMode = function() {
         document.body.appendChild(newPlayer);
 
         staticAssets.oobMask = loadStaticTex("files/boettke/oob-boettke.png");
-        window.__mirrorOverlay = "files/boettke/mirror-matt.pmg";
+        window.__mirrorOverlay = "files/boettke/mirror-matt.png";
         
         if (typeof _entered !== 'undefined') _entered = false;
         window._siteEntered = false;
