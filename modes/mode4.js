@@ -28,38 +28,28 @@ void main() {
     }
   }
 
-  // Overlay layer — parallax + warp reacts to camera direction
-  vec2 parallax = rd.xy * 0.06;
-  float ovWx = fbm(texUV * 4.0 + vec2(u_time * 0.04, 0.0));
-  float ovWy = fbm(texUV * 4.0 + vec2(0.0, u_time * 0.031) + 3.7);
-  vec2 ovWarp = (vec2(ovWx, ovWy) - 0.5) * 0.018;
-  vec2 ovUV = clamp(texUV + parallax + ovWarp, 0.0, 1.0);
-  vec4 overlay = texture2D(u_texEnv3, ovUV);
+  // Overlay (figure layer) — simple darken composite, no warp
+  vec4 overlay = texture2D(u_texEnv3, texUV);
 
-  // Mirror face — green screen keyed, butterchurn reflection warped by camera
+  // Face green screen — replace with room reflection + butterchurn
   const vec2 faceMin = vec2(0.4451, 0.3006);
   const vec2 faceMax = vec2(0.5592, 0.4886);
-  bool inFace = ovUV.x >= faceMin.x && ovUV.x <= faceMax.x &&
-                ovUV.y >= faceMin.y && ovUV.y <= faceMax.y;
+  bool inFace = texUV.x >= faceMin.x && texUV.x <= faceMax.x &&
+                texUV.y >= faceMin.y && texUV.y <= faceMax.y;
   if (inFace) {
     bool isGreen = overlay.g > 0.35 && overlay.r < 0.3 && overlay.b < 0.3;
     if (isGreen) {
-      vec2 faceUV = (ovUV - faceMin) / (faceMax - faceMin);
-      // Warp driven by camera direction — moves with mouse
-      float mWx = fbm(faceUV * 5.0 + rd.xy * 3.0 + vec2(u_time * 0.06, 0.0));
-      float mWy = fbm(faceUV * 5.0 + rd.xy * 3.0 + vec2(0.0, u_time * 0.05) + 5.1);
-      vec2 warpOff = (vec2(mWx, mWy) - 0.5) * 0.18;
-      // Reflect rd and sample room background as the mirror surface
-      vec2 reflUV = clamp(vec2(0.5) + vec2(-rd.x, rd.y) * 1.5 + rd.xy * 0.4 + warpOff, 0.0, 1.0);
+      vec2 faceUV = (texUV - faceMin) / (faceMax - faceMin);
+      vec2 reflUV = clamp(vec2(0.5) + vec2(-rd.x, rd.y) * 1.5 + rd.xy * 0.3, 0.0, 1.0);
       vec3 mirrorCol = texture2D(u_texEnv1, 1.0 - reflUV).rgb;
-      // Blend in butterchurn on top if available
-      vec3 bcCol = texture2D(u_texEnv2, clamp(faceUV + rd.xy * 0.3 + warpOff, 0.0, 1.0)).rgb;
+      vec3 bcCol = texture2D(u_texEnv2, clamp(faceUV + rd.xy * 0.3, 0.0, 1.0)).rgb;
       float bcBright = max(bcCol.r, max(bcCol.g, bcCol.b));
       overlay.rgb = mix(mirrorCol, bcCol, smoothstep(0.02, 0.1, bcBright));
+      col = overlay.rgb;
     }
   }
 
-  // Darken blend — only shows pixels darker than what is already rendered (the figure, not the grey room bg)
+  // Darken blend — grey bg disappears, dark figure composites over room
   col = min(col, overlay.rgb);
 
   float dWin=(-1.5-ro.z)/clean_rd.z;
