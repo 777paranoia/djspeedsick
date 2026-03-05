@@ -64,7 +64,7 @@ float noise2(vec2 p) {
 float fbm(vec2 p) {
     float v = 0.0; float a = 0.5;
     mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 2; ++i) {
         v += a * noise2(p);
         p = rot * p * 2.0 + vec2(100.0);
         a *= 0.5;
@@ -79,7 +79,7 @@ vec3 neonPalette(float t) { return vec3(0.5) + vec3(0.5) * cos(6.28318 * (vec3(1
 float sdFractal(vec3 p, float power, float rotA, float rotB){
   vec3 z = p; z.xz *= rot(u_time * rotA); z.yz *= rot(u_time * rotB);
   float scale = 1.0; vec3 foldOffset = vec3(0.6) + (vec3(0.15) * sin(u_time * 0.15 + power)) + u_audio * 0.2;
-  for(int i=0; i<8; i++){
+  for(int i=0; i<5; i++){
     z=abs(z); if(z.x<z.y) z.xy=z.yx; if(z.x<z.z) z.xz=z.zx; if(z.y<z.z) z.yz=z.zy;
     z=z*2.0-foldOffset; scale*=2.0;
   }
@@ -89,7 +89,7 @@ float sdFractal(vec3 p, float power, float rotA, float rotB){
 vec3 colorPickover(vec3 p) {
   vec2 c = vec2(p.x * 0.4 + sin(u_time * 0.07) * 0.3, p.y * 0.4 + cos(u_time * 0.05) * 0.3);
   vec2 z = vec2(0.0); float minDist = 1e10; float escapeI = 0.0;
-  for(int i = 0; i < 80; i++) {
+  for(int i = 0; i < 32; i++) {
     z = clamp(vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c, -1000.0, 1000.0);
     float d = min(abs(z.x), abs(z.y)); if(d < minDist) minDist = d;
     if(dot(z,z) > 100.0){ escapeI = float(i); break; }
@@ -102,7 +102,7 @@ vec3 colorClifford(vec3 p) {
   float c2 = -1.9 + sin(u_time * 0.09) * 0.3; float d  =  0.4 + cos(u_time * 0.13) * 0.4;
   float x = p.x * 0.5 + p.z * 0.2; float y = p.y * 0.5 + p.z * 0.1;
   float density = 0.0; float hueAcc = 0.0;
-  for(int i = 0; i < 48; i++){
+  for(int i = 0; i < 20; i++){
     float nx = sin(a * y) + c2 * cos(a * x); float ny = sin(b * x) + d  * cos(b * y);
     x = nx; y = ny; density += exp(-length(vec2(x, y)) * 0.5); hueAcc  += atan(y, x);
   }
@@ -153,7 +153,7 @@ vec2 mapScene(vec3 p, bool renderFractals){
     float d5=sdBox(p-vec3( 6.5,0.0,17.0),vec3(2.0,24.0,2.5)); if(d5<res.x) res=vec2(d5,5.0);
     float d6=sdBox(p-vec3( 8.5,0.0,29.0),vec3(2.6,28.0,3.2)); if(d6<res.x) res=vec2(d6,6.0);
     float floorD=p.y+9.5; if(floorD<res.x) res=vec2(floorD,20.0);
-    // fall through to fractal block below
+    return res;
   }
   if (u_mode != 6 && u_mode != 7) {
       float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
@@ -168,7 +168,7 @@ vec2 mapScene(vec3 p, bool renderFractals){
     for(float i=0.0; i<2.0; i++){ 
       if(i >= num) break;
       float id = seed * 7.0 + i; 
-      float sc = mix(0.6, 1.1, hash1(id * 13.1)); 
+      float sc = mix(0.3, 0.6, hash1(id * 13.1)) * 0.7; 
       vec3 a = vec3(mix(-1.4,1.4,hash1(id*3.1+0.13)), mix(0.0,1.6,hash1(id*7.3+0.27)), mix(0.0,3.5,hash1(id*11.7+0.41)));
       vec3 fp = p - a; float bound = length(fp) - (sc * 1.5); float df = bound;
       
@@ -251,7 +251,7 @@ void setupCamera(out vec3 ro, out vec3 rd, out vec3 clean_rd, float intensity) {
   r.y = fbm(uv * 2.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
 
   float liqAmp = mix(0.06, 0.16, u_isOOB) * u_trip;
-  uv += (r - 0.5) * liqAmp; 
+  if (u_trip > 0.01) uv += (r - 0.5) * liqAmp; 
 
   float mt = u_modeTime * u_isOOB;
   

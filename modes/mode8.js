@@ -28,10 +28,8 @@ float goreRainLayer(vec2 uv, float t, float scale, float speed, float thickness,
 float goreRain(vec2 uv, float t) {
   float r = 0.0;
   r += goreRainLayer(uv, t, 14.0, 3.2, 0.006, 0.22, -0.10);
-  r += goreRainLayer(uv, t, 24.0, 4.5, 0.004, 0.28, -0.13);
-  r += goreRainLayer(uv, t, 40.0, 6.0, 0.003, 0.34, -0.16);
+  r += goreRainLayer(uv, t, 30.0, 4.5, 0.003, 0.28, -0.13);
   r += goreRainLayer(uv, t, 60.0, 8.0, 0.002, 0.38, -0.18);
-  r += goreRainLayer(uv, t, 90.0, 10.0, 0.001, 0.42, -0.20);
   return clamp(r, 0.0, 1.0);
 }
 
@@ -50,7 +48,7 @@ void main() {
   rd = normalize(rd);
 
   float t = 0.0; vec2 hit = vec2(0.0);
-  for(int i = 0; i < 90; i++) { hit = mapScene(ro + rd * t, true); if(hit.x < 0.001 || t > 70.0) break; t += hit.x; }
+  for(int i = 0; i < 48; i++) { hit = mapScene(ro + rd * t, true); if(hit.x < 0.001 || t > 70.0) break; t += hit.x; }
 
   vec3 cBlood   = vec3(0.55, 0.0,  0.02);
   vec3 cCrimson = vec3(0.85, 0.04, 0.04);
