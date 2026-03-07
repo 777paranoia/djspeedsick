@@ -21,3 +21,6 @@ gallerytest.html
 sisyphis*
 .bak
 ./.bak
+*.zip
+tmp.sh
+tree.log

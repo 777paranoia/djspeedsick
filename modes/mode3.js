@@ -1,5 +1,5 @@
 
-// MODE 3 - BLACK HOLE
+
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};

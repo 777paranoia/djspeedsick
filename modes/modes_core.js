@@ -1,4 +1,4 @@
-// MODES_CORE
+
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
@@ -64,7 +64,7 @@ float noise2(vec2 p) {
 float fbm(vec2 p) {
     float v = 0.0; float a = 0.5;
     mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 4; ++i) {
         v += a * noise2(p);
         p = rot * p * 2.0 + vec2(100.0);
         a *= 0.5;
@@ -79,7 +79,7 @@ vec3 neonPalette(float t) { return vec3(0.5) + vec3(0.5) * cos(6.28318 * (vec3(1
 float sdFractal(vec3 p, float power, float rotA, float rotB){
   vec3 z = p; z.xz *= rot(u_time * rotA); z.yz *= rot(u_time * rotB);
   float scale = 1.0; vec3 foldOffset = vec3(0.6) + (vec3(0.15) * sin(u_time * 0.15 + power)) + u_audio * 0.2;
-  for(int i=0; i<5; i++){
+  for(int i=0; i<8; i++){
     z=abs(z); if(z.x<z.y) z.xy=z.yx; if(z.x<z.z) z.xz=z.zx; if(z.y<z.z) z.yz=z.zy;
     z=z*2.0-foldOffset; scale*=2.0;
   }
@@ -89,7 +89,7 @@ float sdFractal(vec3 p, float power, float rotA, float rotB){
 vec3 colorPickover(vec3 p) {
   vec2 c = vec2(p.x * 0.4 + sin(u_time * 0.07) * 0.3, p.y * 0.4 + cos(u_time * 0.05) * 0.3);
   vec2 z = vec2(0.0); float minDist = 1e10; float escapeI = 0.0;
-  for(int i = 0; i < 32; i++) {
+  for(int i = 0; i < 80; i++) {
     z = clamp(vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c, -1000.0, 1000.0);
     float d = min(abs(z.x), abs(z.y)); if(d < minDist) minDist = d;
     if(dot(z,z) > 100.0){ escapeI = float(i); break; }
@@ -102,7 +102,7 @@ vec3 colorClifford(vec3 p) {
   float c2 = -1.9 + sin(u_time * 0.09) * 0.3; float d  =  0.4 + cos(u_time * 0.13) * 0.4;
   float x = p.x * 0.5 + p.z * 0.2; float y = p.y * 0.5 + p.z * 0.1;
   float density = 0.0; float hueAcc = 0.0;
-  for(int i = 0; i < 20; i++){
+  for(int i = 0; i < 48; i++){
     float nx = sin(a * y) + c2 * cos(a * x); float ny = sin(b * x) + d  * cos(b * y);
     x = nx; y = ny; density += exp(-length(vec2(x, y)) * 0.5); hueAcc  += atan(y, x);
   }
@@ -153,9 +153,9 @@ vec2 mapScene(vec3 p, bool renderFractals){
     float d5=sdBox(p-vec3( 6.5,0.0,17.0),vec3(2.0,24.0,2.5)); if(d5<res.x) res=vec2(d5,5.0);
     float d6=sdBox(p-vec3( 8.5,0.0,29.0),vec3(2.6,28.0,3.2)); if(d6<res.x) res=vec2(d6,6.0);
     float floorD=p.y+9.5; if(floorD<res.x) res=vec2(floorD,20.0);
-    return res;
+
   }
-  if (u_mode != 6 && u_mode != 7) {
+  if (u_mode != 6 && u_mode != 7 && u_mode != 8) {
       float d1=sdBox(p-vec3(-3.0,0.0,2.0), vec3(1.2,12.0,1.5)); if(d1<res.x) res=vec2(d1,1.0);
       float d2=sdBox(p-vec3(-4.2,0.0,7.0), vec3(1.2,12.0,1.5)); if(d2<res.x) res=vec2(d2,2.0);
       float d3=sdBox(p-vec3(-5.4,0.0,12.0),vec3(1.2,12.0,1.5)); if(d3<res.x) res=vec2(d3,3.0);
@@ -198,7 +198,7 @@ vec2 waterNormal(vec2 uv){
   return vec2(hL - hR, hD - hU) * 7.0;
 }
 
-// PURE DATAMOSH / PIXEL DAMAGE LOGIC
+
 vec3 digitalGlitch(vec3 col, vec2 uv) {
   float burstSlot = floor(u_time * 12.0); 
   float isBurst = step(0.94, hash1(burstSlot * 13.7 + u_modeSeed)); 
@@ -251,17 +251,17 @@ void setupCamera(out vec3 ro, out vec3 rd, out vec3 clean_rd, float intensity) {
   r.y = fbm(uv * 2.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
 
   float liqAmp = mix(0.06, 0.16, u_isOOB) * u_trip;
-  if (u_trip > 0.01) uv += (r - 0.5) * liqAmp; 
+  uv += (r - 0.5) * liqAmp; 
 
   float mt = u_modeTime * u_isOOB;
   
-  // --- THE LUCID SNAP ---
+
   float w1 = sin(mt * 0.4 + u_modeSeed);
   float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);
   float w3 = sin(mt * 1.5 + u_modeSeed * 3.0);
   float surge = smoothstep(0.8, 1.0, (w1 + w2 + w3) / 3.0);
   float snap = pow(surge, 2.0) * 12.0 * u_isOOB;
-  // ----------------------
+
 
   uv *= 1.0 + mt * 0.005 + (snap * 0.02); 
 

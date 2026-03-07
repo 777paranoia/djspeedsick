@@ -1,4 +1,4 @@
-// MODE 4 - MIRROR
+
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
@@ -8,14 +8,14 @@ uniform sampler2D u_texEnv3;
 void main() {
   vec3 ro, rd, clean_rd; setupCamera(ro, rd, clean_rd, 0.0);
 
-  // Sample room background — image is stored 180 rotated, flip on sample
+
   vec2 roomUV = clamp(vec2(0.5) + vec2(-rd.x, rd.y) * 1.5, 0.0, 1.0);
   vec2 texUV = 1.0 - roomUV;
   vec4 roomSample = texture2D(u_texEnv1, texUV);
   vec3 col = roomSample.rgb;
   col = mix(col, vec3(0.05, 0.05, 0.06), 0.3 + hash2(gl_FragCoord.xy/u_resolution.xy * 50.0 + u_time * 2.0) * 0.15) * mix(0.1, 1.0, sin(u_time * 0.5) * 0.5 + 0.5);
 
-  // Green screen TV cluster — coords in original image space (pre-flip)
+
   const vec2 tvMin = vec2(0.3637, 0.5370);
   const vec2 tvMax = vec2(0.5416, 0.6638);
   bool inCluster = texUV.x >= tvMin.x && texUV.x <= tvMax.x &&
@@ -28,10 +28,10 @@ void main() {
     }
   }
 
-  // Overlay (figure layer) — simple darken composite, no warp
+
   vec4 overlay = texture2D(u_texEnv3, texUV);
 
-  // Face green screen — replace with room reflection + butterchurn
+
   const vec2 faceMin = vec2(0.4451, 0.3006);
   const vec2 faceMax = vec2(0.5592, 0.4886);
   bool inFace = texUV.x >= faceMin.x && texUV.x <= faceMax.x &&
@@ -49,7 +49,7 @@ void main() {
     }
   }
 
-  // Darken blend — grey bg disappears, dark figure composites over room
+
   col = min(col, overlay.rgb);
 
   float dWin=(-1.5-ro.z)/clean_rd.z;

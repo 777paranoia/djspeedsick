@@ -40,6 +40,7 @@ window.__ALL_VIDEOS = window.__ALL_VIDEOS || [];
   window.__primeVideoPool = function() {
     const pool = { fixed: {}, mapped: [] };
     pool.fixed["files/mov/bh2.webm"]   = [makePoolVid("files/mov/bh2.webm",  true),
+                                           makePoolVid("files/mov/bh2.webm",  true),
                                            makePoolVid("files/mov/bh2.webm",  true)];
     pool.fixed["files/mov/earth.webm"] = [makePoolVid("files/mov/earth.webm", true)];
     pool.fixed["files/mov/fly.webm"]   = [makePoolVid("files/mov/fly.webm",  false)];
@@ -113,7 +114,7 @@ let __resizeTimer = null;
 window.addEventListener("resize", () => {
   fit();
   if (innerWidth !== lastWidth) { lastWidth = innerWidth; rebuildFBOs(); return; }
-  // Debounce height-only resizes (mobile address bar show/hide)
+
   clearTimeout(__resizeTimer);
   __resizeTimer = setTimeout(() => { fit(); rebuildFBOs(); }, 200);
 });
@@ -231,68 +232,6 @@ function drawBacklight(now, strength, audio){
   gl.disable(gl.BLEND);
 }
 
-window.triggerMattMode = function() {
-    const loader = document.getElementById("loading-screen");
-    if (loader) loader.style.display = "flex"; 
-    
-    window.startWakeSequence = false;
-    window.startSecretFlySequence = false;
-    phase = "suspended";
-    
-    setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        const layerPng = document.getElementById('layer-png');
-        const enterBtn = document.getElementById('enter-button');
-        
-        if(layerPng) layerPng.src = 'files/boettke/aerial-boettke.png';
-        if(enterBtn) {
-            enterBtn.src = 'files/boettke/enter-button-boettke.png';
-            enterBtn.classList.remove('glow-active');
-        }
-        if(splash) splash.style.display = 'block'; 
-        
-        const cont = document.getElementById('container');
-        if(cont) cont.style.visibility = 'hidden';
-        const side = document.getElementById('conky-sidebar');
-        if(side) side.style.display = 'none';
-        
-        const audio = document.getElementById("audioPlayer");
-        if (audio) {
-            audio.pause();
-            audio.src = ""; 
-        }
-        
-        const oldPlayer = document.querySelector('script[src="player.js"]');
-        if (oldPlayer) oldPlayer.remove();
-        const newPlayer = document.createElement('script');
-        newPlayer.src = 'files/boettke/scant.js';
-        document.body.appendChild(newPlayer);
-
-        staticAssets.oobMask = loadStaticTex("files/boettke/oob-boettke.png");
-        window.__mirrorOverlay = "files/boettke/mirror-matt.png";
-        
-        if (typeof _entered !== 'undefined') _entered = false;
-        window._siteEntered = false;
-        window.splashStartTime = Date.now(); 
-        
-        if(currentEngine) { currentEngine.destroy(); currentEngine = null; }
-        if(leftEngine) { leftEngine.destroy(); leftEngine = null; }
-        if(rightEngine) { rightEngine.destroy(); rightEngine = null; }
-        
-        activePOV = 'center';
-        slideState = 'idle';
-        slideOffset = 0;
-        canvas.style.transform = '';
-        mx = 0; my = 0; cx = 0; cy = 0;
-
-        phase = "sleeping";
-
-        setTimeout(() => {
-            if (loader) loader.style.display = "none";
-        }, 500);
-
-    }, 2000); 
-};
 
 class ActiveMode {
     constructor(modeID) {
@@ -303,17 +242,19 @@ const map = {
   2:'fractal',
   3:'bh',
   4:'mirror',
-  5:'deadcity',
-  6:'ocean',
-  7:'earth',
+  5:'ocean',
+  6:'earth',
+  7:'deadcity',
   8:'goreville',
   9:'plane',
+  10:'highcity',
   98:'room_left',
-  99:'room_right'
+  99:'room_right',
+  97:'room_back'
 };
         let fragKey = map[this.id];
 
-        if (fragKey === 'mirror' || fragKey === 'room_left' || fragKey === 'room_right') {
+        if (fragKey === 'mirror' || fragKey === 'room_left' || fragKey === 'room_right' || fragKey === 'room_back') {
             this.isOOB = false;
         } else {
             if (window.__lastOOB) {
@@ -332,7 +273,7 @@ const map = {
         
         this.prog = gl.createProgram();
         gl.attachShader(this.prog, compile(gl.VERTEX_SHADER, GLSL.vert));
-        const isRoom = (fragKey === 'room_left' || fragKey === 'room_right');
+        const isRoom = (fragKey === 'room_left' || fragKey === 'room_right' || fragKey === 'room_back');
         gl.attachShader(this.prog, compile(gl.FRAGMENT_SHADER, isRoom ? GLSL.modules[fragKey] : GLSL.core + GLSL.modules[fragKey]));
         gl.linkProgram(this.prog);
         gl.useProgram(this.prog);
@@ -363,6 +304,11 @@ const map = {
             this.galleryTex = [0,1,2,3].map(() => this._makeBlackTex());
             this.galleryTex.forEach(t => this.textures.push(t));
             [0,1,2].forEach(i => this._loadGallerySlot(i));
+        } else if (fragKey === 'room_back') {
+            this.env1 = loadStaticTex("files/img/rooms/back.png");
+            this.textures.push(this.env1);
+            this.bcTex = this._makeBlackTex();
+            this.textures.push(this.bcTex);
         } else if (fragKey === 'room_right') {
             this.env1 = loadStaticTex("files/img/rooms/right-mobile.png");
             this.textures.push(this.env1);
@@ -376,7 +322,7 @@ const map = {
                 const overlayPick = ["files/img/rooms/mirror-v1.png","files/img/rooms/mirror-v2.png","files/img/rooms/mirror-v3.png"];
                 this.env2 = loadStaticTex(window.__mirrorOverlay || overlayPick[Math.floor(Math.random() * overlayPick.length)]);
                 this.textures.push(this.env2);
-                // Pre-allocate texture slot for butterchurn canvas (TEXTURE9 / u_texEnv2 in shader = bcTex)
+
                 this.bcTex = this._makeBlackTex();
                 this.textures.push(this.bcTex);
             }
@@ -387,6 +333,10 @@ const map = {
                 this.env4 = loadStaticTex("files/img/void/gorebuilding03.png");
                 this.env5 = loadStaticTex("files/img/void/gorewater.png");
                 this.textures.push(this.env1, this.env2, this.env3, this.env4, this.env5);
+            }
+            else if (fragKey === 'highcity') {
+                this.bcTex = this._makeBlackTex();
+                this.textures.push(this.bcTex);
             }
             else if (fragKey === 'ocean') this.env1 = loadStaticTex("files/img/ocean.jpg");
             else if (fragKey === 'deadcity') { this.env1 = this.loadVideo("files/mov/bh2.webm"); this.env2 = loadStaticTex("files/img/deadcity.png"); this.textures.push(this.env2); }
@@ -472,18 +422,7 @@ const map = {
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.videoObj);
         }
 
-        if (this.id === 10 && window.bcCanvas) {
-            gl.activeTexture(gl.TEXTURE8);
-            gl.bindTexture(gl.TEXTURE_2D, this.env1);
-            gl.texImage2D(
-                gl.TEXTURE_2D,
-                0,
-                gl.RGBA,
-                gl.RGBA,
-                gl.UNSIGNED_BYTE,
-                window.bcCanvas
-            );
-        }
+
 
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b1);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b2);
@@ -501,7 +440,7 @@ const map = {
         gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
         gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, DUMMY_BLACK);
 
-        if (this.id === 5 && this.env2) {
+        if (this.id === 7 && this.env2) {
             gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, this.env2);
         }
 
@@ -512,7 +451,7 @@ const map = {
             gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, this.env5 || DUMMY_BLACK);
         }
 
-        // Mirror (mode 4): butterchurn -> TEXTURE9, overlay PNG -> TEXTURE10
+
         if (this.id === 4) {
             if (window.butterchurnVisualizer && window.bcCanvas) {
                 gl.activeTexture(gl.TEXTURE9);
@@ -528,6 +467,15 @@ const map = {
             }
         }
 
+        if (this.id === 10 && window.butterchurnVisualizer && window.bcCanvas) {
+            gl.activeTexture(gl.TEXTURE9);
+            gl.bindTexture(gl.TEXTURE_2D, this.bcTex || DUMMY_BLACK);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, window.bcCanvas);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+
         if (this.id === 98 && this.galleryTex) {
             gl.activeTexture(gl.TEXTURE9);  gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[0]);
             gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[1]);
@@ -538,6 +486,21 @@ const map = {
             if (window.butterchurnVisualizer && window.bcCanvas) {
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, window.bcCanvas);
             }
+        }
+
+               if (this.id === 97 && window.butterchurnVisualizer && window.bcCanvas) {
+
+            gl.activeTexture(gl.TEXTURE9);
+            gl.bindTexture(gl.TEXTURE_2D, this.bcTex || DUMMY_BLACK);
+
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, window.bcCanvas);
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         }
 
         if (this.id === 99) {
@@ -567,6 +530,11 @@ const map = {
         gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
+    setZoom(z) {
+        const loc = gl.getUniformLocation(this.prog, 'u_zoom');
+        if (loc) { gl.useProgram(this.prog); gl.uniform1f(loc, z); }
+    }
+
     destroy() {
         const stopVid = (v) => {
             if (!v) return;
@@ -583,7 +551,8 @@ const map = {
 }
 
 let currentEngine = null, mx=0, my=0, cx=0, cy=0, mode=1, blink=0, flash=0, shake=0, phase="sleeping", timer=-9999, start=0, lastNow=0, blinkCount=0, targetBlinks=1, modeSeed=0, lastMode=-1, tripIntensity=1.0;
-let leftEngine = null, rightEngine = null, activePOV = 'center'; 
+let leftEngine = null, rightEngine = null, backEngine = null, activePOV = 'center';
+let backZoom = 0.0, backZoomTarget = 0.0, comingSoonActive = false, comingSoonStart = 0; 
 const SLIDE_MS = 340, EDGE_SNAP_MS = 80;
 let slideState = 'idle', slideStart = 0, slideDir = 0, slideOffset = 0, pendingPOV = null, povSwitchTime = -9999;
 
@@ -613,7 +582,8 @@ function checkPOVThreshold() {
     if (mx >= 1.24) beginSlide('left', +1);
     else if (mx <= -1.24) beginSlide('right', -1);
   } else if (activePOV === 'left') { if (mx <= -1.14) beginSlide('center', -1);
-  } else if (activePOV === 'right') { if (mx >= 1.14) beginSlide('center', +1); }
+  } else if (activePOV === 'right') { if (mx >= 1.14) beginSlide('center', +1); else if (mx <= -1.24) beginSlide('back', -1); }
+  else if (activePOV === 'back') { if (mx >= 1.14) beginSlide('right', +1); }
 }
 
 let isDragging = false;
@@ -659,6 +629,15 @@ window.addEventListener("touchmove",
 );
 window.addEventListener("touchend", endDrag);
 
+
+canvas.addEventListener("pointerup", function(e) {
+  if (!window.__mobileDebug) return;
+  if (phase !== "open") return;
+
+  if (e.target !== canvas) return;
+  phase = "closing_switch"; start = performance.now(); timer = performance.now();
+});
+
 function simStep(now){
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, texs[ping]);
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, staticAssets.windowMask); 
@@ -672,14 +651,15 @@ function simStep(now){
 function advanceMode(){
   let nextMode = mode;
   let attempts = 0;
-  while((nextMode === mode || nextMode === lastMode || (mode < 8 && nextMode < 8)) && attempts < 20){ nextMode = Math.floor(Math.random() * 9) + 1; attempts++; }
+  const nearPlane = (m) => m === 9 || m === 1 || m === 2;
+  while((nextMode === mode || nextMode === lastMode || (mode < 8 && nextMode < 8) || (nearPlane(mode) && nearPlane(nextMode))) && attempts < 20){ nextMode = Math.floor(Math.random() * 9) + 1; attempts++; }
   lastMode = mode; mode = nextMode; modeSeed++;
   tripIntensity = 0.2 + Math.random() * 1.5; 
   if(currentEngine) currentEngine.destroy();
   currentEngine = new ActiveMode(mode);
 }
 
-function initSideEngines() { if (!leftEngine) leftEngine = new ActiveMode(98); if (!rightEngine) rightEngine = new ActiveMode(99); }
+function initSideEngines() { if (!leftEngine) leftEngine = new ActiveMode(98); if (!rightEngine) rightEngine = new ActiveMode(99); if (!backEngine) backEngine = new ActiveMode(97); }
 
 function render(now){
   if (window.butterchurnVisualizer) window.butterchurnVisualizer.render();
@@ -720,45 +700,85 @@ function render(now){
   } else if(phase === "waking"){ let t = Math.min((now - start) / 3000, 1.0); wakeVal = 1.0 - Math.pow(1.0 - t, 3); if(t >= 1.0){ phase = "open"; timer = now; } }
 
   if (activePOV === 'center') {
-    
     if (mode === 0 && phase === "open") {
         if (currentEngine && currentEngine.videoObj && currentEngine.videoObj.ended) {
-            phase = "waking"; 
-            start = now; 
-            advanceMode();
+            phase = "waking"; start = now; advanceMode();
             if(window.unmuteMainAudio) window.unmuteMainAudio();
         }
-    } else if (mode === 9 && phase === "open" && currentEngine &&
-               (now - currentEngine.startTime) * 0.001 >= 6.0) {
-        // Plane reaches camera at ~8s. If the normal blink shuffle hasn't fired yet, trigger it now.
+    } else if (mode === 9 && phase === "open" && !window.__mobileDebug && currentEngine &&
+               currentEngine.startTime > 0 && (now - currentEngine.startTime) * 0.001 >= 4.4) {
         phase = "closing_switch"; start = now; timer = now;
-    } else if (phase === "open" && now - timer > 9000) {
-        blinkCount++; 
-        if(blinkCount >= targetBlinks){ phase="closing_switch"; start=now; timer=now; } 
-        else { phase="closing_blink"; start=now; timer=now; } 
+    } else if (phase === "open" && !window.__mobileDebug && now - timer > 9000 && activePOV === 'center') {
+        phase = "closing_switch"; start = now; timer = now;
     }
-
-    if(phase==="closing_blink"){ blink=Math.min((now-start)/160, 1); if(blink>=1){ phase="black_blink"; start=now; } }
-    else if(phase==="black_blink" && now-start>120){ phase="opening_blink"; start=now; }
-    else if(phase==="opening_blink"){ blink=1.0-Math.min((now-start)/160, 1); if(blink<=0){ phase="open"; timer=now; blink=0; } }
-    else if(phase==="closing_switch"){ blink=Math.min((now-start)/160, 1); if(blink>=1){ phase="black_switch"; start=now; advanceMode(); } }
-    else if(phase==="black_switch" && now-start>200){ phase="opening_switch"; start=now; }
-    else if(phase==="opening_switch"){ blink=1.0-Math.min((now-start)/160, 1); if(blink<=0){ phase="open"; timer=now; blink=0; } }
   }
+
+  if(phase==="closing_blink"){ blink=Math.min((now-start)/160, 1); if(blink>=1){ phase="black_blink"; start=now; } }
+  else if(phase==="black_blink" && now-start>120){ phase="opening_blink"; start=now; }
+  else if(phase==="opening_blink"){ blink=1.0-Math.min((now-start)/160, 1); if(blink<=0){ phase="open"; timer=now; blink=0; } }
+  else if(phase==="closing_switch"){ blink=Math.min((now-start)/160, 1); if(blink>=1){ phase="black_switch"; start=now; advanceMode(); } }
+  else if(phase==="black_switch" && now-start>200){ phase="opening_switch"; start=now; }
+  else if(phase==="opening_switch"){ blink=1.0-Math.min((now-start)/160, 1); if(blink<=0){ phase="open"; timer=now; blink=0; } }
 
   if (phase === "open" || activePOV !== 'center') checkPOVThreshold();
   tickSlide(now);
   cx += (mx - cx) * 0.12; cy += (my - cy) * 0.12;
 
-  if (activePOV === 'right' && mx <= -1.15) {
-      if (!window.mattModeTimer) window.mattModeTimer = now;
-      if (now - window.mattModeTimer > 5000 && !window.mattModeTriggered) {
-          window.mattModeTriggered = true;
-          triggerMattMode();
-      }
+
+  if (activePOV === 'back' && isDragging && mx < -1.0) {
+    backZoomTarget = Math.min(1.0, backZoomTarget + (-mx - 1.0) * 0.035);
   } else {
-      window.mattModeTimer = 0;
+    backZoomTarget = 0.0;
   }
+  backZoom += (backZoomTarget - backZoom) * 0.18;
+
+
+  if (activePOV === 'back' && backZoom > 0.88 && !comingSoonActive) {
+    comingSoonActive = true;
+    comingSoonStart = lastNow;
+    backZoomTarget = 0.0;
+    let el = document.getElementById('coming-soon-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'coming-soon-overlay';
+      el.innerHTML = 'COMING SOON';
+      el.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:clamp(24px,6vw,64px);font-weight:900;color:#fff;letter-spacing:0.15em;pointer-events:none;z-index:999;mix-blend-mode:difference;`;
+      document.body.appendChild(el);
+    }
+    el.style.display = 'flex';
+    el.style.animation = 'glitch-cs 0.1s steps(1) infinite';
+
+    if (!document.getElementById('cs-style')) {
+      const s = document.createElement('style');
+      s.id = 'cs-style';
+      s.textContent = `
+        @keyframes glitch-cs {
+          0%   { transform: translate(0,0) skewX(0deg);    color:#fff; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+          20%  { transform: translate(-4px,2px) skewX(-8deg); color:#f0f; text-shadow: -3px 0 #0ff, 3px 0 #ff0; }
+          40%  { transform: translate(4px,-2px) skewX(5deg);  color:#0ff; text-shadow: 3px 0 #f0f, -3px 0 #fff; }
+          60%  { transform: translate(-2px,4px) skewX(-4deg); color:#ff0; text-shadow: -2px 0 #f0f, 2px 0 #0ff; }
+          80%  { transform: translate(3px,-3px) skewX(7deg);  color:#fff; text-shadow: 2px 0 #0ff, -2px 0 #f0f; }
+          100% { transform: translate(0,0) skewX(0deg);    color:#fff; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+        }
+      `;
+      document.head.appendChild(s);
+    }
+  }
+
+  if (comingSoonActive) {
+    const elapsed = lastNow - comingSoonStart;
+    if (elapsed > 1800) {
+      comingSoonActive = false;
+      backZoom = 0.0;
+      backZoomTarget = 0.0;
+      const el = document.getElementById('coming-soon-overlay');
+      if (el) el.style.display = 'none';
+      beginSlide('right', +1);
+    }
+  }
+
+
+
 
   if (activePOV === 'center') {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -796,10 +816,21 @@ function render(now){
     }
     if (rightEngine) rightEngine.render(now, cx, cy, audioIntensity, blink, 0, 0, wakeVal, modeSeed);
   }
-  lastNow = now; 
+  if (activePOV === 'back') {
+    gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    if (backEngine) {
+        backEngine.render(now, cx, cy, audioIntensity, blink, flash, shake, wakeVal, modeSeed);
+        backEngine.setZoom(backZoom);
+        if (window.bcCanvas) {
+            const loc = gl.getUniformLocation(backEngine.prog, 'u_bcResolution');
+            if (loc) { gl.useProgram(backEngine.prog); gl.uniform2f(loc, window.bcCanvas.width, window.bcCanvas.height); }
+        }
+    }
+  }
+  lastNow = now;
 }
 
-/* ===== FPS GOVERNOR (30 FPS desktop / 20 FPS mobile) ===== */
+
 
 const TARGET_FPS = IS_MOBILE ? 20 : 30;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;

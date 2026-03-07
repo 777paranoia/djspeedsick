@@ -1,5 +1,4 @@
 
-// MODE - RIGHT ROOM
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
@@ -17,6 +16,10 @@ uniform sampler2D u_texEnv6;
 uniform sampler2D u_texEnv5; 
 uniform float u_trip;
 uniform float u_modeSeed; 
+uniform float u_blink;
+uniform float u_wake;
+uniform float u_isOOB;
+uniform float u_modeTime;
 
 float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
 float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); } 
@@ -94,7 +97,18 @@ void main() {
     vec2 r = vec2(0.0);
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
-    tuv += (r - 0.5) * 0.012 * u_trip; 
+
+
+    float liqAmp = mix(0.012, 0.08, u_isOOB) * u_trip;
+    tuv += (r - 0.5) * liqAmp;
+
+    float mt = u_modeTime * u_isOOB;
+    float w1 = sin(mt * 0.4 + u_modeSeed);
+    float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);
+    float w3 = sin(mt * 1.5 + u_modeSeed * 3.0);
+    float surge = smoothstep(0.8, 1.0, (w1 + w2 + w3) / 3.0);
+    float snap = pow(surge, 2.0) * 0.06 * u_isOOB;
+    tuv = (tuv - 0.5) * (1.0 + snap) + 0.5;
     tuv = clamp(tuv, 0.0, 1.0);
 
     float burstSlot = floor(u_time * 12.0); 
@@ -125,6 +139,6 @@ void main() {
     float doMini = step(0.95, miniRnd) * activeG; 
     col = mix(col, vec3(col.b, col.r, col.g), doMini); 
 
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;

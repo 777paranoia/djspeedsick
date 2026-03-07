@@ -1,11 +1,9 @@
-// MODE 8 - GOREVILLE 
-
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
 GLSL.modules.goreville = `
-// Gore textures: u_texEnv2=gorebuilding01, u_texEnv3=gorebuilding02,
-//                u_texEnv4=gorebuilding03, u_texEnv5=gorewater
+
+
 uniform sampler2D u_texEnv3;
 uniform sampler2D u_texEnv4;
 uniform sampler2D u_texEnv5;
@@ -27,50 +25,33 @@ float goreRainLayer(vec2 uv, float t, float scale, float speed, float thickness,
 
 float goreRain(vec2 uv, float t) {
   float r = 0.0;
-  r += goreRainLayer(uv, t, 14.0, 3.2, 0.006, 0.22, -0.10);
-  r += goreRainLayer(uv, t, 30.0, 4.5, 0.003, 0.28, -0.13);
-  r += goreRainLayer(uv, t, 60.0, 8.0, 0.002, 0.38, -0.18);
+  r += goreRainLayer(uv, t, 14.0, 2.8, 0.006, 0.20, -0.10);
+  r += goreRainLayer(uv, t, 24.0, 3.8, 0.005, 0.24, -0.14);
+  r += goreRainLayer(uv, t, 40.0, 5.0, 0.003, 0.28, -0.18);
+  r += goreRainLayer(uv, t, 60.0, 6.2, 0.002, 0.22, -0.08);
   return clamp(r, 0.0, 1.0);
 }
 
 void main() {
   vec3 ro, rd, clean_rd; setupCamera(ro, rd, clean_rd, 0.0);
-
-  // --- HALLUCINOGEN SWELL WARP (no jitter, pure slow organic distortion) ---
-  float swellA = noise1(u_time * 0.07) * 0.5 + 0.5;
-  float swellB = noise1(u_time * 0.11 + 5.3) * 0.5 + 0.5;
-  float swell  = swellA * swellB; // slow independent oscillators -> occasional peaks
-  float warpAmt = mix(0.04, 0.22, swell * swell);
-  vec2 wuv2 = rd.xy;
-  float wx = fbm(wuv2 * 3.0 + vec2(u_time * 0.018, 0.0));
-  float wy = fbm(wuv2 * 3.0 + vec2(0.0, u_time * 0.014) + 4.7);
-  rd.xy += (vec2(wx, wy) - 0.5) * warpAmt;
-  rd = normalize(rd);
-
   float t = 0.0; vec2 hit = vec2(0.0);
-  for(int i = 0; i < 48; i++) { hit = mapScene(ro + rd * t, true); if(hit.x < 0.001 || t > 70.0) break; t += hit.x; }
+  for(int i = 0; i < 90; i++) { hit = mapScene(ro + rd * t, false); if(hit.x < 0.001 || t > 70.0) break; t += hit.x; }
 
   vec3 cBlood   = vec3(0.55, 0.0,  0.02);
   vec3 cCrimson = vec3(0.85, 0.04, 0.04);
+  vec3 cDark    = vec3(0.02, 0.0,  0.005);
 
-  // Black sky
-  vec3 skyTone = vec3(0.0);
-
-  // Swell lighting — blood-red light pulse, no movement
-  float swellLight = swell * swell * 0.35;
+  vec3 skyTone = texture2D(u_texEnv1, fract(rd.xy * 0.5 + 0.5 + vec2(u_time * 0.0008, 0.0))).rgb;
+  skyTone = mix(skyTone, cDark, 0.45);
+  skyTone += cCrimson * smoothstep(0.1, -0.7, rd.y) * 0.35;
 
   vec3 col = vec3(0.0);
 
   if(t < 70.0) {
     vec3 p = ro + rd * t;
 
-    if(hit.y >= 10.0) {
-      // Fractal hit
-      col = mix(colorPickover(p), skyTone, 1.0 - exp(-0.015 * max(length(p) - 0.8, 0.0) * max(length(p) - 0.8, 0.0)));
-      col = mix(col, cCrimson * 0.4, 0.3);
+    if(hit.y > 19.5) {
 
-    } else if(hit.y > 19.5) {
-      // Floor
       vec2 floorUV = p.xz * 0.04 + vec2(u_time * 0.005, 0.0);
       vec3 floorCol = texture2D(u_texEnv5, fract(floorUV)).rgb;
       vec2 wn = waterNormal(gl_FragCoord.xy / u_resolution) * 0.3;
@@ -78,7 +59,7 @@ void main() {
         texture2D(u_texEnv5, fract(floorUV + wn * 0.015)).rgb,
         clamp(texture2D(u_water, gl_FragCoord.xy / u_resolution).r * 5.0, 0.0, 0.6));
       floorCol = mix(floorCol, cBlood, 0.35);
-      col = mix(floorCol + cCrimson * swellLight, skyTone, 1.0 - exp(-0.018 * t * t));
+      col = mix(floorCol, skyTone, 1.0 - exp(-0.008 * t * t));
 
     } else {
       vec3 n = normalize(vec3(
@@ -88,17 +69,31 @@ void main() {
       ));
       vec3 bTex = sampleGoreBuilding(hit.y, (abs(n.x) > abs(n.y)) ? p.zy : p.xy);
       bTex += bTex * smoothstep(0.5, 0.9, max(bTex.r, max(bTex.g, bTex.b))) * 2.5;
-      col = mix(bTex * (0.18 + swellLight), skyTone, 1.0 - exp(-0.015 * t * t))
+
+      vec2 texUV = (abs(n.x) > abs(n.y)) ? p.zy : p.xy;
+      vec2 wg = floor(texUV * vec2(5.0, 10.0));
+      float won = step(0.68, hash2(wg + hit.y * 17.0));
+      float wflick = step(0.88, hash1(hash2(wg) + floor(u_time * 2.5)));
+      float wpx = smoothstep(0.005, 0.0, abs(fract(texUV.x * 5.0) - 0.5) - 0.15)
+                 * smoothstep(0.005, 0.0, abs(fract(texUV.y * 10.0) - 0.5) - 0.10);
+      float wPulse = 0.7 + 0.3 * sin(u_time * 1.8 + hash2(wg) * 6.28);
+      vec3 wCol = mix(vec3(0.9, 0.2, 0.05), vec3(1.0, 0.6, 0.2), hash2(wg + 7.0));
+      bTex += wCol * won * (1.0 - wflick) * wpx * 1.4 * wPulse;
+
+      col = mix(bTex * 0.22, skyTone, 1.0 - exp(-0.007 * t * t))
           + cBlood * (noise1(u_time * 0.25 + p.x * 0.1) * 0.4 + 0.6)
-          * smoothstep(2.0, -20.0, p.y) * 0.38 * exp(-0.005 * t * t);
+          * smoothstep(2.0, -20.0, p.y) * 0.38 * exp(-0.003 * t * t);
     }
+  } else {
+    col = skyTone;
   }
 
-  // Torrential red rain
-  float rain = goreRain(gl_FragCoord.xy / u_resolution.xy, u_time);
+
+  vec2 rainUV = rd.xz / (abs(rd.y) + 0.1);
+  float rain = goreRain(rainUV, u_time);
   col += cCrimson * rain * 1.1;
 
-  // Window overlay
+
   float dWin = (-1.5 - ro.z) / clean_rd.z;
   if(dWin > 0.0) {
     vec3 pW = ro + clean_rd * dWin;

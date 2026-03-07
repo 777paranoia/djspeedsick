@@ -59,9 +59,9 @@ vec3 jetNormal(vec3 p) {
 void main() {
   vec3 ro, rd, clean_rd; setupCamera(ro, rd, clean_rd, 0.0);
 
-  // --- CITY RAYMARCH ---
+
   float t=0.0; vec2 hit=vec2(0.0);
-  for(int i=0;i<48;i++){ 
+  for(int i=0;i<90;i++){ 
     hit=mapScene(ro+rd*t, false); 
     if(hit.x<0.001||t>70.0) break; 
     t+=hit.x; 
@@ -69,7 +69,7 @@ void main() {
 
   float cityDepth = (t < 70.0) ? t : 9999.0;
 
-  // --- BACKGROUND & SKY ---
+
   vec3 cGreen = vec3(0.15, 0.9, 0.4); vec3 cRed = vec3(0.9, 0.05, 0.15); vec3 cAmber = vec3(1.0, 0.5, 0.0); 
   float traffic = smoothstep(0.7, 1.0, sin(rd.x * 6.0 + u_time * 1.5)) * 0.4;
   vec3 skyTone = mix(vec3(0.005, 0.01, 0.015), vec3(0.05, 0.08, 0.06), exp(-max(rd.y,0.0)*4.0)) + mix(mix(cGreen, cRed, sin(rd.x * 4.0 + u_time * 0.5) * 0.5 + 0.5), cAmber, traffic) * (noise1(u_time * 0.2 - rd.x * 3.0) * 0.5 + 0.5 + traffic) * smoothstep(0.0, -0.8, rd.y) * 0.6 * 0.8;
@@ -80,18 +80,25 @@ void main() {
     vec3 n=normalize(vec3(mapScene(p+vec3(0.01,0,0),false).x-mapScene(p-vec3(0.01,0,0),false).x, mapScene(p+vec3(0,0.01,0),false).x-mapScene(p-vec3(0,0.01,0),false).x, mapScene(p+vec3(0,0,0.01),false).x-mapScene(p-vec3(0,0,0.01),false).x));
     vec3 bTex = sampleBuilding(hit.y, (abs(n.x)>abs(n.y))?p.zy:p.xy); bTex += bTex * smoothstep(0.5, 0.9, max(bTex.r, max(bTex.g, bTex.b))) * 2.5;
     col=mix(bTex*0.25, skyTone, 1.0-exp(-0.015*t*t)) + mix(cGreen, cRed, sin(p.x * 0.4) * 0.5 + 0.5) * (noise1(u_time * 0.3 + p.x * 0.1) * 0.4 + 0.6 + smoothstep(0.8, 1.0, sin(p.z * 0.8 + u_time * 2.0)) * 0.2) * smoothstep(2.0, -20.0, p.y) * 0.4 * exp(-0.005 * t * t);
+    vec2 texUV = (abs(n.x)>abs(n.y))?p.zy:p.xy;
+    vec2 wg = floor(texUV * vec2(5.0, 10.0));
+    float won    = step(0.82, hash2(wg + hit.y * 17.0));
+    float wflick = step(0.96, hash1(hash2(wg) + floor(u_time * 1.5)));
+    float wpx    = smoothstep(0.005, 0.0, abs(fract(texUV.x*5.0)-0.5)-0.15)
+                 * smoothstep(0.005, 0.0, abs(fract(texUV.y*10.0)-0.5)-0.10);
+    col += vec3(1.0, 0.75, 0.35) * won * (1.0-wflick) * wpx * 1.2;
   } else col=texture2D(u_texEnv1,fract(rd.xy*0.5+0.5+vec2(u_time*0.002,0.0))).rgb*0.3+skyTone*0.5;
 
   col += snow(vec2(atan(rd.z,rd.x)*2.0, rd.y*2.0), 15.0, 0.3, 0.3);
 
-  // --- PLANE OVERLAY ---
-  float rawA = clamp(u_modeTime / 8.0, 0.0, 1.0);
+
+  float rawA = clamp(u_modeTime / 4.5, 0.0, 1.0);
   float approach = pow(rawA, 1.5);
   float close = smoothstep(0.8, 1.0, approach);
   
-  // Z stops at 3.5. Nose is 3.0 units long, so it physically cannot touch the camera.
+
   float planeZ = mix(90.0, 3.5, approach);
-  vec3 planePos = vec3(0.0, -0.6, planeZ);
+  vec3 planePos = vec3(0.0, -1.1, planeZ);
 
   vec3 oc2=ro-planePos;
   float bB2=dot(rd,oc2), bC2=dot(oc2,oc2)-81.0, disc2=bB2*bB2-bC2;
@@ -100,7 +107,7 @@ void main() {
   if(disc2>=0.0){
     pd=max(-bB2-sqrt(disc2),0.01);
     if (pd < cityDepth) {
-      for(int i=0;i<60;i++){
+      for(int i=0;i<140;i++){
         vec3 lp=(ro+rd*pd-planePos)/1.4;
         vec2 pr=sdJet(lp); pr.x*=1.4;
         if(pr.x<0.003){planeHit=true;pi=pr;break;}
@@ -178,7 +185,7 @@ void main() {
     col+=vec3(1.0,0.2,0.1)*exp(-dot(sPos,sPos)*mix(20000.0,500.0,approach*approach))*strobe*0.7;
   }
 
-  // --- WINDOW MASK ---
+
   float dWin=(-1.5-ro.z)/clean_rd.z;
   if(dWin>0.0){
     vec3 pW=ro+clean_rd*dWin; vec2 wuv=vec2(pW.x*0.25+0.5,0.5-pW.y*0.25);

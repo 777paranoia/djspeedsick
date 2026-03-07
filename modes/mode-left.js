@@ -1,4 +1,4 @@
-// MODE LEFT ROOM
+
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
@@ -45,20 +45,20 @@ vec4 getScreenCol(vec2 tuv) {
 
     if (tuv.x < 0.296) {
         if (tuv.y < 0.458) {
-            // upper-left monitor
+
             bMin = vec2(0.0963, 0.4010); bMax = vec2(0.2694, 0.4526);
             finalCol = texture2D(u_texEnv2, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
         } else {
-            // lower-left monitor
+
             bMin = vec2(0.1009, 0.4625); bMax = vec2(0.2694, 0.5125);
             finalCol = texture2D(u_texEnv3, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
         }
     } else if (tuv.x > 0.423) {
-        // right monitor
+
         bMin = vec2(0.4370, 0.3969); bMax = vec2(0.6102, 0.4453);
         finalCol = texture2D(u_texEnv4, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
     } else {
-        // laptop / center small screen
+
         bMin = vec2(0.3231, 0.4839); bMax = vec2(0.4093, 0.5125);
         finalCol = texture2D(u_texEnv6, clamp((tuv - bMin) / (bMax - bMin), 0.0, 1.0));
     }
