@@ -98,7 +98,7 @@
       <img id="layer-gif" src="files/img/aerial.gif" draggable="false">
       <img id="layer-png" src="files/img/aerial.png" draggable="false">
   </div>
-  <img id="enter-button" src="files/img/enter-button.png" onclick="enterSite()">
+  <img id="enter-button" src="files/img/enter-button.png" onmousedown="enterSite()" ontouchstart="enterSite()">
 </div>
 
 <img id="secret-button" src="files/img/buttin.png" onclick="toggleConky()">
@@ -160,7 +160,7 @@
     <img src="files/img/me.jpg" alt="" class="responsive-image">
     <p id="aboutText">
       <span style="font-size: 2rem;">DJ Speedsick</span><br>
-      <span style="font-size: 1rem; font-style: italic;">a.k.a. "**** *********"</span><br><br>
+      <span style="font-size: 1rem; font-style: italic;">a.k.a. "A*** E********"</span><br><br>
       <span style="font-size: 0.75rem;">b. 1992</span><br>
       <span style="font-size: 0.75rem;">d. ????</span><br><br>
       <span style="font-size: 0.65rem;">current location: Chicago, IL</span>
@@ -326,7 +326,6 @@ window.addEventListener('load', () => {
     const startHold = (e) => {
       if (_entered) return;
       holdTimer = setTimeout(() => {
-        // Custom launch overlay
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
         const btnStyle = 'background:transparent;color:#0f0;border:1px solid #0f0;padding:12px 32px;font-family:monospace;font-size:15px;cursor:pointer;width:220px;text-align:left;letter-spacing:1px;';
@@ -339,9 +338,9 @@ window.addEventListener('load', () => {
           const b = document.createElement('button');
           b.textContent = o.label;
           b.style.cssText = btnStyle;
-          const pick = () => { document.body.removeChild(overlay); o.action(); };
-          b.addEventListener('touchend', pick);
-          b.addEventListener('click', pick);
+          const pick = () => { if(document.body.contains(overlay)) document.body.removeChild(overlay); o.action(); };
+          b.addEventListener('touchend', (ev) => { ev.stopPropagation(); pick(); });
+          b.addEventListener('click', (ev) => { ev.stopPropagation(); pick(); });
           overlay.appendChild(b);
         });
         document.body.appendChild(overlay);
@@ -351,7 +350,7 @@ window.addEventListener('load', () => {
       if (holdTimer) clearTimeout(holdTimer);
     };
     enterBtn.addEventListener('mousedown', startHold);
-    enterBtn.addEventListener('touchstart', function(e) { e.preventDefault(); startHold(e); }, {passive: false});
+    enterBtn.addEventListener('touchstart', function(e) { startHold(e); }, {passive: true});
     enterBtn.addEventListener('mouseup', cancelHold);
     enterBtn.addEventListener('mouseleave', cancelHold);
     enterBtn.addEventListener('touchend', cancelHold);
@@ -363,7 +362,7 @@ const splashScreen = document.getElementById('splash-screen');
 let sDrag = false, sStartX = 0, sStartY = 0, sPanX = 0, sPanY = 0;
 
 const startSplashDrag = (e) => {
-    if(e.target.id === 'enter-button') return;
+    if(e.target.id === 'enter-button' || e.target.closest('#enter-button')) return;
     if (e.cancelable) e.preventDefault(); 
     sDrag = true;
     let clientX = e.touches ? e.touches[0].clientX : e.clientX;
