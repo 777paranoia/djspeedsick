@@ -179,6 +179,32 @@ const compile = (type, src) => {
   return sh;
 };
 
+const PROGRAM_CACHE = {};
+
+function buildProgram(fragKey) {
+  if (PROGRAM_CACHE[fragKey]) return PROGRAM_CACHE[fragKey];
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, GLSL.vert));
+
+  const isRoom = (fragKey === 'room_left' || fragKey === 'room_right' || fragKey === 'room_back');
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, isRoom ? GLSL.modules[fragKey] : GLSL.core + GLSL.modules[fragKey]));
+  gl.linkProgram(prog);
+
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error(`[GLSL] PROGRAM link error (${fragKey}):
+${gl.getProgramInfoLog(prog)}`);
+  }
+
+  PROGRAM_CACHE[fragKey] = prog;
+  return prog;
+}
+
+function warmPrograms() {
+  const keys = ['fly','city','fractal','bh','mirror','ocean','earth','deadcity','goreville','plane','highcity','room_left','room_right','room_back'];
+  for (let i = 0; i < keys.length; i++) buildProgram(keys[i]);
+}
+
 const simProg = gl.createProgram();
 gl.attachShader(simProg, compile(gl.VERTEX_SHADER, GLSL.vert));
 gl.attachShader(simProg, compile(gl.FRAGMENT_SHADER, GLSL.sim));
@@ -199,7 +225,9 @@ function makeFBO(){
   return {fbo, tex};
 }
 function rebuildFBOs(){ fbos = [makeFBO(), makeFBO()]; texs = [fbos[0].tex, fbos[1].tex]; mirrorFBO = makeFBO(); }
-rebuildFBOs(); let ping = 0;
+rebuildFBOs();
+warmPrograms();
+let ping = 0;
 
 const buf = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -231,7 +259,6 @@ function drawBacklight(now, strength, audio){
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   gl.disable(gl.BLEND);
 }
-
 
 class ActiveMode {
     constructor(modeID) {
@@ -271,11 +298,7 @@ const map = {
         this.vidObjs = [];
         this.startTime = -1;
         
-        this.prog = gl.createProgram();
-        gl.attachShader(this.prog, compile(gl.VERTEX_SHADER, GLSL.vert));
-        const isRoom = (fragKey === 'room_left' || fragKey === 'room_right' || fragKey === 'room_back');
-        gl.attachShader(this.prog, compile(gl.FRAGMENT_SHADER, isRoom ? GLSL.modules[fragKey] : GLSL.core + GLSL.modules[fragKey]));
-        gl.linkProgram(this.prog);
+        this.prog = buildProgram(fragKey);
         gl.useProgram(this.prog);
         gl.uniform1i(gl.getUniformLocation(this.prog,"u_texB1"), 0); gl.uniform1i(gl.getUniformLocation(this.prog,"u_texB2"), 1);
         gl.uniform1i(gl.getUniformLocation(this.prog,"u_texB3"), 2); gl.uniform1i(gl.getUniformLocation(this.prog,"u_texB4"), 3);
@@ -422,8 +445,6 @@ const map = {
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.videoObj);
         }
 
-
-
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b1);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b2);
         gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, staticAssets.b3);
@@ -450,7 +471,6 @@ const map = {
             gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, this.env4 || DUMMY_BLACK);
             gl.activeTexture(gl.TEXTURE13); gl.bindTexture(gl.TEXTURE_2D, this.env5 || DUMMY_BLACK);
         }
-
 
         if (this.id === 4) {
             if (window.butterchurnVisualizer && window.bcCanvas) {
@@ -546,7 +566,6 @@ const map = {
         if (this.videoObj) stopVid(this.videoObj);
         if (this.vidObjs) this.vidObjs.forEach(stopVid);
         for(let tex of this.textures) gl.deleteTexture(tex);
-        gl.deleteProgram(this.prog);
     }
 }
 
@@ -628,7 +647,6 @@ window.addEventListener("touchmove",
   { passive: true }
 );
 window.addEventListener("touchend", endDrag);
-
 
 canvas.addEventListener("pointerup", function(e) {
   if (!window.__mobileDebug) return;
@@ -724,14 +742,12 @@ function render(now){
   tickSlide(now);
   cx += (mx - cx) * 0.12; cy += (my - cy) * 0.12;
 
-
   if (activePOV === 'back' && isDragging && mx < -1.0) {
     backZoomTarget = Math.min(1.0, backZoomTarget + (-mx - 1.0) * 0.035);
   } else {
     backZoomTarget = 0.0;
   }
   backZoom += (backZoomTarget - backZoom) * 0.18;
-
 
   if (activePOV === 'back' && backZoom > 0.88 && !comingSoonActive) {
     comingSoonActive = true;
@@ -776,9 +792,6 @@ function render(now){
       beginSlide('right', +1);
     }
   }
-
-
-
 
   if (activePOV === 'center') {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -829,8 +842,6 @@ function render(now){
   }
   lastNow = now;
 }
-
-
 
 const TARGET_FPS = IS_MOBILE ? 20 : 30;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;

@@ -98,7 +98,7 @@
       <img id="layer-gif" src="files/img/aerial.gif" draggable="false">
       <img id="layer-png" src="files/img/aerial.png" draggable="false">
   </div>
-  <img id="enter-button" src="files/img/enter-button.png">
+  <img id="enter-button" src="files/img/enter-button.png" onclick="enterSite()">
 </div>
 
 <img id="secret-button" src="files/img/buttin.png" onclick="toggleConky()">
@@ -317,73 +317,6 @@ window.addEventListener('load', () => {
   window.splashStartTime = Date.now(); 
 
   const enterBtn = document.getElementById('enter-button');
-if (enterBtn) {
-
-  enterBtn.addEventListener('click', enterSite);
-
-  enterBtn.addEventListener('touchstart', function(e){
-    e.stopPropagation();
-  }, {passive:true});
-
-  enterBtn.addEventListener('touchend', function(e){
-    e.stopPropagation();
-    enterSite();
-  }, {passive:true});
-
-  setTimeout(() => {
-    if (!_entered) enterBtn.classList.add('glow-active');
-  }, 10000);
-
-  let holdTimer = null;
-
-  const startHold = (e) => {
-    if (_entered) return;
-
-    holdTimer = setTimeout(() => {
-
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
-
-      const btnStyle = 'background:transparent;color:#0f0;border:1px solid #0f0;padding:12px 32px;font-family:monospace;font-size:15px;cursor:pointer;width:220px;text-align:left;letter-spacing:1px;';
-
-      const opts = [
-        { label: '1. NORMAL', action: () => { window.startTestSequence = true; window.enterSite(); } },
-        { label: '2. FLY SEQUENCE', action: () => { window.startSecretFlySequence = true; window.enterSite(); } },
-        { label: '3. DEBUG MODE', action: () => { __debugAllowed = true; window.__mobileDebug = true; window.startTestSequence = true; window.enterSite(); } },
-      ];
-
-      opts.forEach(o => {
-        const b = document.createElement('button');
-        b.textContent = o.label;
-        b.style.cssText = btnStyle;
-
-        const pick = () => {
-          document.body.removeChild(overlay);
-          o.action();
-        };
-
-        b.addEventListener('touchend', pick);
-        b.addEventListener('click', pick);
-
-        overlay.appendChild(b);
-      });
-
-      document.body.appendChild(overlay);
-
-    }, 10000);
-  };
-
-  const cancelHold = () => {
-    if (holdTimer) clearTimeout(holdTimer);
-  };
-
-  enterBtn.addEventListener('mousedown', startHold);
-  enterBtn.addEventListener('touchstart', startHold, {passive:true});
-
-  enterBtn.addEventListener('mouseup', cancelHold);
-  enterBtn.addEventListener('mouseleave', cancelHold);
-  enterBtn.addEventListener('touchend', cancelHold);
-}
   if (enterBtn) {
     setTimeout(() => {
       if (!_entered) enterBtn.classList.add('glow-active');
@@ -431,7 +364,7 @@ let sDrag = false, sStartX = 0, sStartY = 0, sPanX = 0, sPanY = 0;
 
 const startSplashDrag = (e) => {
     if(e.target.id === 'enter-button') return;
-    if (sDrag && e.cancelable) e.preventDefault(); 
+    if (e.cancelable) e.preventDefault(); 
     sDrag = true;
     let clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let clientY = e.touches ? e.touches[0].clientY : e.clientY;
