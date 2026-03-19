@@ -1,4 +1,3 @@
-/*global __dirname, require, module*/
 const path = require('path');
 
 const root = path.join(__dirname, '..');

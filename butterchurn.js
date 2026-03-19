@@ -8,42 +8,42 @@
 	else
 		root["butterchurn"] = factory();
 })(typeof self !== 'undefined' ? self : this, function() {
-return /******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
+return /******/ (function(modules) { 
+/******/ 	
 /******/ 	var installedModules = {};
 /******/
-/******/ 	// The require function
+/******/ 	
 /******/ 	function __webpack_require__(moduleId) {
 /******/
-/******/ 		// Check if module is in cache
+/******/ 		
 /******/ 		if(installedModules[moduleId]) {
 /******/ 			return installedModules[moduleId].exports;
 /******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
+/******/ 		
 /******/ 		var module = installedModules[moduleId] = {
 /******/ 			i: moduleId,
 /******/ 			l: false,
 /******/ 			exports: {}
 /******/ 		};
 /******/
-/******/ 		// Execute the module function
+/******/ 		
 /******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/
-/******/ 		// Flag the module as loaded
+/******/ 		
 /******/ 		module.l = true;
 /******/
-/******/ 		// Return the exports of the module
+/******/ 		
 /******/ 		return module.exports;
 /******/ 	}
 /******/
 /******/
-/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	
 /******/ 	__webpack_require__.m = modules;
 /******/
-/******/ 	// expose the module cache
+/******/ 	
 /******/ 	__webpack_require__.c = installedModules;
 /******/
-/******/ 	// define getter function for harmony exports
+/******/ 	
 /******/ 	__webpack_require__.d = function(exports, name, getter) {
 /******/ 		if(!__webpack_require__.o(exports, name)) {
 /******/ 			Object.defineProperty(exports, name, {
@@ -54,7 +54,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 		}
 /******/ 	};
 /******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	
 /******/ 	__webpack_require__.n = function(module) {
 /******/ 		var getter = module && module.__esModule ?
 /******/ 			function getDefault() { return module['default']; } :
@@ -63,18 +63,18 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 		return getter;
 /******/ 	};
 /******/
-/******/ 	// Object.prototype.hasOwnProperty.call
+/******/ 	
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
-/******/ 	// __webpack_public_path__
+/******/ 	
 /******/ 	__webpack_require__.p = "";
 /******/
-/******/ 	// Load entry module and return exports
+/******/ 	
 /******/ 	return __webpack_require__(__webpack_require__.s = 42);
 /******/ })
 /************************************************************************/
 /******/ ([
-/* 0 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -89,7 +89,7 @@ exports.default = function (instance, Constructor) {
 };
 
 /***/ }),
-/* 1 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -122,7 +122,7 @@ exports.default = function () {
 }();
 
 /***/ }),
-/* 2 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -199,7 +199,7 @@ exports.default = ShaderUtils;
 module.exports = exports['default'];
 
 /***/ }),
-/* 3 */
+
 /***/ (function(module, exports) {
 
 var core = module.exports = { version: '2.5.5' };
@@ -207,17 +207,17 @@ if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
 /***/ }),
-/* 4 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// Thank's IE8 for his funny defineProperty
+
 module.exports = !__webpack_require__(9)(function () {
   return Object.defineProperty({}, 'a', { get: function () { return 7; } }).a != 7;
 });
 
 
 /***/ }),
-/* 5 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(6);
@@ -240,16 +240,16 @@ var $export = function (type, name, source) {
   var key, own, out;
   if (IS_GLOBAL) source = name;
   for (key in source) {
-    // contains in native
+    
     own = !IS_FORCED && target && target[key] !== undefined;
     if (own && has(exports, key)) continue;
-    // export native or passed
+    
     out = own ? target[key] : source[key];
-    // prevent global pollution for namespaces
+    
     exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
-    // bind timers to global for call from export context
+    
     : IS_BIND && own ? ctx(out, global)
-    // wrap global constructors for prevent change them in library
+    
     : IS_WRAP && target[key] == out ? (function (C) {
       var F = function (a, b, c) {
         if (this instanceof C) {
@@ -262,33 +262,33 @@ var $export = function (type, name, source) {
       };
       F[PROTOTYPE] = C[PROTOTYPE];
       return F;
-    // make static versions for prototype methods
+    
     })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
-    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
+    
     if (IS_PROTO) {
       (exports.virtual || (exports.virtual = {}))[key] = out;
-      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
+      
       if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
     }
   }
 };
-// type bitmap
-$export.F = 1;   // forced
-$export.G = 2;   // global
-$export.S = 4;   // static
-$export.P = 8;   // proto
-$export.B = 16;  // bind
-$export.W = 32;  // wrap
-$export.U = 64;  // safe
-$export.R = 128; // real proto method for `library`
+
+$export.F = 1;   
+$export.G = 2;   
+$export.S = 4;   
+$export.P = 8;   
+$export.B = 16;  
+$export.W = 32;  
+$export.U = 64;  
+$export.R = 128; 
 module.exports = $export;
 
 
 /***/ }),
-/* 6 */
+
 /***/ (function(module, exports) {
 
-// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
+
 var global = module.exports = typeof window != 'undefined' && window.Math == Math
   ? window : typeof self != 'undefined' && self.Math == Math ? self
   // eslint-disable-next-line no-new-func
@@ -297,7 +297,7 @@ if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
 
 
 /***/ }),
-/* 7 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var anObject = __webpack_require__(12);
@@ -311,7 +311,7 @@ exports.f = __webpack_require__(4) ? Object.defineProperty : function defineProp
   anObject(Attributes);
   if (IE8_DOM_DEFINE) try {
     return dP(O, P, Attributes);
-  } catch (e) { /* empty */ }
+  } catch (e) {  }
   if ('get' in Attributes || 'set' in Attributes) throw TypeError('Accessors not supported!');
   if ('value' in Attributes) O[P] = Attributes.value;
   return O;
@@ -319,7 +319,7 @@ exports.f = __webpack_require__(4) ? Object.defineProperty : function defineProp
 
 
 /***/ }),
-/* 8 */
+
 /***/ (function(module, exports) {
 
 module.exports = function (it) {
@@ -328,7 +328,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 9 */
+
 /***/ (function(module, exports) {
 
 module.exports = function (exec) {
@@ -341,7 +341,7 @@ module.exports = function (exec) {
 
 
 /***/ }),
-/* 10 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var store = __webpack_require__(36)('wks');
@@ -358,7 +358,7 @@ $exports.store = store;
 
 
 /***/ }),
-/* 11 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var dP = __webpack_require__(7);
@@ -372,7 +372,7 @@ module.exports = __webpack_require__(4) ? function (object, key, value) {
 
 
 /***/ }),
-/* 12 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(8);
@@ -383,7 +383,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 13 */
+
 /***/ (function(module, exports) {
 
 var hasOwnProperty = {}.hasOwnProperty;
@@ -393,13 +393,13 @@ module.exports = function (it, key) {
 
 
 /***/ }),
-/* 14 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(46), __esModule: true };
 
 /***/ }),
-/* 15 */
+
 /***/ (function(module, exports) {
 
 module.exports = function (bitmap, value) {
@@ -413,10 +413,10 @@ module.exports = function (bitmap, value) {
 
 
 /***/ }),
-/* 16 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// optional / simple context binding
+
 var aFunction = __webpack_require__(23);
 module.exports = function (fn, that, length) {
   aFunction(fn);
@@ -432,19 +432,19 @@ module.exports = function (fn, that, length) {
       return fn.call(that, a, b, c);
     };
   }
-  return function (/* ...args */) {
+  return function () {
     return fn.apply(that, arguments);
   };
 };
 
 
 /***/ }),
-/* 17 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(8);
 var document = __webpack_require__(6).document;
-// typeof document.createElement is 'object' in old IE
+
 var is = isObject(document) && isObject(document.createElement);
 module.exports = function (it) {
   return is ? document.createElement(it) : {};
@@ -452,10 +452,10 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 18 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 7.1.13 ToObject(argument)
+
 var defined = __webpack_require__(27);
 module.exports = function (it) {
   return Object(defined(it));
@@ -463,7 +463,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 19 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -553,13 +553,13 @@ exports.default = Utils;
 module.exports = exports["default"];
 
 /***/ }),
-/* 20 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(21), __esModule: true };
 
 /***/ }),
-/* 21 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(22);
@@ -570,16 +570,16 @@ module.exports = function defineProperty(it, key, desc) {
 
 
 /***/ }),
-/* 22 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(5);
-// 19.1.2.4 / 15.2.3.6 Object.defineProperty(O, P, Attributes)
+
 $export($export.S + $export.F * !__webpack_require__(4), 'Object', { defineProperty: __webpack_require__(7).f });
 
 
 /***/ }),
-/* 23 */
+
 /***/ (function(module, exports) {
 
 module.exports = function (it) {
@@ -589,7 +589,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 24 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = !__webpack_require__(4) && !__webpack_require__(9)(function () {
@@ -598,13 +598,13 @@ module.exports = !__webpack_require__(4) && !__webpack_require__(9)(function () 
 
 
 /***/ }),
-/* 25 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 7.1.1 ToPrimitive(input [, PreferredType])
+
 var isObject = __webpack_require__(8);
-// instead of the ES6 spec version, we didn't implement @@toPrimitive case
-// and the second argument - flag - preferred type is a string
+
+
 module.exports = function (it, S) {
   if (!isObject(it)) return it;
   var fn, val;
@@ -616,10 +616,10 @@ module.exports = function (it, S) {
 
 
 /***/ }),
-/* 26 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 19.1.2.14 / 15.2.3.14 Object.keys(O)
+
 var $keys = __webpack_require__(49);
 var enumBugKeys = __webpack_require__(38);
 
@@ -629,10 +629,10 @@ module.exports = Object.keys || function keys(O) {
 
 
 /***/ }),
-/* 27 */
+
 /***/ (function(module, exports) {
 
-// 7.2.1 RequireObjectCoercible(argument)
+
 module.exports = function (it) {
   if (it == undefined) throw TypeError("Can't call method on  " + it);
   return it;
@@ -640,10 +640,10 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 28 */
+
 /***/ (function(module, exports) {
 
-// 7.1.4 ToInteger
+
 var ceil = Math.ceil;
 var floor = Math.floor;
 module.exports = function (it) {
@@ -652,7 +652,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 29 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var shared = __webpack_require__(36)('keys');
@@ -663,23 +663,23 @@ module.exports = function (key) {
 
 
 /***/ }),
-/* 30 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(57), __esModule: true };
 
 /***/ }),
-/* 31 */
+
 /***/ (function(module, exports) {
 
 module.exports = {};
 
 
 /***/ }),
-/* 32 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// to indexed object, toObject with fallback for non-array-like ES3 strings
+
 var IObject = __webpack_require__(33);
 var defined = __webpack_require__(27);
 module.exports = function (it) {
@@ -688,10 +688,10 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 33 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// fallback for non-array-like ES3 and non-enumerable old V8 strings
+
 var cof = __webpack_require__(34);
 // eslint-disable-next-line no-prototype-builtins
 module.exports = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
@@ -700,7 +700,7 @@ module.exports = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
 
 
 /***/ }),
-/* 34 */
+
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -711,19 +711,19 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 35 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 7.1.15 ToLength
+
 var toInteger = __webpack_require__(28);
 var min = Math.min;
 module.exports = function (it) {
-  return it > 0 ? min(toInteger(it), 0x1fffffffffffff) : 0; // pow(2, 53) - 1 == 9007199254740991
+  return it > 0 ? min(toInteger(it), 0x1fffffffffffff) : 0; 
 };
 
 
 /***/ }),
-/* 36 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(6);
@@ -735,7 +735,7 @@ module.exports = function (key) {
 
 
 /***/ }),
-/* 37 */
+
 /***/ (function(module, exports) {
 
 var id = 0;
@@ -746,17 +746,17 @@ module.exports = function (key) {
 
 
 /***/ }),
-/* 38 */
+
 /***/ (function(module, exports) {
 
-// IE 8- don't enum bug keys
+
 module.exports = (
   'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
 ).split(',');
 
 
 /***/ }),
-/* 39 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var def = __webpack_require__(7).f;
@@ -769,13 +769,13 @@ module.exports = function (it, tag, stat) {
 
 
 /***/ }),
-/* 40 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(84), __esModule: true };
 
 /***/ }),
-/* 41 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -908,7 +908,7 @@ exports.default = WaveUtils;
 module.exports = exports["default"];
 
 /***/ }),
-/* 42 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -957,7 +957,7 @@ module.exports = Butterchurn;
 module.exports = exports['default'];
 
 /***/ }),
-/* 43 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1024,7 +1024,7 @@ module.exports = exports['default'];
 
 
 /***/ }),
-/* 44 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1072,7 +1072,7 @@ function isFiniteNumber(num) {
 window.pow = function pow(x, y) {
   var z = Math.pow(x, y);
   if (!isFiniteNumber(z)) {
-    // mostly from complex results
+    
     return 0;
   }
   return z;
@@ -1158,7 +1158,7 @@ window.memcpy = function memcpy(megabuf, dst, src, len) {
 /* eslint-enable */
 
 /***/ }),
-/* 45 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1436,7 +1436,7 @@ exports.default = Visualizer;
 module.exports = exports['default'];
 
 /***/ }),
-/* 46 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(47);
@@ -1444,22 +1444,22 @@ module.exports = __webpack_require__(3).Object.assign;
 
 
 /***/ }),
-/* 47 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 19.1.3.1 Object.assign(target, source)
+
 var $export = __webpack_require__(5);
 
 $export($export.S + $export.F, 'Object', { assign: __webpack_require__(48) });
 
 
 /***/ }),
-/* 48 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-// 19.1.2.1 Object.assign(target, source, ...)
+
 var getKeys = __webpack_require__(26);
 var gOPS = __webpack_require__(52);
 var pIE = __webpack_require__(53);
@@ -1467,7 +1467,7 @@ var toObject = __webpack_require__(18);
 var IObject = __webpack_require__(33);
 var $assign = Object.assign;
 
-// should work with symbols and should have deterministic property order (V8 bug)
+
 module.exports = !$assign || __webpack_require__(9)(function () {
   var A = {};
   var B = {};
@@ -1495,7 +1495,7 @@ module.exports = !$assign || __webpack_require__(9)(function () {
 
 
 /***/ }),
-/* 49 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var has = __webpack_require__(13);
@@ -1509,7 +1509,7 @@ module.exports = function (object, names) {
   var result = [];
   var key;
   for (key in O) if (key != IE_PROTO) has(O, key) && result.push(key);
-  // Don't enum bug & hidden keys
+  
   while (names.length > i) if (has(O, key = names[i++])) {
     ~arrayIndexOf(result, key) || result.push(key);
   }
@@ -1518,11 +1518,11 @@ module.exports = function (object, names) {
 
 
 /***/ }),
-/* 50 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// false -> Array#indexOf
-// true  -> Array#includes
+
+
 var toIObject = __webpack_require__(32);
 var toLength = __webpack_require__(35);
 var toAbsoluteIndex = __webpack_require__(51);
@@ -1532,13 +1532,13 @@ module.exports = function (IS_INCLUDES) {
     var length = toLength(O.length);
     var index = toAbsoluteIndex(fromIndex, length);
     var value;
-    // Array#includes uses SameValueZero equality algorithm
+    
     // eslint-disable-next-line no-self-compare
     if (IS_INCLUDES && el != el) while (length > index) {
       value = O[index++];
       // eslint-disable-next-line no-self-compare
       if (value != value) return true;
-    // Array#indexOf ignores holes, Array#includes - not
+    
     } else for (;length > index; index++) if (IS_INCLUDES || index in O) {
       if (O[index] === el) return IS_INCLUDES || index || 0;
     } return !IS_INCLUDES && -1;
@@ -1547,7 +1547,7 @@ module.exports = function (IS_INCLUDES) {
 
 
 /***/ }),
-/* 51 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var toInteger = __webpack_require__(28);
@@ -1560,21 +1560,21 @@ module.exports = function (index, length) {
 
 
 /***/ }),
-/* 52 */
+
 /***/ (function(module, exports) {
 
 exports.f = Object.getOwnPropertySymbols;
 
 
 /***/ }),
-/* 53 */
+
 /***/ (function(module, exports) {
 
 exports.f = {}.propertyIsEnumerable;
 
 
 /***/ }),
-/* 54 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1616,7 +1616,7 @@ var AudioProcessor = function () {
 
       this.audible.connect(this.analyser);
 
-      // Split channels
+      
       this.analyserL = context.createAnalyser();
       this.analyserL.smoothingTimeConstant = 0.0;
       this.analyserL.fftSize = this.numSamps * 2;
@@ -1656,7 +1656,7 @@ value: function updateAudio(timeByteArray, timeByteArrayL, timeByteArrayR) {
   var lastIdx = 0;
 
   for (var i = 0; i < this.numSamps; i++) {
-    this.timeArray.push((timeByteArray[i] - 128) * 2); // Amplify amplitude
+    this.timeArray.push((timeByteArray[i] - 128) * 2); 
     this.timeArrayL.push(timeByteArrayL[i] - 128);
     this.timeArrayR.push(timeByteArrayR[i] - 128);
 
@@ -1665,7 +1665,7 @@ value: function updateAudio(timeByteArray, timeByteArrayL, timeByteArrayR) {
     lastIdx = i;
   }
 
-  // Apply FFT and boost sensitivity by multiplying frequencies
+  
   this.freqArray = this.fft.timeToFrequencyDomain(this.timeArray).map(val => val * 1.5);
   this.freqArrayL = this.fft.timeToFrequencyDomain(tempTimeL).map(val => val * 1.5);
   this.freqArrayR = this.fft.timeToFrequencyDomain(tempTimeR).map(val => val * 1.5);
@@ -1688,7 +1688,7 @@ exports.default = AudioProcessor;
 module.exports = exports['default'];
 
 /***/ }),
-/* 55 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1844,7 +1844,7 @@ exports.default = FFT;
 module.exports = exports["default"];
 
 /***/ }),
-/* 56 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2176,7 +2176,7 @@ var Renderer = function () {
       this.aspecty = this.texsizeX > this.texsizeY ? this.texsizeY / this.texsizeX : 1;
 
       if (this.texsizeX !== oldTexsizeX || this.texsizeY !== oldTexsizeY) {
-        // copy target texture, because we flip prev/target at start of render
+        
         var targetTextureNew = this.gl.createTexture();
         this.bindFrameBufferTexture(this.targetFrameBuffer, targetTextureNew);
         this.bindFrambufferAndSetViewport(this.targetFrameBuffer, this.texsizeX, this.texsizeY);
@@ -2191,7 +2191,7 @@ var Renderer = function () {
 
       this.updateGlobals();
 
-      // rerender current frame at new size
+      
       if (this.frameNum > 0) {
         this.renderToScreen();
       }
@@ -2554,7 +2554,7 @@ var Renderer = function () {
           }
         }
 
-        // rebind target texture framebuffer
+        
         this.bindFrambufferAndSetViewport(this.targetFrameBuffer, this.texsizeX, this.texsizeY);
       }
 
@@ -2603,7 +2603,7 @@ var Renderer = function () {
         }
       }
 
-      // Store variables in case we need to rerender
+      
       this.globalVars = globalVars;
       this.mdVSFrame = mdVSFrame;
       this.mdVSFrameMixed = mdVSFrameMixed;
@@ -2682,7 +2682,7 @@ var Renderer = function () {
 
       this.gl.readPixels(0, 0, this.texsizeX, this.texsizeY, this.gl.RGBA, this.gl.UNSIGNED_BYTE, data);
 
-      // flip data
+      
       (0, _from2.default)({ length: this.texsizeY }, function (val, i) {
         return data.slice(i * _this2.texsizeX * 4, (i + 1) * _this2.texsizeX * 4);
       }).forEach(function (val, i) {
@@ -2839,7 +2839,7 @@ exports.default = Renderer;
 module.exports = exports['default'];
 
 /***/ }),
-/* 57 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(58);
@@ -2848,18 +2848,18 @@ module.exports = __webpack_require__(3).Array.from;
 
 
 /***/ }),
-/* 58 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 var $at = __webpack_require__(59)(true);
 
-// 21.1.3.27 String.prototype[@@iterator]()
+
 __webpack_require__(60)(String, 'String', function (iterated) {
-  this._t = String(iterated); // target
-  this._i = 0;                // next index
-// 21.1.5.2.1 %StringIteratorPrototype%.next()
+  this._t = String(iterated); 
+  this._i = 0;                
+
 }, function () {
   var O = this._t;
   var index = this._i;
@@ -2872,13 +2872,13 @@ __webpack_require__(60)(String, 'String', function (iterated) {
 
 
 /***/ }),
-/* 59 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var toInteger = __webpack_require__(28);
 var defined = __webpack_require__(27);
-// true  -> String#at
-// false -> String#codePointAt
+
+
 module.exports = function (TO_STRING) {
   return function (that, pos) {
     var s = String(defined(that));
@@ -2895,7 +2895,7 @@ module.exports = function (TO_STRING) {
 
 
 /***/ }),
-/* 60 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2909,7 +2909,7 @@ var $iterCreate = __webpack_require__(63);
 var setToStringTag = __webpack_require__(39);
 var getPrototypeOf = __webpack_require__(67);
 var ITERATOR = __webpack_require__(10)('iterator');
-var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
+var BUGGY = !([].keys && 'next' in [].keys()); 
 var FF_ITERATOR = '@@iterator';
 var KEYS = 'keys';
 var VALUES = 'values';
@@ -2934,26 +2934,26 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
   var $entries = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined;
   var $anyNative = NAME == 'Array' ? proto.entries || $native : $native;
   var methods, key, IteratorPrototype;
-  // Fix native
+  
   if ($anyNative) {
     IteratorPrototype = getPrototypeOf($anyNative.call(new Base()));
     if (IteratorPrototype !== Object.prototype && IteratorPrototype.next) {
-      // Set @@toStringTag to native iterators
+      
       setToStringTag(IteratorPrototype, TAG, true);
-      // fix for some old engines
+      
       if (!LIBRARY && typeof IteratorPrototype[ITERATOR] != 'function') hide(IteratorPrototype, ITERATOR, returnThis);
     }
   }
-  // fix Array#{values, @@iterator}.name in V8 / FF
+  
   if (DEF_VALUES && $native && $native.name !== VALUES) {
     VALUES_BUG = true;
     $default = function values() { return $native.call(this); };
   }
-  // Define iterator
+  
   if ((!LIBRARY || FORCED) && (BUGGY || VALUES_BUG || !proto[ITERATOR])) {
     hide(proto, ITERATOR, $default);
   }
-  // Plug for library
+  
   Iterators[NAME] = $default;
   Iterators[TAG] = returnThis;
   if (DEFAULT) {
@@ -2971,21 +2971,21 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
 
 
 /***/ }),
-/* 61 */
+
 /***/ (function(module, exports) {
 
 module.exports = true;
 
 
 /***/ }),
-/* 62 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(11);
 
 
 /***/ }),
-/* 63 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2995,7 +2995,7 @@ var descriptor = __webpack_require__(15);
 var setToStringTag = __webpack_require__(39);
 var IteratorPrototype = {};
 
-// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
+
 __webpack_require__(11)(IteratorPrototype, __webpack_require__(10)('iterator'), function () { return this; });
 
 module.exports = function (Constructor, NAME, next) {
@@ -3005,20 +3005,20 @@ module.exports = function (Constructor, NAME, next) {
 
 
 /***/ }),
-/* 64 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+
 var anObject = __webpack_require__(12);
 var dPs = __webpack_require__(65);
 var enumBugKeys = __webpack_require__(38);
 var IE_PROTO = __webpack_require__(29)('IE_PROTO');
-var Empty = function () { /* empty */ };
+var Empty = function () {  };
 var PROTOTYPE = 'prototype';
 
-// Create object with fake `null` prototype: use iframe Object with cleared prototype
+
 var createDict = function () {
-  // Thrash, waste and sodomy: IE GC bug
+  
   var iframe = __webpack_require__(17)('iframe');
   var i = enumBugKeys.length;
   var lt = '<';
@@ -3027,8 +3027,8 @@ var createDict = function () {
   iframe.style.display = 'none';
   __webpack_require__(66).appendChild(iframe);
   iframe.src = 'javascript:'; // eslint-disable-line no-script-url
-  // createDict = iframe.contentWindow.Object;
-  // html.removeChild(iframe);
+  
+  
   iframeDocument = iframe.contentWindow.document;
   iframeDocument.open();
   iframeDocument.write(lt + 'script' + gt + 'document.F=Object' + lt + '/script' + gt);
@@ -3044,7 +3044,7 @@ module.exports = Object.create || function create(O, Properties) {
     Empty[PROTOTYPE] = anObject(O);
     result = new Empty();
     Empty[PROTOTYPE] = null;
-    // add "__proto__" for Object.getPrototypeOf polyfill
+    
     result[IE_PROTO] = O;
   } else result = createDict();
   return Properties === undefined ? result : dPs(result, Properties);
@@ -3052,7 +3052,7 @@ module.exports = Object.create || function create(O, Properties) {
 
 
 /***/ }),
-/* 65 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var dP = __webpack_require__(7);
@@ -3071,7 +3071,7 @@ module.exports = __webpack_require__(4) ? Object.defineProperties : function def
 
 
 /***/ }),
-/* 66 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var document = __webpack_require__(6).document;
@@ -3079,10 +3079,10 @@ module.exports = document && document.documentElement;
 
 
 /***/ }),
-/* 67 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
+
 var has = __webpack_require__(13);
 var toObject = __webpack_require__(18);
 var IE_PROTO = __webpack_require__(29)('IE_PROTO');
@@ -3098,7 +3098,7 @@ module.exports = Object.getPrototypeOf || function (O) {
 
 
 /***/ }),
-/* 68 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3113,8 +3113,8 @@ var createProperty = __webpack_require__(71);
 var getIterFn = __webpack_require__(72);
 
 $export($export.S + $export.F * !__webpack_require__(74)(function (iter) { Array.from(iter); }), 'Array', {
-  // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
-  from: function from(arrayLike /* , mapfn = undefined, thisArg = undefined */) {
+  
+  from: function from(arrayLike ) {
     var O = toObject(arrayLike);
     var C = typeof this == 'function' ? this : Array;
     var aLen = arguments.length;
@@ -3124,7 +3124,7 @@ $export($export.S + $export.F * !__webpack_require__(74)(function (iter) { Array
     var iterFn = getIterFn(O);
     var length, result, step, iterator;
     if (mapping) mapfn = ctx(mapfn, aLen > 2 ? arguments[2] : undefined, 2);
-    // if object isn't iterable or it's array with default iterator - use simple case
+    
     if (iterFn != undefined && !(C == Array && isArrayIter(iterFn))) {
       for (iterator = iterFn.call(O), result = new C(); !(step = iterator.next()).done; index++) {
         createProperty(result, index, mapping ? call(iterator, mapfn, [step.value, index], true) : step.value);
@@ -3142,15 +3142,15 @@ $export($export.S + $export.F * !__webpack_require__(74)(function (iter) { Array
 
 
 /***/ }),
-/* 69 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// call something on iterator step with safe closing on error
+
 var anObject = __webpack_require__(12);
 module.exports = function (iterator, fn, value, entries) {
   try {
     return entries ? fn(anObject(value)[0], value[1]) : fn(value);
-  // 7.4.6 IteratorClose(iterator, completion)
+  
   } catch (e) {
     var ret = iterator['return'];
     if (ret !== undefined) anObject(ret.call(iterator));
@@ -3160,10 +3160,10 @@ module.exports = function (iterator, fn, value, entries) {
 
 
 /***/ }),
-/* 70 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// check on default Array iterator
+
 var Iterators = __webpack_require__(31);
 var ITERATOR = __webpack_require__(10)('iterator');
 var ArrayProto = Array.prototype;
@@ -3174,7 +3174,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 71 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3189,7 +3189,7 @@ module.exports = function (object, index, value) {
 
 
 /***/ }),
-/* 72 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var classof = __webpack_require__(73);
@@ -3203,36 +3203,36 @@ module.exports = __webpack_require__(3).getIteratorMethod = function (it) {
 
 
 /***/ }),
-/* 73 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// getting tag from 19.1.3.6 Object.prototype.toString()
+
 var cof = __webpack_require__(34);
 var TAG = __webpack_require__(10)('toStringTag');
-// ES3 wrong here
+
 var ARG = cof(function () { return arguments; }()) == 'Arguments';
 
-// fallback for IE11 Script Access Denied error
+
 var tryGet = function (it, key) {
   try {
     return it[key];
-  } catch (e) { /* empty */ }
+  } catch (e) {  }
 };
 
 module.exports = function (it) {
   var O, T, B;
   return it === undefined ? 'Undefined' : it === null ? 'Null'
-    // @@toStringTag case
+    
     : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
-    // builtinTag case
+    
     : ARG ? cof(O)
-    // ES3 arguments fallback
+    
     : (B = cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
 };
 
 
 /***/ }),
-/* 74 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 var ITERATOR = __webpack_require__(10)('iterator');
@@ -3243,7 +3243,7 @@ try {
   riter['return'] = function () { SAFE_CLOSING = true; };
   // eslint-disable-next-line no-throw-literal
   Array.from(riter, function () { throw 2; });
-} catch (e) { /* empty */ }
+} catch (e) {  }
 
 module.exports = function (exec, skipClosing) {
   if (!skipClosing && !SAFE_CLOSING) return false;
@@ -3254,13 +3254,13 @@ module.exports = function (exec, skipClosing) {
     iter.next = function () { return { done: safe = true }; };
     arr[ITERATOR] = function () { return iter; };
     exec(arr);
-  } catch (e) { /* empty */ }
+  } catch (e) {  }
   return safe;
 };
 
 
 /***/ }),
-/* 75 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3406,13 +3406,13 @@ exports.default = AudioLevels;
 module.exports = exports["default"];
 
 /***/ }),
-/* 76 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(77), __esModule: true };
 
 /***/ }),
-/* 77 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(78);
@@ -3420,10 +3420,10 @@ module.exports = __webpack_require__(3).Number.isNaN;
 
 
 /***/ }),
-/* 78 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 20.1.2.4 Number.isNaN(number)
+
 var $export = __webpack_require__(5);
 
 $export($export.S, 'Number', {
@@ -3435,13 +3435,13 @@ $export($export.S, 'Number', {
 
 
 /***/ }),
-/* 79 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = { "default": __webpack_require__(80), __esModule: true };
 
 /***/ }),
-/* 80 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(81);
@@ -3449,10 +3449,10 @@ module.exports = __webpack_require__(3).Number.isFinite;
 
 
 /***/ }),
-/* 81 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 20.1.2.2 Number.isFinite(number)
+
 var $export = __webpack_require__(5);
 var _isFinite = __webpack_require__(6).isFinite;
 
@@ -3464,7 +3464,7 @@ $export($export.S, 'Number', {
 
 
 /***/ }),
-/* 82 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3793,7 +3793,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 /* eslint-enable */
 
 /***/ }),
-/* 83 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3908,7 +3908,7 @@ var PresetEquationRunner = function () {
 
       var mdVSAfterInit = this.preset.init_eqs(_utils2.default.cloneVars(this.mdVS));
 
-      // qs need to be initialized to there init values every frame
+      
       this.mdVSQInit = _utils2.default.pick(mdVSAfterInit, this.qs);
       this.mdVSRegs = _utils2.default.pick(mdVSAfterInit, this.regs);
       var initUserVars = _utils2.default.pick(mdVSAfterInit, (0, _keys2.default)(_utils2.default.omit(mdVSAfterInit, nonUserKeys)));
@@ -3917,13 +3917,13 @@ var PresetEquationRunner = function () {
 
       this.mdVSFrame = this.preset.frame_eqs((0, _assign2.default)({}, this.mdVS, this.mdVSQInit, this.mdVSRegs, initUserVars));
 
-      // user vars need to be copied between frames
+      
       this.mdVSUserKeys = (0, _keys2.default)(_utils2.default.omit(this.mdVSFrame, nonUserKeys));
 
-      // Determine vars to carry over between frames
+      
       this.mdVSFrameMap = _utils2.default.pick(this.mdVSFrame, this.mdVSUserKeys);
 
-      // qs for shapes
+      
       this.mdVSQAfterFrame = _utils2.default.pick(this.mdVSFrame, this.qs);
       this.mdVSRegs = _utils2.default.pick(this.mdVSFrame, this.regs);
 
@@ -3948,7 +3948,7 @@ var PresetEquationRunner = function () {
 
               this.mdVSRegs = _utils2.default.pick(mdVSWave, this.regs);
 
-              // base vals need to be reset
+              
               (0, _assign2.default)(mdVSWave, baseVals);
             }
             this.mdVSWaves.push(mdVSWave);
@@ -3987,7 +3987,7 @@ var PresetEquationRunner = function () {
 
               this.mdVSRegs = _utils2.default.pick(mdVSShape, this.regs);
 
-              // base vals need to be reset
+              
               (0, _assign2.default)(mdVSShape, _baseVals);
             }
             this.mdVSShapes.push(mdVSShape);
@@ -4041,7 +4041,7 @@ exports.default = PresetEquationRunner;
 module.exports = exports['default'];
 
 /***/ }),
-/* 84 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(85);
@@ -4049,10 +4049,10 @@ module.exports = __webpack_require__(3).Object.keys;
 
 
 /***/ }),
-/* 85 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// 19.1.2.14 Object.keys(O)
+
 var toObject = __webpack_require__(18);
 var $keys = __webpack_require__(26);
 
@@ -4064,10 +4064,10 @@ __webpack_require__(86)('keys', function () {
 
 
 /***/ }),
-/* 86 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
-// most Object methods by ES6 should accept primitives
+
 var $export = __webpack_require__(5);
 var core = __webpack_require__(3);
 var fails = __webpack_require__(9);
@@ -4080,7 +4080,7 @@ module.exports = function (KEY, exec) {
 
 
 /***/ }),
-/* 87 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4107,7 +4107,7 @@ exports.default = function (arr) {
 };
 
 /***/ }),
-/* 88 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4265,7 +4265,7 @@ var BasicWaveform = function () {
               positions[i * 3 + 2] = 0;
             }
 
-            // connect the loop
+            
             positions[(numVert - 1) * 3 + 0] = positions[0];
             positions[(numVert - 1) * 3 + 1] = positions[1];
             positions[(numVert - 1) * 3 + 2] = 0;
@@ -4317,7 +4317,7 @@ var BasicWaveform = function () {
             }
 
             alpha *= 1.3;
-            alpha *= mdVSFrame.treb * mdVSFrame.treb; // should be treb_imm
+            alpha *= mdVSFrame.treb * mdVSFrame.treb; 
 
             if (mdVSFrame.modwavealphabyvolume > 0) {
               var _alphaDiff3 = mdVSFrame.modwavealphaend - mdVSFrame.modwavealphastart;
@@ -4351,7 +4351,7 @@ var BasicWaveform = function () {
               var x = 2.0 * _i4 * _numVertInv + (wavePosX - 1) + waveR[(_i4 + 25 + _sampleOffset) % waveL.length] * 0.44;
               var y = waveL[_i4 + _sampleOffset] * 0.47 + wavePosY;
 
-              // momentum
+              
               if (_i4 > 1) {
                 x = x * w2 + w1 * (positions[(_i4 - 1) * 3 + 0] * 2.0 - positions[(_i4 - 2) * 3 + 0]);
                 y = y * w2 + w1 * (positions[(_i4 - 1) * 3 + 1] * 2.0 - positions[(_i4 - 2) * 3 + 1]);
@@ -4703,7 +4703,7 @@ exports.default = BasicWaveform;
 module.exports = exports['default'];
 
 /***/ }),
-/* 89 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4851,7 +4851,7 @@ var CustomWaveform = function () {
           var mix1 = Math.pow(smoothing * 0.98, 0.5);
           var mix2 = 1 - mix1;
 
-          // Milkdrop smooths waveform forward, backward and then scales
+          
           this.pointsData[0][0] = pointsLeft[j0];
           this.pointsData[1][0] = pointsRight[j1];
           for (var j = 1; j < this.samples; j++) {
@@ -4904,7 +4904,7 @@ var CustomWaveform = function () {
             this.colors[_j3 * 4 + 3] = a * alphaMult;
           }
 
-          // this needs to be after per point (check fishbrain - witchcraft)
+          
           var mdvsUserKeysWave = presetEquationRunner.mdVSUserKeysWaves[this.index];
           var mdVSNewFrameMapWave = _utils2.default.pick(mdVSWaveFrame, mdvsUserKeysWave);
 
@@ -5005,7 +5005,7 @@ exports.default = CustomWaveform;
 module.exports = exports['default'];
 
 /***/ }),
-/* 90 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5375,7 +5375,7 @@ exports.default = CustomShape;
 module.exports = exports['default'];
 
 /***/ }),
-/* 91 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5464,7 +5464,7 @@ var Border = function () {
       this.positions[offset + 8] = point3[2];
     }
 
-    // based on https://github.com/mrdoob/three.js/blob/master/src/geometries/PlaneGeometry.js
+    
 
   }, {
     key: 'generateBorder',
@@ -5484,7 +5484,7 @@ var Border = function () {
         var borderWidthWidth = borderWidth * width;
         var borderWidthHeight = borderWidth * height;
 
-        // 1st side
+        
         var point1 = [-widthHalf + prevBorderWidthWidth, -heightHalf + borderWidthHeight, 0];
         var point2 = [-widthHalf + prevBorderWidthWidth, heightHalf - borderWidthHeight, 0];
         var point3 = [-widthHalf + borderWidthWidth, heightHalf - borderWidthHeight, 0];
@@ -5493,7 +5493,7 @@ var Border = function () {
         this.addTriangle(0, point4, point2, point1);
         this.addTriangle(9, point4, point3, point2);
 
-        // 2nd side
+        
         point1 = [widthHalf - prevBorderWidthWidth, -heightHalf + borderWidthHeight, 0];
         point2 = [widthHalf - prevBorderWidthWidth, heightHalf - borderWidthHeight, 0];
         point3 = [widthHalf - borderWidthWidth, heightHalf - borderWidthHeight, 0];
@@ -5502,7 +5502,7 @@ var Border = function () {
         this.addTriangle(18, point1, point2, point4);
         this.addTriangle(27, point2, point3, point4);
 
-        // Top
+        
         point1 = [-widthHalf + prevBorderWidthWidth, -heightHalf + prevBorderWidthHeight, 0];
         point2 = [-widthHalf + prevBorderWidthWidth, borderWidthHeight - heightHalf, 0];
         point3 = [widthHalf - prevBorderWidthWidth, borderWidthHeight - heightHalf, 0];
@@ -5511,7 +5511,7 @@ var Border = function () {
         this.addTriangle(36, point4, point2, point1);
         this.addTriangle(45, point4, point3, point2);
 
-        // Bottom
+        
         point1 = [-widthHalf + prevBorderWidthWidth, heightHalf - prevBorderWidthHeight, 0];
         point2 = [-widthHalf + prevBorderWidthWidth, heightHalf - borderWidthHeight, 0];
         point3 = [widthHalf - prevBorderWidthWidth, heightHalf - borderWidthHeight, 0];
@@ -5552,7 +5552,7 @@ exports.default = Border;
 module.exports = exports['default'];
 
 /***/ }),
-/* 92 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5665,7 +5665,7 @@ exports.default = CustomShape;
 module.exports = exports['default'];
 
 /***/ }),
-/* 93 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5883,7 +5883,7 @@ exports.default = MotionVectors;
 module.exports = exports['default'];
 
 /***/ }),
-/* 94 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5967,7 +5967,7 @@ var WarpShader = function () {
     gl.samplerParameteri(this.mainSamplerPC, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  // based on https://github.com/mrdoob/three.js/blob/master/src/geometries/PlaneGeometry.js
+  
 
 
   (0, _createClass3.default)(WarpShader, [{
@@ -6335,7 +6335,7 @@ exports.default = WarpShader;
 module.exports = exports['default'];
 
 /***/ }),
-/* 95 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6421,7 +6421,7 @@ var CompShader = function () {
     gl.samplerParameteri(this.mainSamplerPC, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  // based on https://github.com/mrdoob/three.js/blob/master/src/geometries/PlaneGeometry.js
+  
 
 
   (0, _createClass3.default)(CompShader, [{
@@ -6867,7 +6867,7 @@ exports.default = CompShader;
 module.exports = exports['default'];
 
 /***/ }),
-/* 96 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6934,7 +6934,7 @@ var OutputShader = function () {
       }
     }
 
-    // based on https://github.com/mattdesl/glsl-fxaa
+    
 
   }, {
     key: 'createFXAAShader',
@@ -7009,7 +7009,7 @@ exports.default = OutputShader;
 module.exports = exports['default'];
 
 /***/ }),
-/* 97 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7096,7 +7096,7 @@ exports.default = ResampleShader;
 module.exports = exports['default'];
 
 /***/ }),
-/* 98 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7234,7 +7234,7 @@ exports.default = BlurShader;
 module.exports = exports['default'];
 
 /***/ }),
-/* 99 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7345,7 +7345,7 @@ exports.default = BlurVertical;
 module.exports = exports['default'];
 
 /***/ }),
-/* 100 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7487,7 +7487,7 @@ exports.default = BlurHorizontal;
 module.exports = exports['default'];
 
 /***/ }),
-/* 101 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7800,7 +7800,7 @@ exports.default = Noise;
 module.exports = exports['default'];
 
 /***/ }),
-/* 102 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7911,7 +7911,7 @@ exports.default = ImageTextures;
 module.exports = exports['default'];
 
 /***/ }),
-/* 103 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8013,7 +8013,7 @@ var TitleText = function () {
       this.canvas.height = this.texsizeY;
     }
 
-    // based on https://github.com/mrdoob/three.js/blob/master/src/geometries/PlaneGeometry.js
+    
 
   }, {
     key: 'buildPositions',
@@ -8125,7 +8125,7 @@ var TitleText = function () {
         uvs[_i2 * 2] *= scale;
         uvs[_i2 * 2 + 1] *= scale * this.invAspecty;
 
-        // get back UVs
+        
         uvs[_i2 * 2] = (uvs[_i2 * 2] + 1) / 2.0;
         uvs[_i2 * 2 + 1] = (uvs[_i2 * 2 + 1] + 1) / 2.0;
       }
@@ -8173,7 +8173,7 @@ exports.default = TitleText;
 module.exports = exports['default'];
 
 /***/ }),
-/* 104 */
+
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8265,7 +8265,7 @@ var BlendPattern = function () {
     value: function createBlendPattern() {
       var mixType = 1 + Math.floor(Math.random() * 3);
       if (mixType === 0) {
-        // not currently used
+        
         var nVert = 0;
         for (var y = 0; y <= this.mesh_height; y++) {
           for (var x = 0; x <= this.mesh_width; x++) {
@@ -8393,4 +8393,3 @@ module.exports = exports["default"];
 /***/ })
 /******/ ]);
 });
-//# sourceMappingURL=butterchurn.js.map

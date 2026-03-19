@@ -324,7 +324,7 @@
 
   /** Used to map Latin Unicode letters to basic Latin letters. */
   var deburredLetters = {
-    // Latin-1 Supplement block.
+    
     '\xc0': 'A',  '\xc1': 'A', '\xc2': 'A', '\xc3': 'A', '\xc4': 'A', '\xc5': 'A',
     '\xe0': 'a',  '\xe1': 'a', '\xe2': 'a', '\xe3': 'a', '\xe4': 'a', '\xe5': 'a',
     '\xc7': 'C',  '\xe7': 'c',
@@ -342,7 +342,7 @@
     '\xc6': 'Ae', '\xe6': 'ae',
     '\xde': 'Th', '\xfe': 'th',
     '\xdf': 'ss',
-    // Latin Extended-A block.
+    
     '\u0100': 'A',  '\u0102': 'A', '\u0104': 'A',
     '\u0101': 'a',  '\u0103': 'a', '\u0105': 'a',
     '\u0106': 'C',  '\u0108': 'C', '\u010a': 'C', '\u010c': 'C',
@@ -436,19 +436,19 @@
   /** Used to access faster Node.js helpers. */
   var nodeUtil = (function() {
     try {
-      // Use `util.types` for Node.js 10+.
+      
       var types = freeModule && freeModule.require && freeModule.require('util').types;
 
       if (types) {
         return types;
       }
 
-      // Legacy `process.binding('util')` for Node.js < 10.
+      
       return freeProcess && freeProcess.binding && freeProcess.binding('util');
     } catch (e) {}
   }());
 
-  /* Node.js helper references. */
+  
   var nodeIsArrayBuffer = nodeUtil && nodeUtil.isArrayBuffer,
       nodeIsDate = nodeUtil && nodeUtil.isDate,
       nodeIsMap = nodeUtil && nodeUtil.isMap,
@@ -456,7 +456,7 @@
       nodeIsSet = nodeUtil && nodeUtil.isSet,
       nodeIsTypedArray = nodeUtil && nodeUtil.isTypedArray;
 
-  /*--------------------------------------------------------------------------*/
+  
 
   /**
    * A faster alternative to `Function#apply`, this function invokes `func`
@@ -1372,7 +1372,7 @@
     return string.match(reUnicodeWord) || [];
   }
 
-  /*--------------------------------------------------------------------------*/
+  
 
   /**
    * Create a new pristine `lodash` function using the `context` object.
@@ -1485,7 +1485,7 @@
         ctxNow = Date && Date.now !== root.Date.now && Date.now,
         ctxSetTimeout = context.setTimeout !== root.setTimeout && context.setTimeout;
 
-    /* Built-in method references for those with the same name as other `lodash` methods. */
+    
     var nativeCeil = Math.ceil,
         nativeFloor = Math.floor,
         nativeGetSymbols = Object.getOwnPropertySymbols,
@@ -1500,7 +1500,7 @@
         nativeRandom = Math.random,
         nativeReverse = arrayProto.reverse;
 
-    /* Built-in method references that are verified to be native. */
+    
     var DataView = getNative(context, 'DataView'),
         Map = getNative(context, 'Map'),
         Promise = getNative(context, 'Promise'),
@@ -1526,7 +1526,7 @@
         symbolValueOf = symbolProto ? symbolProto.valueOf : undefined,
         symbolToString = symbolProto ? symbolProto.toString : undefined;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a `lodash` object which wraps `value` to enable implicit method
@@ -1687,7 +1687,7 @@
      * @private
      */
     function baseLodash() {
-      // No operation performed.
+      
     }
 
     /**
@@ -1766,14 +1766,14 @@
       }
     };
 
-    // Ensure wrappers are instances of `baseLodash`.
+    
     lodash.prototype = baseLodash.prototype;
     lodash.prototype.constructor = lodash;
 
     LodashWrapper.prototype = baseCreate(baseLodash.prototype);
     LodashWrapper.prototype.constructor = LodashWrapper;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a lazy wrapper object which wraps `value` to enable lazy evaluation.
@@ -1888,11 +1888,11 @@
       return result;
     }
 
-    // Ensure `LazyWrapper` is an instance of `baseLodash`.
+    
     LazyWrapper.prototype = baseCreate(baseLodash.prototype);
     LazyWrapper.prototype.constructor = LazyWrapper;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a hash object.
@@ -1989,14 +1989,14 @@
       return this;
     }
 
-    // Add methods to `Hash`.
+    
     Hash.prototype.clear = hashClear;
     Hash.prototype['delete'] = hashDelete;
     Hash.prototype.get = hashGet;
     Hash.prototype.has = hashHas;
     Hash.prototype.set = hashSet;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates an list cache object.
@@ -2106,14 +2106,14 @@
       return this;
     }
 
-    // Add methods to `ListCache`.
+    
     ListCache.prototype.clear = listCacheClear;
     ListCache.prototype['delete'] = listCacheDelete;
     ListCache.prototype.get = listCacheGet;
     ListCache.prototype.has = listCacheHas;
     ListCache.prototype.set = listCacheSet;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a map cache object to store key-value pairs.
@@ -2209,14 +2209,14 @@
       return this;
     }
 
-    // Add methods to `MapCache`.
+    
     MapCache.prototype.clear = mapCacheClear;
     MapCache.prototype['delete'] = mapCacheDelete;
     MapCache.prototype.get = mapCacheGet;
     MapCache.prototype.has = mapCacheHas;
     MapCache.prototype.set = mapCacheSet;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      *
@@ -2264,11 +2264,11 @@
       return this.__data__.has(value);
     }
 
-    // Add methods to `SetCache`.
+    
     SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
     SetCache.prototype.has = setCacheHas;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a stack cache object to store key-value pairs.
@@ -2363,14 +2363,14 @@
       return this;
     }
 
-    // Add methods to `Stack`.
+    
     Stack.prototype.clear = stackClear;
     Stack.prototype['delete'] = stackDelete;
     Stack.prototype.get = stackGet;
     Stack.prototype.has = stackHas;
     Stack.prototype.set = stackSet;
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates an array of the enumerable property names of the array-like `value`.
@@ -2392,13 +2392,13 @@
       for (var key in value) {
         if ((inherited || hasOwnProperty.call(value, key)) &&
             !(skipIndexes && (
-               // Safari 9 has enumerable `arguments.length` in strict mode.
+               
                key == 'length' ||
-               // Node.js 0.10 has enumerable non-index properties on buffers.
+               
                (isBuff && (key == 'offset' || key == 'parent')) ||
-               // PhantomJS 2 has enumerable non-index properties on typed arrays.
+               
                (isType && (key == 'buffer' || key == 'byteLength' || key == 'byteOffset')) ||
-               // Skip index properties.
+               
                isIndex(key, length)
             ))) {
           result.push(key);
@@ -2659,7 +2659,7 @@
           result = initCloneByTag(value, tag, isDeep);
         }
       }
-      // Check for circular references and return its corresponding clone.
+      
       stack || (stack = new Stack);
       var stacked = stack.get(value);
       if (stacked) {
@@ -2693,7 +2693,7 @@
           key = subValue;
           subValue = value[key];
         }
-        // Recursively populate clone (susceptible to call stack limits).
+        
         assignValue(result, key, baseClone(subValue, bitmask, customizer, key, value, stack));
       });
       return result;
@@ -2947,7 +2947,7 @@
         var value = array[index];
         if (depth > 0 && predicate(value)) {
           if (depth > 1) {
-            // Recursively flatten arrays (susceptible to call stack limits).
+            
             baseFlatten(value, depth - 1, predicate, isStrict, result);
           } else {
             arrayPush(result, value);
@@ -3462,8 +3462,8 @@
      * @returns {Function} Returns the iteratee.
      */
     function baseIteratee(value) {
-      // Don't store the `typeof` result in a variable to avoid a JIT bug in Safari 9.
-      // See https://bugs.webkit.org/show_bug.cgi?id=156034 for more details.
+      
+      
       if (typeof value == 'function') {
         return value;
       }
@@ -3690,7 +3690,7 @@
         }
       }
       if (isCommon) {
-        // Recursively merge objects and arrays (susceptible to call stack limits).
+        
         stack.set(srcValue, newValue);
         mergeFunc(newValue, srcValue, srcIndex, customizer, stack);
         stack['delete'](srcValue);
@@ -3907,8 +3907,8 @@
       if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
         return result;
       }
-      // Leverage the exponentiation by squaring algorithm for a faster repeat.
-      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
+      
+      
       do {
         if (n % 2) {
           result += string;
@@ -4228,12 +4228,12 @@
      * @returns {string} Returns the string.
      */
     function baseToString(value) {
-      // Exit early for strings to avoid a performance hit in some environments.
+      
       if (typeof value == 'string') {
         return value;
       }
       if (isArray(value)) {
-        // Recursively convert values (susceptible to call stack limits).
+        
         return arrayMap(value, baseToString) + '';
       }
       if (isSymbol(value)) {
@@ -4652,13 +4652,13 @@
           return result * (order == 'desc' ? -1 : 1);
         }
       }
-      // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
-      // that causes it, under certain circumstances, to provide the same value for
-      // `object` and `other`. See https://github.com/jashkenas/underscore/pull/1247
-      // for more details.
-      //
-      // This also ensures a stable sort in V8 and other engines.
-      // See https://bugs.chromium.org/p/v8/issues/detail?id=90 for more details.
+      
+      
+      
+      
+      
+      
+      
       return object.index - other.index;
     }
 
@@ -4987,9 +4987,9 @@
      */
     function createCtor(Ctor) {
       return function() {
-        // Use a `switch` statement to work with class constructors. See
-        // http://ecma-international.org/ecma-262/7.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist
-        // for more details.
+        
+        
+        
         var args = arguments;
         switch (args.length) {
           case 0: return new Ctor;
@@ -5004,8 +5004,8 @@
         var thisBinding = baseCreate(Ctor.prototype),
             result = Ctor.apply(thisBinding, args);
 
-        // Mimic the constructor's `return` behavior.
-        // See https://es5.github.io/#x13.2.2 for more details.
+        
+        
         return isObject(result) ? result : thisBinding;
       };
     }
@@ -5337,7 +5337,7 @@
         if (step && typeof step != 'number' && isIterateeCall(start, end, step)) {
           end = step = undefined;
         }
-        // Ensure the sign of `-0` is preserved.
+        
         start = toFinite(start);
         if (end === undefined) {
           end = start;
@@ -5423,8 +5423,8 @@
         number = toNumber(number);
         precision = precision == null ? 0 : nativeMin(toInteger(precision), 292);
         if (precision) {
-          // Shift with exponential notation to avoid floating-point issues.
-          // See [MDN](https://mdn.io/round#Examples) for more details.
+          
+          
           var pair = (toString(number) + 'e').split('e'),
               value = func(pair[0] + 'e' + (+pair[1] + precision));
 
@@ -5582,7 +5582,7 @@
      */
     function customDefaultsMerge(objValue, srcValue, key, object, source, stack) {
       if (isObject(objValue) && isObject(srcValue)) {
-        // Recursively merge objects and arrays (susceptible to call stack limits).
+        
         stack.set(srcValue, objValue);
         baseMerge(objValue, srcValue, undefined, customDefaultsMerge, stack);
         stack['delete'](srcValue);
@@ -5624,7 +5624,7 @@
       if (arrLength != othLength && !(isPartial && othLength > arrLength)) {
         return false;
       }
-      // Assume cyclic values are equal.
+      
       var stacked = stack.get(array);
       if (stacked && stack.get(other)) {
         return stacked == other;
@@ -5636,7 +5636,7 @@
       stack.set(array, other);
       stack.set(other, array);
 
-      // Ignore non-index properties.
+      
       while (++index < arrLength) {
         var arrValue = array[index],
             othValue = other[index];
@@ -5653,7 +5653,7 @@
           result = false;
           break;
         }
-        // Recursively compare arrays (susceptible to call stack limits).
+        
         if (seen) {
           if (!arraySome(other, function(othValue, othIndex) {
                 if (!cacheHas(seen, othIndex) &&
@@ -5714,8 +5714,8 @@
         case boolTag:
         case dateTag:
         case numberTag:
-          // Coerce booleans to `1` or `0` and dates to milliseconds.
-          // Invalid dates are coerced to `NaN`.
+          
+          
           return eq(+object, +other);
 
         case errorTag:
@@ -5723,9 +5723,9 @@
 
         case regexpTag:
         case stringTag:
-          // Coerce regexes to strings and treat strings, primitives and objects,
-          // as equal. See http://www.ecma-international.org/ecma-262/7.0/#sec-regexp.prototype.tostring
-          // for more details.
+          
+          
+          
           return object == (other + '');
 
         case mapTag:
@@ -5738,14 +5738,14 @@
           if (object.size != other.size && !isPartial) {
             return false;
           }
-          // Assume cyclic values are equal.
+          
           var stacked = stack.get(object);
           if (stacked) {
             return stacked == other;
           }
           bitmask |= COMPARE_UNORDERED_FLAG;
 
-          // Recursively compare objects (susceptible to call stack limits).
+          
           stack.set(object, other);
           var result = equalArrays(convert(object), convert(other), bitmask, customizer, equalFunc, stack);
           stack['delete'](object);
@@ -5789,7 +5789,7 @@
           return false;
         }
       }
-      // Assume cyclic values are equal.
+      
       var stacked = stack.get(object);
       if (stacked && stack.get(other)) {
         return stacked == other;
@@ -5809,7 +5809,7 @@
             ? customizer(othValue, objValue, key, other, object, stack)
             : customizer(objValue, othValue, key, object, other, stack);
         }
-        // Recursively compare objects (susceptible to call stack limits).
+        
         if (!(compared === undefined
               ? (objValue === othValue || equalFunc(objValue, othValue, bitmask, customizer, stack))
               : compared
@@ -5823,7 +5823,7 @@
         var objCtor = object.constructor,
             othCtor = other.constructor;
 
-        // Non `Object` object instances with different constructors are not equal.
+        
         if (objCtor != othCtor &&
             ('constructor' in object && 'constructor' in other) &&
             !(typeof objCtor == 'function' && objCtor instanceof objCtor &&
@@ -6049,7 +6049,7 @@
      */
     var getTag = baseGetTag;
 
-    // Fallback for data views, maps, sets, and weak maps in IE 11 and promises in Node.js < 6.
+    
     if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
         (Map && getTag(new Map) != mapTag) ||
         (Promise && getTag(Promise.resolve()) != promiseTag) ||
@@ -6155,7 +6155,7 @@
       var length = array.length,
           result = new array.constructor(length);
 
-      // Add properties assigned by `RegExp#exec`.
+      
       if (length && typeof array[0] == 'string' && hasOwnProperty.call(array, 'index')) {
         result.index = array.index;
         result.input = array.input;
@@ -6466,44 +6466,44 @@
         ((srcBitmask == WRAP_ARY_FLAG) && (bitmask == WRAP_REARG_FLAG) && (data[7].length <= source[8])) ||
         ((srcBitmask == (WRAP_ARY_FLAG | WRAP_REARG_FLAG)) && (source[7].length <= source[8]) && (bitmask == WRAP_CURRY_FLAG));
 
-      // Exit early if metadata can't be merged.
+      
       if (!(isCommon || isCombo)) {
         return data;
       }
-      // Use source `thisArg` if available.
+      
       if (srcBitmask & WRAP_BIND_FLAG) {
         data[2] = source[2];
-        // Set when currying a bound function.
+        
         newBitmask |= bitmask & WRAP_BIND_FLAG ? 0 : WRAP_CURRY_BOUND_FLAG;
       }
-      // Compose partial arguments.
+      
       var value = source[3];
       if (value) {
         var partials = data[3];
         data[3] = partials ? composeArgs(partials, value, source[4]) : value;
         data[4] = partials ? replaceHolders(data[3], PLACEHOLDER) : source[4];
       }
-      // Compose partial right arguments.
+      
       value = source[5];
       if (value) {
         partials = data[5];
         data[5] = partials ? composeArgsRight(partials, value, source[6]) : value;
         data[6] = partials ? replaceHolders(data[5], PLACEHOLDER) : source[6];
       }
-      // Use source `argPos` if available.
+      
       value = source[7];
       if (value) {
         data[7] = value;
       }
-      // Use source `ary` if it's smaller.
+      
       if (srcBitmask & WRAP_ARY_FLAG) {
         data[8] = data[8] == null ? source[8] : nativeMin(data[8], source[8]);
       }
-      // Use source `arity` if one is not provided.
+      
       if (data[9] == null) {
         data[9] = source[9];
       }
-      // Use source `func` and merge bitmasks.
+      
       data[0] = source[0];
       data[1] = newBitmask;
 
@@ -6736,7 +6736,7 @@
      */
     var stringToPath = memoizeCapped(function(string) {
       var result = [];
-      if (string.charCodeAt(0) === 46 /* . */) {
+      if (string.charCodeAt(0) === 46 ) {
         result.push('');
       }
       string.replace(rePropName, function(match, number, quote, subString) {
@@ -6815,7 +6815,7 @@
       return result;
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates an array of elements split into groups the length of `size`.
@@ -8705,7 +8705,7 @@
       return unzipWith(arrays, iteratee);
     });
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates a `lodash` wrapper instance that wraps `value` with explicit method
@@ -9052,7 +9052,7 @@
       return baseWrapperValue(this.__wrapped__, this.__actions__);
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Creates an object composed of keys generated from the results of running
@@ -9941,7 +9941,7 @@
       return baseOrderBy(collection, baseFlatten(iteratees, 1), []);
     });
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Gets the timestamp of the number of milliseconds that have elapsed since
@@ -9963,7 +9963,7 @@
       return root.Date.now();
     };
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * The opposite of `_.before`; this method creates a function that invokes
@@ -10337,11 +10337,11 @@
       }
 
       function leadingEdge(time) {
-        // Reset any `maxWait` timer.
+        
         lastInvokeTime = time;
-        // Start the timer for the trailing edge.
+        
         timerId = setTimeout(timerExpired, wait);
-        // Invoke the leading edge.
+        
         return leading ? invokeFunc(time) : result;
       }
 
@@ -10359,9 +10359,9 @@
         var timeSinceLastCall = time - lastCallTime,
             timeSinceLastInvoke = time - lastInvokeTime;
 
-        // Either this is the first call, activity has stopped and we're at the
-        // trailing edge, the system time has gone backwards and we're treating
-        // it as the trailing edge, or we've hit the `maxWait` limit.
+        
+        
+        
         return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
           (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
       }
@@ -10371,15 +10371,15 @@
         if (shouldInvoke(time)) {
           return trailingEdge(time);
         }
-        // Restart the timer.
+        
         timerId = setTimeout(timerExpired, remainingWait(time));
       }
 
       function trailingEdge(time) {
         timerId = undefined;
 
-        // Only invoke if we have `lastArgs` which means `func` has been
-        // debounced at least once.
+        
+        
         if (trailing && lastArgs) {
           return invokeFunc(time);
         }
@@ -10412,7 +10412,7 @@
             return leadingEdge(lastCallTime);
           }
           if (maxing) {
-            // Handle invocations in a tight loop.
+            
             timerId = setTimeout(timerExpired, wait);
             return invokeFunc(lastCallTime);
           }
@@ -10558,7 +10558,7 @@
       return memoized;
     }
 
-    // Expose `MapCache`.
+    
     memoize.Cache = MapCache;
 
     /**
@@ -10958,7 +10958,7 @@
       return partial(castFunction(wrapper), value);
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Casts `value` as an array if it's not one.
@@ -11649,8 +11649,8 @@
       if (!isObject(value)) {
         return false;
       }
-      // The use of `Object#toString` avoids issues with the `typeof` operator
-      // in Safari 9 which returns 'object' for typed arrays and other constructors.
+      
+      
       var tag = baseGetTag(value);
       return tag == funcTag || tag == genTag || tag == asyncTag || tag == proxyTag;
     }
@@ -11891,9 +11891,9 @@
      * // => false
      */
     function isNaN(value) {
-      // An `NaN` primitive is the only value that is not equal to itself.
-      // Perform the `toStringTag` check first to avoid errors with some
-      // ActiveX objects in IE.
+      
+      
+      
       return isNumber(value) && value != +value;
     }
 
@@ -12559,7 +12559,7 @@
       return value == null ? '' : baseToString(value);
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Assigns own enumerable string keyed properties of source objects to the
@@ -13627,7 +13627,7 @@
       var index = -1,
           length = path.length;
 
-      // Ensure the loop is entered when path is empty.
+      
       if (!length) {
         length = 1;
         object = undefined;
@@ -13958,7 +13958,7 @@
       return object == null ? [] : baseValues(object, keysIn(object));
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Clamps `number` within the inclusive `lower` and `upper` bounds.
@@ -14115,7 +14115,7 @@
       return baseRandom(lower, upper);
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Converts `string` to [camel case](https://en.wikipedia.org/wiki/CamelCase).
@@ -14769,9 +14769,9 @@
      * ');
      */
     function template(string, options, guard) {
-      // Based on John Resig's `tmpl` implementation
-      // (http://ejohn.org/blog/javascript-micro-templating/)
-      // and Laura Doktorova's doT.js (https://github.com/olado/doT).
+      
+      
+      
       var settings = lodash.templateSettings;
 
       if (guard && isIterateeCall(string, options, guard)) {
@@ -14790,7 +14790,7 @@
           interpolate = options.interpolate || reNoMatch,
           source = "__p += '";
 
-      // Compile the regexp to match each delimiter.
+      
       var reDelimiters = RegExp(
         (options.escape || reNoMatch).source + '|' +
         interpolate.source + '|' +
@@ -14798,7 +14798,7 @@
         (options.evaluate || reNoMatch).source + '|$'
       , 'g');
 
-      // Use a sourceURL for easier debugging.
+      
       var sourceURL = '//# sourceURL=' +
         ('sourceURL' in options
           ? options.sourceURL
@@ -14808,10 +14808,10 @@
       string.replace(reDelimiters, function(match, escapeValue, interpolateValue, esTemplateValue, evaluateValue, offset) {
         interpolateValue || (interpolateValue = esTemplateValue);
 
-        // Escape characters that can't be included in string literals.
+        
         source += string.slice(index, offset).replace(reUnescapedString, escapeStringChar);
 
-        // Replace delimiters with snippets.
+        
         if (escapeValue) {
           isEscaping = true;
           source += "' +\n__e(" + escapeValue + ") +\n'";
@@ -14825,25 +14825,25 @@
         }
         index = offset + match.length;
 
-        // The JS engine embedded in Adobe products needs `match` returned in
-        // order to produce the correct `offset` value.
+        
+        
         return match;
       });
 
       source += "';\n";
 
-      // If `variable` is not specified wrap a with-statement around the generated
-      // code to add the data object to the top of the scope chain.
+      
+      
       var variable = options.variable;
       if (!variable) {
         source = 'with (obj) {\n' + source + '\n}\n';
       }
-      // Cleanup code by stripping empty strings.
+      
       source = (isEvaluating ? source.replace(reEmptyStringLeading, '') : source)
         .replace(reEmptyStringMiddle, '$1')
         .replace(reEmptyStringTrailing, '$1;');
 
-      // Frame code as the function body.
+      
       source = 'function(' + (variable || 'obj') + ') {\n' +
         (variable
           ? ''
@@ -14867,8 +14867,8 @@
           .apply(undefined, importsValues);
       });
 
-      // Provide the compiled function's source by its `toString` method or
-      // the `source` property as a convenience for inlining compiled templates.
+      
+      
       result.source = source;
       if (isError(result)) {
         throw result;
@@ -15221,7 +15221,7 @@
       return string.match(pattern) || [];
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Attempts to invoke `func`, returning either the result or the caught error
@@ -15754,7 +15754,7 @@
      * // => [undefined, undefined]
      */
     function noop() {
-      // No operation performed.
+      
     }
 
     /**
@@ -16168,7 +16168,7 @@
       return toString(prefix) + id;
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * Adds two numbers.
@@ -16515,9 +16515,9 @@
         : 0;
     }
 
-    /*------------------------------------------------------------------------*/
+    
 
-    // Add methods that return wrapped values in chain sequences.
+    
     lodash.after = after;
     lodash.ary = ary;
     lodash.assign = assign;
@@ -16668,18 +16668,18 @@
     lodash.zipObjectDeep = zipObjectDeep;
     lodash.zipWith = zipWith;
 
-    // Add aliases.
+    
     lodash.entries = toPairs;
     lodash.entriesIn = toPairsIn;
     lodash.extend = assignIn;
     lodash.extendWith = assignInWith;
 
-    // Add methods to `lodash.prototype`.
+    
     mixin(lodash, lodash);
 
-    /*------------------------------------------------------------------------*/
+    
 
-    // Add methods that return unwrapped values in chain sequences.
+    
     lodash.add = add;
     lodash.attempt = attempt;
     lodash.camelCase = camelCase;
@@ -16830,7 +16830,7 @@
     lodash.upperCase = upperCase;
     lodash.upperFirst = upperFirst;
 
-    // Add aliases.
+    
     lodash.each = forEach;
     lodash.eachRight = forEachRight;
     lodash.first = head;
@@ -16845,7 +16845,7 @@
       return source;
     }()), { 'chain': false });
 
-    /*------------------------------------------------------------------------*/
+    
 
     /**
      * The semantic version number.
@@ -16856,12 +16856,12 @@
      */
     lodash.VERSION = VERSION;
 
-    // Assign default placeholders.
+    
     arrayEach(['bind', 'bindKey', 'curry', 'curryRight', 'partial', 'partialRight'], function(methodName) {
       lodash[methodName].placeholder = lodash;
     });
 
-    // Add `LazyWrapper` methods for `_.drop` and `_.take` variants.
+    
     arrayEach(['drop', 'take'], function(methodName, index) {
       LazyWrapper.prototype[methodName] = function(n) {
         n = n === undefined ? 1 : nativeMax(toInteger(n), 0);
@@ -16886,7 +16886,7 @@
       };
     });
 
-    // Add `LazyWrapper` methods that accept an `iteratee` value.
+    
     arrayEach(['filter', 'map', 'takeWhile'], function(methodName, index) {
       var type = index + 1,
           isFilter = type == LAZY_FILTER_FLAG || type == LAZY_WHILE_FLAG;
@@ -16902,7 +16902,7 @@
       };
     });
 
-    // Add `LazyWrapper` methods for `_.head` and `_.last`.
+    
     arrayEach(['head', 'last'], function(methodName, index) {
       var takeName = 'take' + (index ? 'Right' : '');
 
@@ -16911,7 +16911,7 @@
       };
     });
 
-    // Add `LazyWrapper` methods for `_.initial` and `_.tail`.
+    
     arrayEach(['initial', 'tail'], function(methodName, index) {
       var dropName = 'drop' + (index ? '' : 'Right');
 
@@ -16972,7 +16972,7 @@
       return this.take(MAX_ARRAY_LENGTH);
     };
 
-    // Add `LazyWrapper` methods to `lodash.prototype`.
+    
     baseForOwn(LazyWrapper.prototype, function(func, methodName) {
       var checkIteratee = /^(?:filter|find|map|reject)|While$/.test(methodName),
           isTaker = /^(?:head|last)$/.test(methodName),
@@ -16995,7 +16995,7 @@
         };
 
         if (useLazy && checkIteratee && typeof iteratee == 'function' && iteratee.length != 1) {
-          // Avoid lazy use if the iteratee has a "length" value other than `1`.
+          
           isLazy = useLazy = false;
         }
         var chainAll = this.__chain__,
@@ -17017,7 +17017,7 @@
       };
     });
 
-    // Add `Array` methods to `lodash.prototype`.
+    
     arrayEach(['pop', 'push', 'shift', 'sort', 'splice', 'unshift'], function(methodName) {
       var func = arrayProto[methodName],
           chainName = /^(?:push|sort|unshift)$/.test(methodName) ? 'tap' : 'thru',
@@ -17035,7 +17035,7 @@
       };
     });
 
-    // Map minified method names to their real names.
+    
     baseForOwn(LazyWrapper.prototype, function(func, methodName) {
       var lodashFunc = lodash[methodName];
       if (lodashFunc) {
@@ -17051,12 +17051,12 @@
       'func': undefined
     }];
 
-    // Add methods to `LazyWrapper`.
+    
     LazyWrapper.prototype.clone = lazyClone;
     LazyWrapper.prototype.reverse = lazyReverse;
     LazyWrapper.prototype.value = lazyValue;
 
-    // Add chain sequence methods to the `lodash` wrapper.
+    
     lodash.prototype.at = wrapperAt;
     lodash.prototype.chain = wrapperChain;
     lodash.prototype.commit = wrapperCommit;
@@ -17065,7 +17065,7 @@
     lodash.prototype.reverse = wrapperReverse;
     lodash.prototype.toJSON = lodash.prototype.valueOf = lodash.prototype.value = wrapperValue;
 
-    // Add lazy aliases.
+    
     lodash.prototype.first = lodash.prototype.head;
 
     if (symIterator) {
@@ -17074,34 +17074,34 @@
     return lodash;
   });
 
-  /*--------------------------------------------------------------------------*/
+  
 
-  // Export lodash.
+  
   var _ = runInContext();
 
-  // Some AMD build optimizers, like r.js, check for condition patterns like:
+  
   if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
-    // Expose Lodash on the global object to prevent errors when Lodash is
-    // loaded by a script tag in the presence of an AMD loader.
-    // See http://requirejs.org/docs/errors.html#mismatch for more details.
-    // Use `_.noConflict` to remove Lodash from the global object.
+    
+    
+    
+    
     root._ = _;
 
-    // Define as an anonymous module so, through path mapping, it can be
-    // referenced as the "underscore" module.
+    
+    
     define(function() {
       return _;
     });
   }
-  // Check for `exports` after `define` in case a build optimizer adds it.
+  
   else if (freeModule) {
-    // Export for Node.js.
+    
     (freeModule.exports = _)._ = _;
-    // Export for CommonJS support.
+    
     freeExports._ = _;
   }
   else {
-    // Export to the global object.
+    
     root._ = _;
   }
 }.call(this));

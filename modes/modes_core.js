@@ -1,5 +1,3 @@
-
-
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -44,6 +42,8 @@ uniform int u_mode;
 uniform float u_isOOB;
 uniform float u_modeTime;
 uniform float u_trip;
+uniform float u_fractalSeed;
+uniform float u_blinkAge;
 
 uniform sampler2D u_texB1, u_texB2, u_texB3, u_texB4, u_texB5, u_texB6;
 uniform sampler2D u_water; uniform sampler2D u_texWindow; 
@@ -295,5 +295,108 @@ void setupCamera(out vec3 ro, out vec3 rd, out vec3 clean_rd, float intensity) {
       float warp = (0.06 + hash1(u_time * 50.0) * u_shake * 0.08 * intensity) / (length(rd.xy) + 0.05) * intensity; 
       rd.xy *= rot(warp * (1.5 + u_shake * 0.5)); rd.xy -= normalize(rd.xy) * (warp * (0.4 + u_shake * 0.3)); rd = normalize(rd); 
   }
+}
+`;
+
+// Shared hallucination overlay — inject into any shader that declares the required uniforms.
+// Required uniforms: u_fractalSeed, u_blinkAge, u_trip, u_time, u_resolution
+// Call: col = applyHallucination(col, screenUV, u_fractalSeed, u_blinkAge, u_trip, u_time);
+GLSL.hallucinationFn = `
+// ═══ INLINE HALLUCINATION HELPERS ═══
+// WebGL1-safe (no break). Available to any shader that includes GLSL.core.
+float _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float _hh1(float x){ return fract(sin(x*127.1)*43758.5453); }
+
+// Burning Ship fractal — melting cityscape structures
+float burningShip(vec2 c){
+    vec2 z=vec2(0.0); float si=0.0;
+    for(int n=0;n<48;n++){
+        z=vec2(abs(z.x),abs(z.y));
+        z=vec2(z.x*z.x-z.y*z.y,2.0*z.x*z.y)+c;
+        si+=(1.0-step(4.0,dot(z,z)));
+    }
+    return si/48.0;
+}
+
+// Julia set — organic tendrils
+float juliaSet(vec2 z, vec2 c){
+    float si=0.0;
+    for(int n=0;n<36;n++){
+        z=vec2(z.x*z.x-z.y*z.y,2.0*z.x*z.y)+c;
+        si+=(1.0-step(4.0,dot(z,z)));
+    }
+    return si/36.0;
+}
+
+// Clifford attractor density
+float clifford(vec2 p, float seed) {
+    float a =  1.5 + sin(seed * 1.3) * 0.5;
+    float b = -1.8 + cos(seed * 0.7) * 0.4;
+    float c = -1.9 + sin(seed * 2.1) * 0.4;
+    float d =  0.4 + cos(seed * 1.7) * 0.4;
+    float x = p.x * 0.6; float y = p.y * 0.6;
+    float density = 0.0;
+    for(int i=0; i<32; i++){
+        float nx = sin(a*y) + c*cos(a*x);
+        float ny = sin(b*x) + d*cos(b*y);
+        x=nx; y=ny;
+        density += exp(-length(vec2(x,y)-p*0.6)*2.0);
+    }
+    return clamp(density * 0.08, 0.0, 1.0);
+}
+
+vec3 sickNeonPal(float t, float seed){
+    vec3 a = vec3(0.5, 0.4, 0.45);
+    vec3 b = vec3(0.5, 0.35, 0.5);
+    vec3 c = vec3(1.0, 0.8, 1.0);
+    vec3 d = vec3(_hh1(seed)*0.5, _hh1(seed+1.0)*0.3+0.1, _hh1(seed+2.0)*0.4+0.3);
+    return a + b * cos(6.28318*(c*t+d));
+}
+
+// Apply hallucination inline — call from any shader's final output
+// Returns modified baseCol with fractal bleeding, grain, and horror tint
+vec3 applyHallucination(vec3 baseCol, vec2 screenUV, float fractalSeed, float blinkAge, float trip, float time){
+    if(trip < 0.05) return baseCol;
+    float r = length(screenUV);
+    float periph = smoothstep(0.25, 0.9, r);
+
+    // Base + surge envelope
+    float surge = smoothstep(6.0, 0.0, blinkAge) * 0.35;
+    float strength = (trip * 0.15 + surge) * periph;
+    if(strength < 0.005) return baseCol;
+
+    // Fractal type selection
+    float typeRoll = _hh1(fractalSeed * 3.7);
+    float zoom = mix(0.6, 3.0, _hh1(fractalSeed * 1.3));
+    vec2 drift = vec2(sin(time*0.03+fractalSeed)*0.2, cos(time*0.02+fractalSeed*1.7)*0.2);
+    vec2 sUV = screenUV / zoom + drift;
+    float val = 0.0;
+
+    if(typeRoll < 0.4) {
+        vec2 region = vec2(-1.76, -0.028) + vec2(_hh1(fractalSeed*5.1)-0.5, _hh1(fractalSeed*7.3)-0.5)*0.3;
+        val = burningShip(sUV * 0.5 + region);
+    } else if(typeRoll < 0.7) {
+        vec2 jc = vec2(-0.8+sin(time*0.015+fractalSeed)*0.15, 0.156+cos(time*0.012)*0.1);
+        val = juliaSet(sUV * 0.8, jc);
+    } else {
+        val = clifford(sUV * 1.5, fractalSeed);
+    }
+
+    val = fract(val * 3.5 + time * 0.04);
+    vec3 fracCol = sickNeonPal(val, fractalSeed * 11.3);
+    fracCol *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);
+    float pulse = 0.55 + 0.45 * sin(time * 0.9 + fractalSeed);
+
+    // Film grain
+    float grain = (_hh2(screenUV * 400.0 + floor(time * 24.0) * 7.3) - 0.5) * trip * 0.08;
+
+    // Horror vignette darken
+    float vignette = smoothstep(0.3, 1.1, r) * trip * 0.12 * (0.5 + 0.5 * sin(time * 0.7));
+
+    vec3 result = baseCol;
+    result += fracCol * strength * pulse;         // fractal glow
+    result += vec3(grain);                         // grain
+    result = mix(result, result * vec3(0.85, 0.7, 0.75), vignette); // horror darken
+    return result;
 }
 `;

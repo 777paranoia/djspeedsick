@@ -160,7 +160,7 @@
         ];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // AUDIO PLAYER SETUP
+    
     const audioPlayer = document.getElementById('audioPlayer');
     const enterButton = document.getElementById('enter-button');
     const splashScreen = document.getElementById('splash-screen');
@@ -230,11 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleEnterClick() {
-        // Hide splash screen and show main container
+        
         splashScreen.style.display = 'none';
         container.style.visibility = 'visible';
 
-        // Start audio playback and initialize visualizer
+        
         playRandomTrack().then(() => {
     initVisualizer();
         }).catch(error => {
@@ -298,14 +298,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const images = Array.from(galleryContent.querySelectorAll('img'));
         const shuffledImages = shuffle(images);
 
-        // Clear and re-add shuffled images
+        
         galleryContent.innerHTML = '';
         shuffledImages.forEach((img) => galleryContent.appendChild(img));
     }
 
     function openGallery() {
         if (galleryOverlay) {
-    populateGallery(); // Randomize image order
+    populateGallery(); 
     galleryOverlay.style.display = 'block';
         }
     }
@@ -359,7 +359,7 @@ function toggleAbout() {
     }
 }
 
-// Prevent gallery clicks from opening About
+
 document.getElementById('artGalleryOverlay').addEventListener('click', (event) => {
     event.stopPropagation();
 });

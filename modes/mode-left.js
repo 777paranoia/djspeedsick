@@ -1,5 +1,3 @@
-
-
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -13,8 +11,10 @@ uniform sampler2D u_texEnv2;
 uniform sampler2D u_texEnv3; 
 uniform sampler2D u_texEnv4; 
 uniform sampler2D u_texEnv6; 
+uniform sampler2D u_texEnv5; 
 uniform float u_trip;
 uniform float u_modeSeed;
+uniform float u_flash;
 
 float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
 float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); }
@@ -68,6 +68,13 @@ vec4 getScreenCol(vec2 tuv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     uv.y = 1.0 - uv.y;
+    
+
+    float gTick = floor(u_time * 16.0);
+    if (step(0.979, hash1(gTick * 133.77)) > 0.0) {
+        uv.x += (hash1(floor(uv.y * 20.0) + gTick) - 0.5) * 0.21 * clamp(u_trip, 0.0, 1.0);
+    }
+    
     float panRangeX = 300.0 / 1437.0;
     float panRangeY = 300.0 / 2048.0;
     float screenAspect = u_resolution.x / u_resolution.y;
@@ -83,6 +90,7 @@ void main() {
     tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;
     tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;
 
+
     float t = u_time * 0.1;
     vec2 q = vec2(0.0);
     q.x = fbm(tuv * 5.0 + vec2(0.0, t));
@@ -90,7 +98,10 @@ void main() {
     vec2 r = vec2(0.0);
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
-    tuv += (r - 0.5) * 0.012 * u_trip; 
+    
+
+    float liqAmp = mix(0.012, 0.08, 0.0) * u_trip; 
+    tuv += (r - 0.5) * liqAmp; 
     tuv = clamp(tuv, 0.0, 1.0);
 
     float burstSlot = floor(u_time * 12.0); 
@@ -120,6 +131,9 @@ void main() {
     float miniRnd = hash2(miniBlockUV + floor(u_time * 60.0));
     float doMini = step(0.95, miniRnd) * activeG; 
     col = mix(col, vec3(col.b, col.r, col.g), doMini); 
+
+
+    col += vec3(u_flash);
 
     gl_FragColor = vec4(col, 1.0);
 }

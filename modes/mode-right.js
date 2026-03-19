@@ -1,3 +1,5 @@
+// /Users/studio/CommentRemover/untitled folder/mode-right.js
+
 
 
 window.GLSL = window.GLSL || {};

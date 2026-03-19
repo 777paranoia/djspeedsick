@@ -16,6 +16,7 @@ uniform float u_wake;
 uniform float u_isOOB;
 uniform float u_modeTime;
 uniform float u_audio;
+uniform float u_flash;
 
 float hash2(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
 float hash1(float x){ return fract(sin(x*127.1 + 1.9898)*43758.5); }
@@ -51,6 +52,13 @@ vec4 getScreenCol(vec2 tuv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     uv.y = 1.0 - uv.y;
+    
+
+    float gTick = floor(u_time * 16.0);
+    if (step(0.979, hash1(gTick * 133.77)) > 0.0) {
+        uv.x += (hash1(floor(uv.y * 20.0) + gTick) - 0.5) * 0.21 * clamp(u_trip, 0.0, 1.0);
+    }
+    
     float panRangeX = 200.0 / 966.0;
     float panRangeY = 200.0 / 1288.0;
     float screenAspect = u_resolution.x / u_resolution.y;
@@ -70,6 +78,7 @@ void main() {
     float zAmt = u_zoom * u_zoom;
     tuv = mix(tuv, doorwayUV + (tuv - doorwayUV) * 0.05, zAmt);
 
+
     float t = u_time * 0.1;
     vec2 q = vec2(0.0);
     q.x = fbm(tuv * 5.0 + vec2(0.0, t));
@@ -78,7 +87,7 @@ void main() {
     r.x = fbm(tuv * 5.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t);
     r.y = fbm(tuv * 5.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t);
 
-    // Liquid warp + lucid snap (mirrors setupCamera behavior in UV space)
+
     float liqAmp = mix(0.012, 0.08, u_isOOB) * u_trip + u_zoom * 0.15;
     tuv += (r - 0.5) * liqAmp;
 
@@ -103,7 +112,6 @@ void main() {
     float doMosh = step(0.9, blockRnd) * activeG;
     vec2 moshUV = mix(tuv, fract(blockUV + motionVector * activeG), doMosh);
 
-    // Radial blur during zoom (unrolled for WebGL1)
     float blurAmt = zAmt * 0.018;
     vec3 col  = getScreenCol(clamp(mix(tuv, doorwayUV, -0.5  * blurAmt), 0.0, 1.0)).rgb;
     col += getScreenCol(clamp(mix(tuv, doorwayUV, -0.3  * blurAmt), 0.0, 1.0)).rgb;
@@ -126,6 +134,9 @@ void main() {
     float miniRnd = hash2(miniBlockUV + floor(u_time * 60.0));
     float doMini = step(0.95, miniRnd) * activeG;
     col = mix(col, vec3(col.b, col.r, col.g), doMini);
+    
+
+    col += vec3(u_flash);
 
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
