@@ -34,3 +34,7 @@ engine2.bak.js
 files/etc/JVC_car_stereo.wsz
 files/img/load.gbak.if
 files/img/load.gif.bak2
+*.bak
+index.html.bak2
+index.html.bak3
+patch.js
