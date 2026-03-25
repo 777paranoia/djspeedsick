@@ -5833,30 +5833,11 @@ float cockpitDoor(vec3 p) {
 }
 
 float exitDoor(vec3 p) {
-    if(u_doorOpen > 0.5) return 8.0;
-    if(p.x > 0.0) return 8.0;
-    float doorH = 1.8;
-    float doorD = 0.95;
-    // Flat slab on the port wall — positioned just inside the fuselage
-    float dZ = abs(p.z - EXIT_ROW_Z) - doorD * 0.5;
-    float dY = abs(p.y - (FLOOR_Y + 0.1 + doorH * 0.5)) - doorH * 0.5;
-    // Thin shell at the wall radius — sits ON the wall surface
-    float distToWall = length(p.xy) - FUSE_R;
-    float dWall = abs(distToWall + 0.04) - 0.06; // centered 0.04 inside wall, 0.06 thick
-    return max(max(dZ, dY), dWall);
+    return 8.0;
 }
 
 bool inExitHole(vec3 p){
-    // Always carve the wall in the door area so the door SDF is reachable from inside.
-    // The door SDF fills this gap. When doorOpen=1, door SDF returns 8.0 -> open hole.
-    float doorH = 1.8;
-    float doorD = 0.95;
-    bool inDoorArea = abs(p.z - EXIT_ROW_Z) < doorD * 0.52 &&
-                      p.y > FLOOR_Y + 0.05 && p.y < FLOOR_Y + 0.1 + doorH &&
-                      p.x < -FUSE_R + 0.30;
-    if(!inDoorArea) return false;
-    // Always carve when door is switched or open
-    return (u_doorSwitched > 0.5 || u_doorOpen > 0.5);
+    return false;
 }
 
 bool isWindowHit(vec3 p){
@@ -5893,8 +5874,6 @@ vec2 scene(vec3 p){
     
     float d  = min(min(toWall, toFloor), toBack);
     float id = (d == toFloor) ? 2.0 : 1.0;
-    
-    if(inExitHole(p)){ d = max(d, 0.05); }
 
     float s = seatRows(p);
     if(s<d){ d=s; id=3.0; }
@@ -6053,13 +6032,7 @@ void main() {
 
         if(!hit) {
             vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
-            if(u_doorOpen > 0.5) {
-                // Ray escaped through door aperture — show the exterior
-                col = texture2D(u_voidTex, vuv).rgb * 1.2;
-            } else {
-                // Ray escaped off the back end — conceal with fog
-                col = mix(texture2D(u_voidTex, vuv).rgb * 0.3, fogCol, 0.85);
-            }
+            col = mix(texture2D(u_voidTex, vuv).rgb * 0.3, fogCol, 0.85);
         } else {
             vec3 p = cp_ro + rd*t;
             float totalDist = t_march + t;
@@ -6083,24 +6056,6 @@ void main() {
                     col = cpTex.rgb * (max(dot(n, vec3(0,0,-1)), 0.0) * 0.6 + 0.4);
                     col = mix(col, fogCol, fogAmt);
                 }
-
-            } else if(mid > 8.5 && mid < 9.5) { 
-                // Exit door — PNG mapped onto cylinder wall surface
-                float doorH = 1.8;
-                float doorD = 0.9;
-                // U maps along Z, V maps down Y — same for both sides
-                float u_coord = clamp((p.z - (EXIT_ROW_Z - doorD * 0.5)) / doorD, 0.0, 1.0);
-                float v_coord = clamp(1.0 - (p.y - (FLOOR_Y + 0.1)) / doorH, 0.0, 1.0);
-                // No mirror — single port door
-                vec2 doorUV = vec2(u_coord, v_coord);
-                vec4 dTex = (u_doorSwitched > 0.5)
-                    ? texture2D(u_doorOpenTex,   clamp(doorUV, 0.0, 1.0))
-                    : texture2D(u_doorClosedTex, clamp(doorUV, 0.0, 1.0));
-                vec3 n = calcNormal(p);
-                // Door face normal points inward (toward aisle)
-                float diff = max(dot(n, normalize(vec3(-sign(p.x), 0.1, 0.0))), 0.0) * 0.7 + 0.3;
-                col = dTex.rgb * diff;
-                col = mix(col, fogCol, fogAmt);
 
             } else if(mid > 10.5 && mid < 11.5) {
                 // Stern fractal — visible after 180 turn at cockpit
@@ -6131,31 +6086,40 @@ void main() {
                 else if(mid < 3.5) matCol = vec3(0.15, 0.17, 0.32);
                 else               matCol = vec3(0.48, 0.48, 0.52);
 
-                // ── DOOR OVERRIDE — if we hit ANY surface in the door area, show the door texture ──
-                float doorH = 1.8;
-                float doorD = 0.95;
-                bool inDoorZone = (u_doorSwitched > 0.5) &&
-                    abs(p.z - EXIT_ROW_Z) < doorD * 0.55 &&
-                    p.y > FLOOR_Y + 0.05 && p.y < FLOOR_Y + 0.1 + doorH &&
-                    p.x < -FUSE_R + 0.35;
-                if(inDoorZone){
-                    if(u_doorOpen > 0.5){
-                        // Door fully open — show exterior void
-                        vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
-                        col = texture2D(u_voidTex, vuv).rgb * 1.2;
-                    } else {
-                        // Door switched but not open — show door-open.png
-                        float u_coord = clamp((p.z - (EXIT_ROW_Z - doorD * 0.5)) / doorD, 0.0, 1.0);
-                        float v_coord = clamp(1.0 - (p.y - (FLOOR_Y + 0.1)) / doorH, 0.0, 1.0);
-                        col = texture2D(u_doorOpenTex, vec2(u_coord, v_coord)).rgb * 0.8;
-                    }
-                } else {
-                    float flicker = 0.7 + 0.3 * sin(u_time*3.9) * sin(u_time*5.7+1.4);
-                    vec3 ambient = vec3(0.22, 0.24, 0.28) * flicker;
-                    vec3 cockpitLit = vec3(0.15, 0.22, 0.28) * max(dot(n, vec3(0,0,-1)), 0.0) * smoothstep(COCKPIT_Z, COCKPIT_Z-10.0, p.z) * 2.5;
+                float flicker = 0.7 + 0.3 * sin(u_time*3.9) * sin(u_time*5.7+1.4);
+                vec3 ambient = vec3(0.22, 0.24, 0.28) * flicker;
+                vec3 cockpitLit = vec3(0.15, 0.22, 0.28) * max(dot(n, vec3(0,0,-1)), 0.0) * smoothstep(COCKPIT_Z, COCKPIT_Z-10.0, p.z) * 2.5;
 
-                    col = matCol * (ambient + emergencyStrip(p) + cockpitLit);
-                    col = mix(col, fogCol, fogAmt);
+                col = matCol * (ambient + emergencyStrip(p) + cockpitLit);
+                col = mix(col, fogCol, fogAmt);
+
+                // ── EXIT DOOR TEXTURE — mapped onto the port wall ──
+                // Door area: port side wall, near EXIT_ROW_Z
+                if(mid < 1.5 && p.x < -0.5) {
+                    float doorH = 1.8;
+                    float doorW = 1.0;
+                    float doorBottom = FLOOR_Y + 0.08;
+                    float doorLeft = EXIT_ROW_Z - doorW * 0.5;
+                    
+                    // UV mapping: Z maps to U, Y maps to V
+                    float du = (p.z - doorLeft) / doorW;
+                    float dv = 1.0 - (p.y - doorBottom) / doorH;
+                    
+                    if(du > 0.0 && du < 1.0 && dv > 0.0 && dv < 1.0) {
+                        vec2 doorUV = vec2(du, dv);
+                        vec4 dTex = (u_doorSwitched > 0.5)
+                            ? texture2D(u_doorOpenTex, doorUV)
+                            : texture2D(u_doorClosedTex, doorUV);
+                        
+                        if(u_doorSwitched > 0.5 && dTex.a < 0.3) {
+                            // Transparent part of door-open.png — show the void
+                            vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
+                            col = texture2D(u_voidTex, vuv).rgb * 1.2;
+                        } else {
+                            // Door texture visible
+                            col = dTex.rgb * 0.8;
+                        }
+                    }
                 }
             }
         }
