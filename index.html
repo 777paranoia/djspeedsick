@@ -12,7 +12,7 @@
 :root {
   --ui-base-width: 1440;
   --ui-base-height: 900;
-
+a
   --scale-x: calc(100vw / var(--ui-base-width));
   --scale-y: calc(100vh / var(--ui-base-height));
 
@@ -149,7 +149,7 @@
     <div class="conky-line"><a href="http://escalation.ist" class="conky-link">>> ESCALATIONIST</a></div>
     <div class="separator">-----------------------</div><BR>
     <div class="separator">-----------------------</div>
-    <div class="conky-line"><a href="adhd.html" class="conky-link">>> PORTFOLIO</a></div>
+    <div class="conky-line"><a href="portfolio.html" class="conky-link">>> PORTFOLIO</a></div>
     <div class="separator">-----------------------</div><br>
     <div class="separator">-----------------------</div>
     <div class="conky-line">EXTERNAL LINKS</div>
@@ -461,8 +461,50 @@ splashScreen.addEventListener('touchstart', startSplashDrag, {passive: false});
 window.addEventListener('touchmove', doSplashDrag, {passive: false});
 window.addEventListener('touchend', endSplashDrag);
 
+
 var __dHeld = false;
 var __debugAllowed = false;
+
+window.showTransientCenterOverlay = function(src, holdMs, fadeMs){
+  holdMs = holdMs || 1800;
+  fadeMs = fadeMs || 1350;
+  let el = document.getElementById("__center_control_hint");
+  if (!el) {
+    el = document.createElement("img");
+    el.id = "__center_control_hint";
+    el.style.cssText = [
+      "position:fixed",
+      "left:50%",
+      "top:50%",
+      "transform:translate(-50%,-50%)",
+      "max-width:min(72vw,1180px)",
+      "max-height:min(34vh,420px)",
+      "width:auto",
+      "height:auto",
+      "opacity:0",
+      "display:none",
+      "pointer-events:none",
+      "z-index:100000",
+      "transition:opacity 220ms ease",
+      "filter:drop-shadow(0 0 18px rgba(0,0,0,0.32))"
+    ].join(";");
+    document.body.appendChild(el);
+  }
+  clearTimeout(window.__centerControlHintHold);
+  clearTimeout(window.__centerControlHintHide);
+  el.src = src;
+  el.style.display = "block";
+  el.style.opacity = "0";
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){ el.style.opacity = "0.18"; });
+  });
+  window.__centerControlHintHold = setTimeout(function(){
+    el.style.opacity = "0";
+    window.__centerControlHintHide = setTimeout(function(){
+      el.style.display = "none";
+    }, fadeMs + 40);
+  }, holdMs);
+};
 
 window.addEventListener("keydown", e => { if (e.key === "d" || e.key === "D") __dHeld = true; });
 window.addEventListener("keyup", e => { if (e.key === "d" || e.key === "D") __dHeld = false; });
@@ -482,6 +524,11 @@ window.enterSite = function() {
   const bgc = document.getElementById("background-container"); if(bgc) bgc.style.display = "none";
 
   window._siteEntered = true;
+  setTimeout(function(){
+    if (typeof window.showTransientCenterOverlay === "function") {
+      window.showTransientCenterOverlay("files/img/splash/ctrls.png", 1800, 1350);
+    }
+  }, 120);
   
   try {
       if (window.__primeVideoPool) window.__primeVideoPool();
@@ -2774,7 +2821,7 @@ canvas.addEventListener('webglcontextlost', function(e) {
 
 window.__ALL_VIDEOS = window.__ALL_VIDEOS || [];
 
-(new Image()).src = "files/img/void/skyline.png";
+(new Image()).src = "files/img/z1/skyline.png";
 
 (function(){
   function ensureBin(){
@@ -4275,127 +4322,7 @@ if (!GLSL.modules['z2_seq_hole']) {
     `;
 }
 
-if (!GLSL.modules['z2_seq_blackhole']) {
-    GLSL.modules['z2_seq_blackhole'] = `
-    precision mediump float;
-    uniform vec2 u_resolution;
-    uniform sampler2D u_tex;
-    uniform float u_time;
-    uniform float u_trip;
-    uniform float u_seed;
-    uniform float u_blink;
 
-    float _bhHash(float x){ return fract(sin(x * 127.1) * 43758.5453123); }
-    float _bhHash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-    float _bhNoise(vec2 p){
-        vec2 i = floor(p);
-        vec2 f = fract(p);
-        vec2 u = f * f * (3.0 - 2.0 * f);
-        return mix(
-            mix(_bhHash2(i), _bhHash2(i + vec2(1.0, 0.0)), u.x),
-            mix(_bhHash2(i + vec2(0.0, 1.0)), _bhHash2(i + vec2(1.0, 1.0)), u.x),
-            u.y
-        );
-    }
-    float _bhFbm(vec2 p){
-        float v = 0.0;
-        float a = 0.5;
-        for(int i = 0; i < 4; i++){
-            v += a * _bhNoise(p);
-            p = p * 2.03 + vec2(17.13, 9.71);
-            a *= 0.5;
-        }
-        return v;
-    }
-    float _bhSnow(vec2 uv, float size, float speed, float opacity){
-        vec2 grid = uv * size;
-        vec2 id = floor(grid);
-        vec2 f = fract(grid) - 0.5;
-        f.y += fract(u_time * speed + _bhHash2(id) * 15.0) - 0.5;
-        f.x += sin(u_time * 0.5 + _bhHash2(id) * 6.2831) * 0.2;
-        return smoothstep(0.06, 0.0, length(f)) * _bhHash2(id) * opacity;
-    }
-    float _bhJulia(vec2 z, vec2 c){
-        float acc = 0.0;
-        vec2 zz = z;
-        for(int i = 0; i < 14; i++){
-            zz = vec2(zz.x * zz.x - zz.y * zz.y, 2.0 * zz.x * zz.y) + c;
-            float m2 = dot(zz, zz);
-            acc += exp(-m2 * 0.75);
-        }
-        return acc / 14.0;
-    }
-
-    void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-        vec2 p = uv * 2.0 - 1.0;
-        p.x *= u_resolution.x / u_resolution.y;
-
-        float trip = clamp(u_trip, 0.0, 2.5);
-        float t = u_time * (0.18 + trip * 0.06);
-
-        vec2 warp = vec2(
-            sin(p.y * 5.0 + t * 2.3) * 0.012,
-            cos(p.x * 6.5 - t * 1.8) * 0.010
-        );
-        warp += vec2(
-            sin(p.y * 2.2 - t * 0.9),
-            cos(p.x * 2.6 + t * 0.8)
-        ) * (0.012 * trip);
-
-        float tearTick = floor(u_time * 18.0);
-        float tearRand = _bhHash(tearTick + floor(uv.y * 40.0) * 13.1 + u_seed);
-        if (tearRand > 0.93 - trip * 0.08) {
-            warp.x += (tearRand - 0.5) * 0.22 * (0.45 + trip * 0.55);
-        }
-
-        vec2 sampleUV = clamp(uv + warp, 0.0, 1.0);
-
-        float ch = 0.003 + 0.004 * trip;
-        vec3 src;
-        src.r = texture2D(u_tex, clamp(sampleUV + vec2(ch, 0.0), 0.0, 1.0)).r;
-        src.g = texture2D(u_tex, sampleUV).g;
-        src.b = texture2D(u_tex, clamp(sampleUV - vec2(ch, 0.0), 0.0, 1.0)).b;
-
-        float holeR = length(p + warp * 1.4);
-        float swirl = atan(p.y + warp.y, p.x + warp.x) + t * 0.8 + holeR * 3.5;
-        float pull = 1.0 / max(0.18, holeR * 2.3 + 0.2);
-        float vortex = smoothstep(1.25, 0.16, holeR);
-        vec3 holeCol = vec3(0.0);
-        holeCol += vec3(0.03, 0.05, 0.09) * pull;
-        holeCol += vec3(0.20, 0.28, 0.46) * sin(swirl * 2.0 + vec3(0.0, 1.2, 2.4)) * 0.5 * vortex;
-        holeCol += vec3(0.65, 0.72, 0.95) * pow(max(0.0, 1.0 - holeR * 1.5), 3.0) * (0.2 + trip * 0.25);
-
-        vec2 fp = p * 1.2;
-        fp = mat2(cos(t*0.4), -sin(t*0.4), sin(t*0.4), cos(t*0.4)) * fp;
-        float fractal = _bhJulia(fp * 0.85, vec2(-0.72 + 0.08 * sin(t * 0.7), 0.18 + 0.05 * cos(t * 0.9)));
-        vec2 fractalPos = vec2(0.0, -0.15 + 0.08 * sin(t * 0.55));
-        float fractalMask = smoothstep(0.55, 0.05, length(p - fractalPos));
-        holeCol += vec3(0.55, 0.72, 1.0) * fractal * fractalMask * (0.7 + trip * 0.35);
-
-        holeCol += _bhSnow(uv + vec2(t * 0.03, 0.0), 42.0, 0.35, 0.35);
-        holeCol += _bhSnow(uv + vec2(-t * 0.04, 0.0), 75.0, 0.55, 0.22);
-        holeCol += _bhSnow(uv, 120.0, 0.8, 0.14);
-
-        float scan = 0.94 + 0.06 * sin((uv.y + t * 0.8) * u_resolution.y * 0.32);
-        float glitch = 1.0 - step(0.985 - trip * 0.04, _bhHash(floor(u_time * 24.0) + floor(uv.y * 50.0) + u_seed)) * (0.18 + trip * 0.12);
-        holeCol *= scan * glitch;
-
-        float invBurst = step(0.991 - trip * 0.01, _bhHash(floor(u_time * 8.0) + u_seed * 3.1));
-        if (invBurst > 0.0) holeCol = 1.0 - holeCol;
-
-        vec3 col = mix(src * 0.35, holeCol, 0.72);
-        col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.12);
-        col += vec3(0.08, 0.02, 0.02) * pow(vortex, 2.0) * trip * 0.35;
-
-        float vignette = smoothstep(1.45, 0.22, length(p));
-        col *= vignette;
-        col *= (1.0 - u_blink * 0.95);
-
-        gl_FragColor = vec4(col, 1.0);
-    }
-    `;
-}
 
 
 if (!GLSL.modules['z3_alt_blackhole_walk']) {
@@ -4411,349 +4338,269 @@ uniform float u_movePhase;
 uniform float u_speed;
 uniform float u_seed;
 uniform float u_audio;
+uniform float u_trip;
+uniform sampler2D u_texGround;
 
 const int   MARCH_STEPS = 96;
-const int   BEND_STEPS  = 18;
-const float FAR_CLIP    = 120000.0;
-const float EPS         = 0.012;
+const int   BEND_STEPS  = 26;
+const float FAR_CLIP    = 14000.0;
+const float EPS         = 0.045;
 
-const vec3  BH_CENTER   = vec3(0.0, 380.0, -18000.0);
-const float BH_RADIUS   = 1650.0;
+const vec3  BH_CENTER   = vec3(0.0, 0.0, -3200.0);
+const float BH_RADIUS   = 520.0;
 
-mat2 rot(float a){
-  float c = cos(a), s = sin(a);
-  return mat2(c,-s,s,c);
-}
-
-float hash11(float p){ return fract(sin(p * 127.1) * 43758.5453123); }
-float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-float hash3(vec3 p){ return fract(sin(dot(p, vec3(127.1,311.7,191.999))) * 43758.5453123); }
+mat2 rot(float a){ float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+float hash1(float p){ return fract(sin(p*127.1)*43758.5453123); }
+float hash2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+float hash3(vec3 p){ return fract(sin(dot(p,vec3(127.1,311.7,191.999)))*43758.5453123); }
 
 float noise3(vec3 p){
-  vec3 i = floor(p);
-  vec3 f = fract(p);
-  f = f*f*(3.0-2.0*f);
-
-  float n000 = hash3(i + vec3(0.0,0.0,0.0));
-  float n100 = hash3(i + vec3(1.0,0.0,0.0));
-  float n010 = hash3(i + vec3(0.0,1.0,0.0));
-  float n110 = hash3(i + vec3(1.0,1.0,0.0));
-  float n001 = hash3(i + vec3(0.0,0.0,1.0));
-  float n101 = hash3(i + vec3(1.0,0.0,1.0));
-  float n011 = hash3(i + vec3(0.0,1.0,1.0));
-  float n111 = hash3(i + vec3(1.0,1.0,1.0));
-
-  float nx00 = mix(n000,n100,f.x);
-  float nx10 = mix(n010,n110,f.x);
-  float nx01 = mix(n001,n101,f.x);
-  float nx11 = mix(n011,n111,f.x);
-
-  float nxy0 = mix(nx00,nx10,f.y);
-  float nxy1 = mix(nx01,nx11,f.y);
-
-  return mix(nxy0,nxy1,f.z);
-}
-
-float snowLayer(vec2 uv, float size, float speed, float amp){
-  vec2 grid = uv * size;
-  vec2 id = floor(grid);
-  vec2 f = fract(grid) - 0.5;
-  float seed = hash21(id);
-  f.y += fract(u_time * speed + seed * 37.0) - 0.5;
-  f.x += sin(u_time * (0.4 + seed) + seed * 6.2831) * amp;
-  float d = length(f * vec2(1.0, 1.35));
-  return smoothstep(0.055, 0.0, d) * mix(0.25, 1.0, seed);
+  vec3 i=floor(p); vec3 f=fract(p); f=f*f*(3.0-2.0*f);
+  float n000=hash3(i); float n100=hash3(i+vec3(1,0,0));
+  float n010=hash3(i+vec3(0,1,0)); float n110=hash3(i+vec3(1,1,0));
+  float n001=hash3(i+vec3(0,0,1)); float n101=hash3(i+vec3(1,0,1));
+  float n011=hash3(i+vec3(0,1,1)); float n111=hash3(i+vec3(1,1,1));
+  return mix(mix(mix(n000,n100,f.x),mix(n010,n110,f.x),f.y),
+             mix(mix(n001,n101,f.x),mix(n011,n111,f.x),f.y),f.z);
 }
 
 vec3 camForward(float yaw, float pitch){
-  vec3 f = vec3(0.0,0.0,-1.0);
-  f.xz *= rot(yaw);
-  f.yz *= rot(pitch);
-  return normalize(f);
+  vec3 f=vec3(0,0,-1); f.xz*=rot(yaw); f.yz*=rot(pitch); return normalize(f);
 }
-vec3 camRight(vec3 fwd){ return normalize(cross(fwd, vec3(0.0,1.0,0.0))); }
-vec3 camUp(vec3 fwd, vec3 right){ return normalize(cross(right, fwd)); }
+vec3 camRight(vec3 fwd){ return normalize(cross(fwd,vec3(0,1,0))); }
+vec3 camUp(vec3 fwd, vec3 right){ return normalize(cross(right,fwd)); }
 
-float pathCenterX(float z){ return 0.0; }
-float pathCenterY(float z){ return 0.0; }
-
+// ─── PATH — curves up into the black hole center ───
+float pathCenterX(float z){
+  float k = clamp((-z-50.0)/2800.0, 0.0, 1.0);
+  return sin(z*0.00165+0.7)*22.0*k + sin(z*0.006+1.8)*3.5;
+}
+float pathCenterY(float z){
+  return -1.25 + smoothstep(-2400.0, -3100.0, z) * 30.0;
+}
 float pathHalfWidth(float z){
-  float t = clamp((-z - 220.0) / 18000.0, 0.0, 1.0);
-  return mix(0.13, 0.26, t * t);
+  float t = clamp((-z-20.0)/3300.0, 0.0, 1.0);
+  return mix(1.3, 18.0, t*t);
 }
 
-float sdRail(vec3 p){
-  float cx = pathCenterX(p.z);
-  float cy = pathCenterY(p.z);
-  float width = pathHalfWidth(p.z);
-  float halfH = 0.055;
-  vec3 q = p - vec3(cx, cy, 0.0);
-
-  float topBeam = max(abs(q.x) - width, abs(q.y) - halfH);
-  float rib = 1.0 - smoothstep(0.0, 0.15, abs(fract((p.z + 2500.0) * 0.035) - 0.5));
-  float nibble = rib * 0.006 * (noise3(vec3(q.x * 4.0, q.y * 14.0, p.z * 0.02)) - 0.5);
-  return topBeam + nibble;
+// ─── GROUND TEXTURE ───
+vec3 groundColor(vec3 hp, vec3 ro){
+  float flowZ = hp.z + u_movePhase * mix(28.0, 64.0, clamp(u_speed,0.0,1.5));
+  vec2 guv = vec2(hp.x*0.12+0.5, fract(flowZ*0.035));
+  vec3 tex = texture2D(u_texGround, guv).rgb;
+  float dist = length(hp-ro);
+  tex *= exp(-dist*0.004) * 0.50;
+  float cx = pathCenterX(hp.z);
+  float hw = pathHalfWidth(hp.z);
+  float edge = abs(hp.x-cx)/max(hw,0.001);
+  tex *= 1.0 - smoothstep(0.80, 1.02, edge);
+  float seg = 1.0-smoothstep(0.0,0.18,abs(fract((flowZ+1000.0)*0.060)-0.5));
+  tex += vec3(0.10,0.11,0.16)*seg*(1.0-smoothstep(0.0,0.10,abs(hp.x-cx)))*u_speed*0.5;
+  tex += vec3(0.07,0.04,0.02)*smoothstep(-600.0,-2800.0,hp.z)*exp(-dist*0.004)*0.3;
+  tex += vec3(0.06,0.07,0.12)*smoothstep(-2800.0,-3200.0,hp.z)*0.24;
+  return tex;
 }
 
-float sdSphere(vec3 p, vec3 c, float r){ return length(p - c) - r; }
-
-vec3 fractalCenter(){
-  float sx = (hash11(u_seed * 1.71) - 0.5) * 6.0;
-  float sy = 3.6 + hash11(u_seed * 2.33) * 2.4;
-  float sz = -1100.0 - hash11(u_seed * 3.91) * 4200.0;
-  return vec3(
-    sx + sin(u_time * (0.19 + hash11(u_seed * 4.17) * 0.15)) * 0.45,
-    sy + sin(u_time * (0.43 + hash11(u_seed * 5.13) * 0.21)) * 0.30,
-    sz + sin(u_time * (0.11 + hash11(u_seed * 6.27) * 0.09)) * 55.0
-  );
-}
-
-float sdFractalOrb(vec3 p){
-  float r = mix(1.6, 2.8, hash11(u_seed * 7.91));
-  return sdSphere(p, fractalCenter(), r);
-}
-
-vec2 sceneSDF(vec3 p){
-  float dRail = sdRail(p);
-  float dFrac = sdFractalOrb(p);
-  float dBH   = sdSphere(p, BH_CENTER, BH_RADIUS);
-
-  vec2 res = vec2(dRail, 1.0);
-  if (dFrac < res.x) res = vec2(dFrac, 3.0);
-  if (dBH   < res.x) res = vec2(dBH,   2.0);
-  return res;
-}
-
-vec3 estimateNormal(vec3 p){
-  vec2 e = vec2(0.012,0.0);
-  float dx = sceneSDF(p + vec3(e.x,e.y,e.y)).x - sceneSDF(p - vec3(e.x,e.y,e.y)).x;
-  float dy = sceneSDF(p + vec3(e.y,e.x,e.y)).x - sceneSDF(p - vec3(e.y,e.x,e.y)).x;
-  float dz = sceneSDF(p + vec3(e.y,e.y,e.x)).x - sceneSDF(p - vec3(e.y,e.y,e.x)).x;
-  return normalize(vec3(dx,dy,dz));
-}
-
+// ─── COSMOS — dense, from standalone ───
 vec3 cosmos(vec3 rd, vec3 ro){
-  vec3 d = normalize(rd);
-  vec3 col = vec3(0.0);
-
-  vec3 p1 = normalize(d * 850.0 + ro * 0.003);
-  float h1 = hash3(floor(p1 * 260.0));
-  float starsA = smoothstep(0.9990, 1.0, h1);
-  col += vec3(0.78,0.84,0.94) * starsA * 0.56;
-
-  vec3 neb = d * 6.2 + ro * vec3(0.00018,0.00008,0.00022);
-  float band = smoothstep(0.42,0.03,abs(d.y + sin(d.x * 2.2 + ro.z * 0.00005) * 0.12));
-  float gal1 = noise3(neb + vec3(0.0,u_time * 0.0025,0.0));
-  float gal2 = noise3(neb * 1.55 + vec3(4.2,-2.3,7.7));
-
-  col += vec3(0.09,0.12,0.20) * gal1 * band * 0.82;
-  col += vec3(0.05,0.07,0.13) * gal2 * band * 0.62;
-
+  vec3 d=normalize(rd); vec3 col=vec3(0.0);
+  vec3 p1=normalize(d*900.0+ro*0.012);
+  vec3 p2=normalize(d*1600.0+ro*0.020+vec3(17.3,-9.1,5.7));
+  col += vec3(0.80,0.86,0.96)*smoothstep(0.9982,1.0,hash3(floor(p1*320.0)+u_seed*0.01))*(0.65+u_audio*0.30);
+  col += vec3(0.72,0.76,0.92)*smoothstep(0.9993,1.0,hash3(floor(p2*520.0)+u_seed*0.007))*0.35;
+  vec3 neb=d*7.0+ro*vec3(0.0007,0.0003,0.0009);
+  float band=smoothstep(0.42,0.0,abs(d.y+sin(d.x*2.4+ro.z*0.0002)*0.16));
+  col += vec3(0.10,0.13,0.22)*noise3(neb+vec3(0,u_time*0.005,0))*band*0.90;
+  col += vec3(0.08,0.10,0.18)*noise3(neb*1.9+vec3(4.2,-2.3,7.7))*band*0.70;
+  col += vec3(0.04,0.06,0.12)*noise3(neb*0.8+vec3(-3.4,2.0,-6.1))*band*0.55;
+  col += vec3(0.05,0.07,0.12)*smoothstep(0.85,-0.10,d.y)*0.50;
   return col;
 }
 
+// ─── VOID FRACTAL — engine1's sdFractal + colorPickover ───
+vec3 neonPalette(float t){
+  return vec3(0.5)+vec3(0.5)*cos(6.28318*(vec3(1.0)*t+vec3(0.00,0.33,0.67)));
+}
+
+float sdVoidFractal(vec3 p, float power, float rotA, float rotB){
+  vec3 z=p; z.xz*=rot(u_time*rotA); z.yz*=rot(u_time*rotB);
+  float scale=1.0;
+  vec3 foldOffset=vec3(0.6)+(vec3(0.15)*sin(u_time*0.15+power))+u_audio*0.2;
+  for(int i=0;i<8;i++){
+    z=abs(z); if(z.x<z.y) z.xy=z.yx; if(z.x<z.z) z.xz=z.zx; if(z.y<z.z) z.yz=z.zy;
+    z=z*2.0-foldOffset; scale*=2.0;
+  }
+  return (length(z)-0.2)/scale;
+}
+
+vec3 colorPickoverVoid(vec3 p){
+  vec2 c=vec2(p.x*0.4+sin(u_time*0.07)*0.3, p.y*0.4+cos(u_time*0.05)*0.3);
+  vec2 z=vec2(0.0); float minDist=1e10; float escapeI=0.0;
+  for(int i=0;i<80;i++){
+    z=clamp(vec2(z.x*z.x-z.y*z.y,2.0*z.x*z.y)+c,-1000.0,1000.0);
+    float d=min(abs(z.x),abs(z.y)); if(d<minDist) minDist=d;
+    if(dot(z,z)>100.0){escapeI=float(i); break;}
+  }
+  return neonPalette(fract(clamp(minDist*8.0,0.0,1.0)*2.0+u_time*0.15+escapeI*0.01))
+       *(0.4+0.6*(1.0-clamp(minDist*8.0,0.0,1.0)));
+}
+
+vec3 marchVoidFractal(vec3 ro, vec3 rd, vec3 fracPos, float fracScale, float power, float rotA, float rotB){
+  vec3 lro=(ro-fracPos)/fracScale;
+  vec3 lrd=rd;
+  // Bounding sphere — skip if ray misses entirely
+  float boundR=1.8;
+  vec3 oc=lro;
+  float b=dot(oc,lrd); float c_=dot(oc,oc)-boundR*boundR;
+  float disc=b*b-c_;
+  if(disc<0.0) return vec3(0.0);
+  float t=max(0.0,-b-sqrt(disc));
+  for(int i=0;i<50;i++){
+    vec3 p=lro+lrd*t;
+    if(length(p)>boundR+0.5) break;
+    float d=sdVoidFractal(p,power,rotA,rotB);
+    if(d<0.003){
+      vec3 e=vec3(0.003,0.0,0.0);
+      vec3 n=normalize(vec3(
+        sdVoidFractal(p+e.xyy,power,rotA,rotB)-sdVoidFractal(p-e.xyy,power,rotA,rotB),
+        sdVoidFractal(p+e.yxy,power,rotA,rotB)-sdVoidFractal(p-e.yxy,power,rotA,rotB),
+        sdVoidFractal(p+e.yyx,power,rotA,rotB)-sdVoidFractal(p-e.yyx,power,rotA,rotB)
+      ));
+      vec3 matCol=colorPickoverVoid(p);
+      float diff=max(dot(n,normalize(vec3(0.2,1.0,0.5))),0.0)*0.7+0.15;
+      float fres=pow(1.0-max(dot(-lrd,n),0.0),3.0);
+      vec3 col=matCol*diff+neonPalette(fract(u_time*0.08+p.y*0.5))*fres*0.3;
+      col*=exp(-t*fracScale*0.003);
+      return col;
+    }
+    t+=d*0.7;
+    if(t>boundR*3.0) break;
+  }
+  return vec3(0.0);
+}
+
+
+// ─── ACCRETION — from standalone ───
 vec3 accretionGlow(vec3 p, float closestR){
-  vec3 rel = p - BH_CENTER;
-  float plane = abs(rel.y);
-  float ringRadius = length(rel.xz);
-
-  float disk = exp(-plane * 0.020) * smoothstep(BH_RADIUS * 3.2, BH_RADIUS * 1.05, ringRadius);
-  float innerCut = smoothstep(BH_RADIUS * 1.03, BH_RADIUS * 1.26, ringRadius);
-  disk *= innerCut;
-
-  float swirl = 0.60 + 0.40 * sin(atan(rel.z, rel.x) * 6.0 - u_time * 0.18 + ringRadius * 0.0009);
-  float turbulence = noise3(rel * vec3(0.0007,0.0021,0.0007) + vec3(0.0,u_time * 0.005,0.0));
-
-  vec3 ember = vec3(0.98,0.40,0.12);
-  vec3 hot   = vec3(1.02,0.60,0.24);
-  vec3 rim   = vec3(0.30,0.36,0.66);
-  float temp = smoothstep(BH_RADIUS * 1.1, BH_RADIUS * 2.6, ringRadius);
-
-  vec3 glow = mix(ember, hot, temp) * disk * (0.74 + 0.36 * swirl + 0.18 * turbulence);
-  float photonShell = exp(-abs(length(rel) - BH_RADIUS * 1.46) * 0.0020) * smoothstep(0.8,0.0,plane * 0.005);
-  glow += rim * photonShell * 0.26;
-
-  float lens = smoothstep(BH_RADIUS * 6.0, BH_RADIUS * 1.0, closestR);
-  glow += vec3(0.08,0.10,0.20) * disk * lens * 0.10;
-  glow *= (0.88 + u_audio * 0.40);
-
-  return glow * 0.06;
+  vec3 rel=p-BH_CENTER; float r=length(rel); float plane=abs(rel.y); float ringR=length(rel.xz);
+  float disk=exp(-plane*0.085)*smoothstep(BH_RADIUS*2.6,BH_RADIUS*1.08,ringR)*smoothstep(BH_RADIUS*1.02,BH_RADIUS*1.30,ringR);
+  float swirl=0.55+0.45*sin(atan(rel.z,rel.x)*7.0-u_time*0.8+ringR*0.008);
+  float turb=noise3(rel*vec3(0.006,0.03,0.006)+vec3(0,u_time*0.03,0));
+  vec3 glow=mix(vec3(1.02,0.42,0.12),vec3(1.05,0.63,0.26),smoothstep(BH_RADIUS*1.15,BH_RADIUS*2.2,ringR))*disk*(0.72+0.48*swirl+0.30*turb);
+  glow+=vec3(0.34,0.40,0.76)*exp(-abs(r-BH_RADIUS*1.55)*0.022)*smoothstep(0.7,0.0,plane*0.05)*(0.22+u_audio*0.12);
+  glow+=vec3(0.10,0.12,0.24)*disk*smoothstep(BH_RADIUS*4.2,BH_RADIUS*1.0,closestR)*0.08;
+  return glow*(0.013+u_audio*0.006+u_trip*0.003);
 }
 
-vec3 railMaterial(vec3 p, vec3 rd, vec3 n){
-  float z = p.z;
-  float width = pathHalfWidth(z);
-  float cx = pathCenterX(z);
-  float localX = p.x - cx;
-  float edge = abs(localX / max(width,0.0001));
-
-  float grain = noise3(vec3(p.x * 1.6, p.y * 18.0, p.z * 0.04));
-  float seg = 1.0 - smoothstep(0.0,0.10,abs(fract((p.z + 3000.0) * 0.050) - 0.5));
-  float centerLine = 1.0 - smoothstep(0.0,0.032,abs(localX));
-  float edgeGlow = smoothstep(0.86,0.99,edge);
-
-  vec3 base   = vec3(0.006,0.007,0.010);
-  vec3 detail = vec3(0.018,0.022,0.028) * grain * 0.55;
-  vec3 seam   = vec3(0.05,0.07,0.11) * seg * 0.12;
-  vec3 center = vec3(0.13,0.15,0.22) * centerLine * (0.22 + 0.32 * u_speed);
-  vec3 edges  = vec3(0.09,0.11,0.18) * edgeGlow * 0.32;
-
-  float fres = pow(1.0 - max(dot(-rd, n), 0.0), 3.0);
-  vec3 rim = vec3(0.08,0.10,0.16) * fres * 0.18;
-
-  vec3 col = base + detail + seam + center + edges + rim;
-  float horizonTint = smoothstep(-15000.0,-22000.0,z);
-  col += vec3(0.07,0.08,0.14) * horizonTint * 0.16;
-  col *= 1.0 - smoothstep(0.95, 1.08, edge);
-  return col;
-}
-
-float juliaGlow(vec2 z, vec2 c){
-  float acc = 0.0;
-  vec2 zz = z;
-  for(int i = 0; i < 18; i++){
-    zz = vec2(zz.x * zz.x - zz.y * zz.y, 2.0 * zz.x * zz.y) + c;
-    float m2 = dot(zz, zz);
-    acc += exp(-m2 * 0.55);
-  }
-  return acc / 18.0;
-}
-
-vec3 fractalMaterial(vec3 p, vec3 rd, vec3 n){
-  vec3 c = fractalCenter();
-  vec3 q = p - c;
-
-  float seedA = hash11(u_seed * 8.13);
-  float seedB = hash11(u_seed * 9.37);
-  vec2 uvA = q.xz * mix(0.35, 0.68, seedA);
-  vec2 uvB = q.yz * mix(0.28, 0.56, seedB);
-  float fA = juliaGlow(uvA, vec2(-0.74 + 0.12 * seedA, 0.16 + 0.08 * seedB));
-  float fB = juliaGlow(uvB, vec2(-0.12 + 0.18 * seedB, 0.58 + 0.14 * seedA));
-  float frac = max(fA, fB);
-
-  float fres = pow(1.0 - max(dot(-rd, n), 0.0), 2.0);
-  vec3 base = mix(vec3(0.05,0.12,0.24), vec3(0.10,0.05,0.22), seedA);
-  vec3 glow = mix(vec3(0.46, 0.70, 1.10), vec3(1.00,0.36,0.82), seedB) * frac * (1.3 + 0.5 * u_audio);
-  vec3 rim  = vec3(0.30, 0.44, 0.80) * fres * 0.6;
-  return base + glow + rim;
-}
-
+// ─── MAIN ───
 void main(){
-  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+  vec2 uv=(gl_FragCoord.xy-0.5*u_resolution.xy)/u_resolution.y;
 
-  vec3 ro = u_camPos;
-  vec3 fwd = camForward(u_yaw, u_pitch);
-  vec3 right = camRight(fwd);
-  vec3 up = camUp(fwd, right);
-  vec3 rd = normalize(fwd + right * uv.x + up * uv.y);
-
-  vec3 p = ro;
-  vec3 col = vec3(0.0);
-
-  float traveled = 0.0;
-  float closestR = 1e9;
-  bool hit = false;
-  float hitMat = 0.0;
-
-  for(int i=0; i<MARCH_STEPS; i++){
-    vec3 toBH = BH_CENTER - p;
-    float r = length(toBH);
-    closestR = min(closestR, r);
-
-    if(r < BH_RADIUS){
-      col = vec3(0.0);
-      hit = true;
-      hitMat = 2.0;
-      break;
-    }
-
-    float grav = clamp((BH_RADIUS * 10.0) / (r * r), 0.0, 0.006);
-    rd = normalize(mix(rd, normalize(toBH), grav));
-
-    vec2 s = sceneSDF(p);
-    float d = s.x;
-
-    if(r < BH_RADIUS * 8.0 && mod(float(i), 3.0) < 0.5){
-      col += accretionGlow(p, closestR);
-    }
-
-    if(d < EPS){
-      hit = true;
-      hitMat = s.y;
-      break;
-    }
-
-    float stepLen = clamp(d * 0.94, 0.35, 220.0);
-    stepLen *= 1.0 + smoothstep(BH_RADIUS * 7.0, FAR_CLIP, r) * 1.5;
-
-    p += rd * stepLen;
-    traveled += stepLen;
-
-    if(traveled > FAR_CLIP) break;
+  // ── Liquid warp — EXACT same as z3_merged: mix(0.015, 0.10, isOOB) * trip ──
+  // In void phase, isOOB = 1.0, so this is 0.10 * trip
+  float liqAmp = 0.10 * u_trip;
+  if(liqAmp > 0.001){
+    float tw=u_time*0.15;
+    vec2 q=vec2(noise3(vec3(uv*2.0, tw)), noise3(vec3(uv*2.0+vec2(tw,0.0), tw)));
+    float n3=noise3(vec3(uv*2.0+2.0*q+vec2(1.7,9.2), tw*0.6));
+    float n4=noise3(vec3(uv*2.0+2.0*q+vec2(8.3,2.8), tw*0.5));
+    uv += (vec2(n3,n4)-0.5) * liqAmp;
   }
 
-  if(hit && hitMat == 1.0){
-    vec3 n = estimateNormal(p);
-    col += railMaterial(p, rd, n);
-  } else if(hit && hitMat == 3.0){
-    vec3 n = estimateNormal(p);
-    col += fractalMaterial(p, rd, n);
-    col += vec3(0.08,0.12,0.20);
-  } else if(!hit){
-    vec3 bent = rd;
-    vec3 rp = ro;
-    float bendClosest = 1e9;
+  // ── Surge / snap — EXACT same as z3_merged ──
+  float mt=u_time;
+  float w1=sin(mt*0.4+u_seed); float w2=sin(mt*0.9+u_seed*2.0); float w3=sin(mt*1.5+u_seed*3.0);
+  float surge=smoothstep(0.8,1.0,(w1+w2+w3)/3.0);
+  float snap=pow(surge,2.0)*12.0;
+  uv*=1.0+mt*0.003+snap*0.015;
 
-    for(int i=0; i<BEND_STEPS; i++){
-      vec3 toBH = BH_CENTER - rp;
-      float r = length(toBH);
-      bendClosest = min(bendClosest, r);
+  // ── Glitch scanline — EXACT same as z3_merged ──
+  float gTick=floor(u_time*16.0);
+  if(step(0.979,hash1(gTick*133.77+u_seed))>0.0)
+    uv.x+=(hash1(floor(uv.y*mix(10.0,30.0,hash1(gTick*2.1)))+gTick)-0.5)*0.18*clamp(u_trip,0.0,1.5);
 
-      if(r < BH_RADIUS * 1.04) break;
+  vec3 ro=u_camPos;
+  vec3 fwd=camForward(u_yaw,u_pitch); vec3 right=camRight(fwd); vec3 up=camUp(fwd,right);
+  vec3 rd=normalize(fwd+right*uv.x+up*uv.y);
+  vec3 col=vec3(0.0);
 
-      float grav = clamp((BH_RADIUS * 10.0) / (r * r), 0.0, 0.006);
-      bent = normalize(mix(bent, normalize(toBH), grav));
+  // ── 3D fractal — engine1's sdFractal + colorPickover ──
+  float fracAngle=hash1(u_seed*7.7)*6.28;
+  vec3 fracPos=vec3(sin(fracAngle)*45.0, pathCenterY(u_camPos.z-300.0)+10.0, u_camPos.z-300.0);
+  float fracPow=mix(6.0,10.0,hash1(u_seed*5.3))+sin(u_time*0.05)*1.5;
+  float fracRotA=mix(0.05,0.15,hash1(u_seed*9.7))*(hash1(u_seed*4.1)>0.5?1.0:-1.0);
+  float fracRotB=mix(0.04,0.12,hash1(u_seed*6.3))*(hash1(u_seed*8.9)>0.5?1.0:-1.0);
+  vec3 fracResult=marchVoidFractal(ro, rd, fracPos, 10.0, fracPow, fracRotA, fracRotB);
+  bool hitFractal=length(fracResult)>0.001;
 
-      float stepLen = clamp(r * 0.08, 60.0, 1200.0);
-      rp += bent * stepLen;
-      if(length(rp - ro) > FAR_CLIP) break;
+  // ── Ground ──
+  bool hitGround=false;
+  if(!hitFractal && rd.y<0.05){
+    for(int gi=0;gi<40;gi++){
+      float gt=float(gi)*8.0+1.0;
+      vec3 gp=ro+rd*gt;
+      if(gp.y<pathCenterY(gp.z)+0.09){
+        float gtP=gt-8.0;
+        for(int ri=0;ri<6;ri++){float mid=(gtP+gt)*0.5; vec3 mp=ro+rd*mid; if(mp.y<pathCenterY(mp.z)+0.09) gt=mid; else gtP=mid;}
+        vec3 hp=ro+rd*gt;
+        float cx=pathCenterX(hp.z); float hw=pathHalfWidth(hp.z);
+        if(abs(hp.x-cx)<hw && hp.z<ro.z+10.0 && gt>0.5){col=groundColor(hp,ro); hitGround=true;}
+        break;
+      }
     }
-
-    vec3 bg = cosmos(bent, ro);
-
-    vec3 bhDir = normalize(BH_CENTER - ro);
-    float ang = acos(clamp(dot(rd, bhDir), -1.0, 1.0));
-    float core = smoothstep(0.11, 0.020, ang);
-    float halo = smoothstep(0.22, 0.060, ang) - core;
-    float ring = smoothstep(0.070, 0.040, abs(ang - 0.053));
-
-    bg *= 1.0 - core;
-    bg += vec3(0.26,0.14,0.08) * halo * (0.45 + 0.55 * u_audio);
-    bg += vec3(0.28,0.34,0.62) * ring * 0.35;
-
-    float lensRing = exp(-abs(bendClosest - BH_RADIUS * 1.58) * 0.0020);
-    bg += vec3(0.14,0.18,0.30) * lensRing * 0.28;
-
-    col += bg;
   }
 
-  float snow = 0.0;
-  vec2 suv = gl_FragCoord.xy / u_resolution.xy;
-  snow += snowLayer(suv + vec2(u_time * 0.008, 0.0), 48.0, 0.11, 0.16) * 0.55;
-  snow += snowLayer(suv + vec2(-u_time * 0.010, 0.0), 84.0, 0.18, 0.12) * 0.35;
-  snow += snowLayer(suv, 140.0, 0.25, 0.08) * 0.18;
-  col += vec3(0.44, 0.48, 0.56) * snow;
+  // ── BH raymarching ──
+  if(!hitGround && !hitFractal){
+    vec3 p=ro; float traveled=0.0; float closestR=1e9; bool hitBH=false;
+    for(int i=0;i<MARCH_STEPS;i++){
+      vec3 toBH=BH_CENTER-p; float r=length(toBH); closestR=min(closestR,r);
+      if(r<BH_RADIUS){col=vec3(0); hitBH=true; break;}
+      float grav=clamp((BH_RADIUS*(16.0+u_trip*2.0))/(r*r),0.0,0.040);
+      rd=normalize(mix(rd,normalize(toBH),grav));
+      if(r<BH_RADIUS*4.8 && mod(float(i),2.0)<0.5) col+=accretionGlow(p,closestR);
+      float stepLen=clamp(r*0.03,0.75,78.0); stepLen*=1.0+smoothstep(BH_RADIUS*5.5,FAR_CLIP,r)*1.55;
+      p+=rd*stepLen; traveled+=stepLen;
+      if(traveled>FAR_CLIP) break;
+    }
+    if(!hitBH){
+      vec3 bent=rd; vec3 rp=ro; float bendClosest=1e9;
+      for(int i=0;i<BEND_STEPS;i++){
+        vec3 toBH=BH_CENTER-rp; float r=length(toBH); bendClosest=min(bendClosest,r);
+        if(r<BH_RADIUS*1.03) break;
+        bent=normalize(mix(bent,normalize(toBH),clamp((BH_RADIUS*14.0)/(r*r),0.0,0.032)));
+        rp+=bent*clamp(r*0.15,34.0,180.0);
+        if(length(rp-ro)>FAR_CLIP) break;
+      }
+      vec3 bg=cosmos(bent,ro);
+      bg+=vec3(0.16,0.20,0.34)*exp(-abs(bendClosest-BH_RADIUS*1.68)*0.018)*0.34;
+      bg*=1.0-smoothstep(BH_RADIUS*1.30,BH_RADIUS*0.96,bendClosest);
+      col+=bg;
+    }
+  }
 
-  float vign = 1.0 - smoothstep(0.95, 1.65, length(uv));
-  col *= 0.84 + 0.16 * vign;
+  if(hitFractal) col=fracResult;
 
-  col = 1.0 - exp(-col * 1.16);
-  col = pow(max(col, 0.0), vec3(1.0));
+  // ── Fog ──
+  col=mix(col,vec3(0.008,0.010,0.016), hitGround ? 0.12 : 0.20);
 
-  gl_FragColor = vec4(col, 1.0);
+  // ── Cold desaturation ──
+  float lum=dot(col,vec3(0.299,0.587,0.114));
+  col=mix(col,vec3(lum*0.88,lum*0.90,lum*1.04),0.15);
+
+  // ── Vignette ──
+  col*=0.78+0.22*(1.0-smoothstep(0.75,1.5,length(uv)));
+
+  // ── Tonemap ──
+  col=1.0-exp(-col*1.08);
+
+  gl_FragColor=vec4(col,1.0);
 }
 `;
 }
+
+
+
 
 
 
@@ -5714,6 +5561,11 @@ window.startZone2 = function() {
     
     fadeOverlay.style.opacity = "1";
     setTimeout(() => { fadeOverlay.style.opacity = "0"; }, 50);
+    setTimeout(() => {
+        if (typeof window.showTransientCenterOverlay === "function") {
+            window.showTransientCenterOverlay("files/img/rooms/ctrls.png", 1800, 1350);
+        }
+    }, 180);
 
     const checkStart = () => {
         if (!window.isEngine1Dead) {
@@ -5980,25 +5832,31 @@ float cockpitDoor(vec3 p) {
     return sdBox(p-vec3(0.0, FLOOR_Y+0.95, COCKPIT_Z - 0.01), vec3(0.4, 0.95, 0.02));
 }
 
-float exitDoor(vec3 p){
-    // Door geometry stays visible when switched — shows open PNG texture
-    // Only disappears entirely when doorOpen=1 (suction pulls it away)
+float exitDoor(vec3 p) {
     if(u_doorOpen > 0.5) return 8.0;
-    if(p.x > 0.0) return 8.0; // port side only (-X)
+    if(p.x > 0.0) return 8.0;
     float doorH = 1.8;
     float doorD = 0.95;
-    float distToWall = abs(length(p.xy) - FUSE_R);
+    // Flat slab on the port wall — positioned just inside the fuselage
     float dZ = abs(p.z - EXIT_ROW_Z) - doorD * 0.5;
     float dY = abs(p.y - (FLOOR_Y + 0.1 + doorH * 0.5)) - doorH * 0.5;
-    return max(max(dZ, dY), distToWall - 0.12);
+    // Thin shell at the wall radius — sits ON the wall surface
+    float distToWall = length(p.xy) - FUSE_R;
+    float dWall = abs(distToWall + 0.04) - 0.06; // centered 0.04 inside wall, 0.06 thick
+    return max(max(dZ, dY), dWall);
 }
 
 bool inExitHole(vec3 p){
-    // Hole only opens when door is fully open (suction), not just switched
-    if(u_doorOpen < 0.5) return false;
-    return abs(p.z - EXIT_ROW_Z) < 0.48 &&
-           p.y > FLOOR_Y + 0.05 && p.y < FLOOR_Y + 1.95 &&
-           p.x < -FUSE_R + 0.25;
+    // Always carve the wall in the door area so the door SDF is reachable from inside.
+    // The door SDF fills this gap. When doorOpen=1, door SDF returns 8.0 -> open hole.
+    float doorH = 1.8;
+    float doorD = 0.95;
+    bool inDoorArea = abs(p.z - EXIT_ROW_Z) < doorD * 0.52 &&
+                      p.y > FLOOR_Y + 0.05 && p.y < FLOOR_Y + 0.1 + doorH &&
+                      p.x < -FUSE_R + 0.30;
+    if(!inDoorArea) return false;
+    // Always carve when door is switched or open
+    return (u_doorSwitched > 0.5 || u_doorOpen > 0.5);
 }
 
 bool isWindowHit(vec3 p){
@@ -6145,10 +6003,10 @@ void main() {
 
         if (wallID == 2) {
             if (u_altRoute > 0.5) {
-                vec2 frontUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;
-                finalCol = texture2D(u_voidTex, clamp(frontUV, 0.0, 1.0)).rgb;
-                float fogFactor = exp(-t_box * 0.38);
-                finalCol = mix(vec3(0.02, 0.01, 0.02), finalCol, fogFactor);
+                vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
+                vec3 bhCol = texture2D(u_voidTex, clamp(vuv, 0.0, 1.0)).rgb;
+                float fogFactor = exp(-t_box * 0.16);
+                finalCol = mix(vec3(0.012, 0.009, 0.020), bhCol, fogFactor);
             } else {
                 doRaymarch = true;
                 t_march = t_box;
@@ -6273,12 +6131,32 @@ void main() {
                 else if(mid < 3.5) matCol = vec3(0.15, 0.17, 0.32);
                 else               matCol = vec3(0.48, 0.48, 0.52);
 
-                float flicker = 0.7 + 0.3 * sin(u_time*3.9) * sin(u_time*5.7+1.4);
-                vec3 ambient = vec3(0.22, 0.24, 0.28) * flicker;
-                vec3 cockpitLit = vec3(0.15, 0.22, 0.28) * max(dot(n, vec3(0,0,-1)), 0.0) * smoothstep(COCKPIT_Z, COCKPIT_Z-10.0, p.z) * 2.5;
+                // ── DOOR OVERRIDE — if we hit ANY surface in the door area, show the door texture ──
+                float doorH = 1.8;
+                float doorD = 0.95;
+                bool inDoorZone = (u_doorSwitched > 0.5) &&
+                    abs(p.z - EXIT_ROW_Z) < doorD * 0.55 &&
+                    p.y > FLOOR_Y + 0.05 && p.y < FLOOR_Y + 0.1 + doorH &&
+                    p.x < -FUSE_R + 0.35;
+                if(inDoorZone){
+                    if(u_doorOpen > 0.5){
+                        // Door fully open — show exterior void
+                        vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
+                        col = texture2D(u_voidTex, vuv).rgb * 1.2;
+                    } else {
+                        // Door switched but not open — show door-open.png
+                        float u_coord = clamp((p.z - (EXIT_ROW_Z - doorD * 0.5)) / doorD, 0.0, 1.0);
+                        float v_coord = clamp(1.0 - (p.y - (FLOOR_Y + 0.1)) / doorH, 0.0, 1.0);
+                        col = texture2D(u_doorOpenTex, vec2(u_coord, v_coord)).rgb * 0.8;
+                    }
+                } else {
+                    float flicker = 0.7 + 0.3 * sin(u_time*3.9) * sin(u_time*5.7+1.4);
+                    vec3 ambient = vec3(0.22, 0.24, 0.28) * flicker;
+                    vec3 cockpitLit = vec3(0.15, 0.22, 0.28) * max(dot(n, vec3(0,0,-1)), 0.0) * smoothstep(COCKPIT_Z, COCKPIT_Z-10.0, p.z) * 2.5;
 
-                col = matCol * (ambient + emergencyStrip(p) + cockpitLit);
-                col = mix(col, fogCol, fogAmt);
+                    col = matCol * (ambient + emergencyStrip(p) + cockpitLit);
+                    col = mix(col, fogCol, fogAmt);
+                }
             }
         }
         
@@ -6546,10 +6424,10 @@ class Zone3Engine {
         this.voidMode = (!this.isAltRoute && typeof ActiveMode !== 'undefined') ? new ActiveMode(2) : null;
         if(this.voidMode) this.voidMode.maskTex = this._makeBlankTex();
 
-        this.activePOV = 'left'; 
+        this.activePOV = this.isAltRoute ? 'right' : 'left'; 
         this.centerPhase = 'hallway'; 
         this.voidStart = 0;
-        this.bhCamPos = { x: 0.0, y: 1.68, z: -260.0 };
+        this.bhCamPos = { x: 0.0, y: 1.68, z: 70.0 };
         this.bhYaw = 0.0;
         this.bhPitch = -0.05;
         this.bhMovePhase = 0.0;
@@ -6581,6 +6459,7 @@ this.lastRenderTime = performance.now();
 
         // Camera warp state — randomizes on each blink
         this.z3ModeSeed = Math.random() * 100.0;
+        this.blackholeSeed = Math.random() * 10000.0;
         this.z3Trip     = 0.5;
         this.z3ModeTime = 0.0;
         this.z3IsOOB    = 0.0;
@@ -6630,7 +6509,12 @@ this.lastRenderTime = performance.now();
         const filt = window.__audioFilter;
 
         if (this.centerPhase === 'hallway') {
-            // Do nothing — leave engine2's levels alone
+            const p = Math.max(0, Math.min(1, (this.camZ - this.HALL_START_Z) / (this.HALL_END_Z - this.HALL_START_Z)));
+            if (wet)  wet.gain.setTargetAtTime((this.isAltRoute ? 0.28 : 0.20) + p * (this.isAltRoute ? 0.18 : 0.10), t, 1.0);
+            if (dry)  dry.gain.setTargetAtTime((this.isAltRoute ? 0.44 : 0.50) - p * 0.16, t, 1.0);
+            if (filt) filt.frequency.setTargetAtTime((this.isAltRoute ? 520.0 : 650.0) - p * (this.isAltRoute ? 260.0 : 180.0), t, 1.0);
+            if (this._humGain) this._humGain.gain.setTargetAtTime((this.isAltRoute ? 0.008 : 0.004) + p * (this.isAltRoute ? 0.020 : 0.010), t, 1.0);
+            if (this._humOsc)  this._humOsc.frequency.setTargetAtTime((this.isAltRoute ? 52.0 : 62.0) + p * (this.isAltRoute ? 18.0 : 8.0), t, 1.0);
 
         } else if (this.centerPhase === 'cabin') {
             const p = Math.max(0, Math.min(1,
@@ -6670,7 +6554,7 @@ this.lastRenderTime = performance.now();
                 } catch(_) {}
                 if (wet)  wet.gain.setTargetAtTime(0.34 + ai * 0.18, t, 0.45);
                 if (dry)  dry.gain.setTargetAtTime(0.22 + ai * 0.08, t, 0.45);
-                if (filt) filt.frequency.setTargetAtTime(180.0 + ai * 260.0 + sin(now * 0.0017) * 25.0, t, 0.35);
+                if (filt) filt.frequency.setTargetAtTime(180.0 + ai * 260.0 + Math.sin(now * 0.0017) * 25.0, t, 0.35);
                 if (this._humGain) this._humGain.gain.setTargetAtTime(0.020 + ai * 0.028, t, 0.35);
                 if (this._humOsc)  this._humOsc.frequency.setTargetAtTime(42.0 + ai * 18.0, t, 0.35);
             } else {
@@ -6698,9 +6582,21 @@ this.lastRenderTime = performance.now();
         var _z3mob = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
         if (_z3mob) _z3frag = '#define MOBILE\n' + _z3frag;
         const p = gl.createProgram();
-        gl.attachShader(p, compile(gl.VERTEX_SHADER, GLSL.vert));
-        gl.attachShader(p, compile(gl.FRAGMENT_SHADER, _z3frag));
+        const vs = compile(gl.VERTEX_SHADER, GLSL.vert);
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, _z3frag);
+        gl.compileShader(fs);
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+            console.error('[Z3 SHADER COMPILE ERROR] ' + fragKey + ':', gl.getShaderInfoLog(fs));
+            return null;
+        }
+        gl.attachShader(p, vs);
+        gl.attachShader(p, fs);
         gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+            console.error('[Z3 SHADER LINK ERROR] ' + fragKey + ':', gl.getProgramInfoLog(p));
+            return null;
+        }
         return p;
     }
 
@@ -6753,19 +6649,64 @@ this.lastRenderTime = performance.now();
         gl.disable(gl.BLEND);
     }
 
+    _ensurePortalCompositeProg() {
+        if (this._portalCompositeProg) return;
+        this._portalCompositeProg = gl.createProgram();
+        gl.attachShader(this._portalCompositeProg, compile(gl.VERTEX_SHADER, GLSL.vert));
+        gl.attachShader(this._portalCompositeProg, compile(gl.FRAGMENT_SHADER, `
+            precision mediump float;
+            uniform sampler2D u_tex;
+            uniform vec2 u_resolution;
+            uniform float u_alpha;
+            uniform float u_radius;
+            uniform float u_soft;
+            void main() {
+                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                vec2 p = uv * 2.0 - 1.0;
+                p.x *= u_resolution.x / u_resolution.y;
+                float mask = smoothstep(u_radius + u_soft, u_radius - u_soft, length(p));
+                vec3 col = texture2D(u_tex, uv).rgb;
+                gl_FragColor = vec4(col, mask * u_alpha);
+            }
+        `));
+        gl.linkProgram(this._portalCompositeProg);
+    }
+
+    _drawPortalComposite(tex, width, height, alpha, radius, soft) {
+        if (!tex || alpha <= 0.001) return;
+        this._ensurePortalCompositeProg();
+        gl.useProgram(this._portalCompositeProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.uniform1i(gl.getUniformLocation(this._portalCompositeProg, "u_tex"), 0);
+        gl.uniform2f(gl.getUniformLocation(this._portalCompositeProg, "u_resolution"), width, height);
+        gl.uniform1f(gl.getUniformLocation(this._portalCompositeProg, "u_alpha"), alpha);
+        gl.uniform1f(gl.getUniformLocation(this._portalCompositeProg, "u_radius"), radius);
+        gl.uniform1f(gl.getUniformLocation(this._portalCompositeProg, "u_soft"), soft);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        this._drawQuad(this._portalCompositeProg);
+        gl.disable(gl.BLEND);
+    }
+
 
     _bhPathCenterX(z) {
-        return 0.0;
+        const k = Math.max(0.0, Math.min(1.0, (-z - 50.0) / 2800.0));
+        return Math.sin(z * 0.00165 + 0.7) * 22.0 * k + Math.sin(z * 0.006 + 1.8) * 3.5;
     }
 
     _bhPathCenterY(z) {
-        return -0.18;
+        // Match GLSL: smoothstep(-2400, -3100, z) * 30.0
+        const t = Math.max(0, Math.min(1, (z - (-2400.0)) / (-3100.0 - (-2400.0))));
+        const ss = t * t * (3.0 - 2.0 * t);
+        return -1.25 + ss * 30.0;
     }
 
     _resetBlackholeStart() {
         const z = -260.0;
-        this.bhCamPos.x = 0.0;
-        this.bhCamPos.y = 1.68;
+        this.blackholeSeed = Math.random() * 10000.0;
+        this.bhCamPos.x = this._bhPathCenterX(z);
+        this.bhCamPos.y = this._bhPathCenterY(z) + 3.85;
         this.bhCamPos.z = z;
         this.bhYaw = 0.0;
         this.bhPitch = -0.05;
@@ -6793,8 +6734,12 @@ this.lastRenderTime = performance.now();
         gl.uniform3f(gl.getUniformLocation(prog, 'u_camPos'), this.bhCamPos.x, this.bhCamPos.y, this.bhCamPos.z);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_movePhase'), this.bhMovePhase || 0.0);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_speed'), this.bhSpeed || 0.0);
-        gl.uniform1f(gl.getUniformLocation(prog, 'u_seed'), this.z3ModeSeed || 0.0);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_seed'), this.blackholeSeed || this.z3ModeSeed || 0.0);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_audio'), ai);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_trip'), Math.max(this.z3Trip || 0.0, 1.10));
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texHallBottom);
+        gl.uniform1i(gl.getUniformLocation(prog, 'u_texGround'), 0);
         this._drawQuad(prog);
     }
 
@@ -6856,10 +6801,10 @@ checkPOVThreshold(now, currentMx) {
 
     if (this.centerPhase === 'hallway') {
         if (this.isAltRoute) {
-            if (this.activePOV === 'left') {
-                if (currentMx <= -0.75) {
+            if (this.activePOV === 'right') {
+                if (currentMx >= 0.75) {
                     this.pendingPOV = 'center';
-                    this.slideDir = -1;
+                    this.slideDir = +1;
                     this.slideState = 'out';
                     this.slideStart = now;
                     this.povSwitchTime = now;
@@ -6868,8 +6813,8 @@ checkPOVThreshold(now, currentMx) {
                 }
             } else if (this.activePOV === 'center') {
                 if (currentMx <= -0.75) {
-                    this.pendingPOV = 'left';
-                    this.slideDir = +1;
+                    this.pendingPOV = 'right';
+                    this.slideDir = -1;
                     this.slideState = 'out';
                     this.slideStart = now;
                     this.povSwitchTime = now;
@@ -6954,37 +6899,49 @@ checkPOVThreshold(now, currentMx) {
             if (this.isAltRoute) {
                 const yawT = (this.cx || 0.0) * 0.24;
                 const pitchT = -0.05 + (this.cy || 0.0) * 0.11;
+                const hallP = Math.max(0, Math.min(1, (this.camZ - this.HALL_START_Z) / (this.HALL_END_Z - this.HALL_START_Z)));
                 this.bhYaw += (yawT - this.bhYaw) * Math.min(1.0, 0.10 * timeScale);
                 this.bhPitch += (pitchT - this.bhPitch) * Math.min(1.0, 0.10 * timeScale);
-                this.bhCamPos.x = 0.0;
-                this.bhCamPos.y = 1.68;
-                this.bhSpeed += (0.0 - this.bhSpeed) * Math.min(1.0, 0.10 * timeScale);
+                this.bhCamPos.z = 120.0 - hallP * 50.0;
+                this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z);
+                this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.20;
+                // Don't drive movePhase/speed during hallway — path shouldn't scroll yet
+                this.bhMovePhase = 0.0;
+                this.bhSpeed = 0.0;
             }
             if (isWalking) this.camZ += walkSpeed; 
             if (this.camZ >= this.HALL_END_Z) {
-                this.cx = 0; this.cy = 0;
                 if (this.isAltRoute) {
                     this.centerPhase = 'void';
                     this.voidStart = now;
                     this.camZ = this.HALL_END_Z;
                 } else {
+                    this.cx = 0; this.cy = 0;
                     this.centerPhase = 'cabin';
                     this.cabinState = 'forward';
                 }
             }
         } else if (this.centerPhase === 'void') {
             if (this.isAltRoute) {
-                const walkAmt = isWalking ? (0.18 * timeScale) : 0.0;
-                this.bhCamPos.x = 0.0;
-                this.bhCamPos.y = 1.68;
+                const walkAmt = isWalking ? (1.20 * timeScale) : 0.0;
                 if (walkAmt > 0.0) {
-                    this.bhCamPos.z -= walkAmt;
-                    this.bhMovePhase += 0.022 * timeScale;
-                    this.bhSpeed += (1.0 - this.bhSpeed) * Math.min(1.0, 0.05 * timeScale);
+                    this.bhCamPos.z -= 18.0 * (timeScale / 60.0);
+                    // Clamp — never pass the BH, infinite approach
+                    this.bhCamPos.z = Math.max(this.bhCamPos.z, -3050.0);
+                    this.bhMovePhase += 7.5 * (timeScale / 60.0);
+                    this.bhSpeed += (1.0 - this.bhSpeed) * Math.min(1.0, 0.24 * timeScale);
                     this.z3Trip = Math.min(2.35, this.z3Trip + 0.0011 * timeScale);
                 } else {
-                    this.bhSpeed += (0.0 - this.bhSpeed) * Math.min(1.0, 0.10 * timeScale);
+                    this.bhSpeed = 0.0;
                 }
+                const bobY = isWalking ? Math.sin(this.bhMovePhase * 2.0) * 0.07 : 0.0;
+                const swayX = isWalking ? Math.sin(this.bhMovePhase) * 0.05 : 0.0;
+                // Idle body sway — subtle weight shift + breathing even when still
+                const idleTime = now * 0.001;
+                const breathY = Math.sin(idleTime * 0.8) * 0.012 + Math.sin(idleTime * 1.3) * 0.006;
+                const weightX = Math.sin(idleTime * 0.35) * 0.015 + Math.sin(idleTime * 0.57) * 0.008;
+                this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z) + swayX + weightX;
+                this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.85 + bobY + breathY;
                 const yawT = (this.cx || 0.0) * 0.24;
                 const pitchT = -0.05 + (this.cy || 0.0) * 0.11;
                 this.bhYaw += (yawT - this.bhYaw) * Math.min(1.0, 0.10 * timeScale);
@@ -7014,19 +6971,19 @@ checkPOVThreshold(now, currentMx) {
                     if (this.camZ <= this.EXIT_ROW_Z + 0.2) { 
                         this.cabinState = 'suction'; 
                         this.doorOpen = 1.0;
-                        this.zoomTarget = 1.5;
+                        this.zoomTarget = 1.1;
                         this.cx = 0; this.cy = 0;
                     }
                     break;
                 case 'suction':
                     this.suctionShake = 0.015;
                     if (!this.suctionYawSnapped) {
-                        // Phase 1: drift toward port door (-X)
+                        // Drift toward port door (-X)
                         this.camX += (-1.1 - this.camX) * Math.min(1.0, 0.004 * timeScale);
                         if (this.camX < -0.55) {
                             this.suctionYawSnapped = true;
-                            this.yawTarget = Math.PI * 0.5; // from stern (PI), left turn faces port (-X)
-                            this.zoomTarget = 1.8;
+                            this.yawTarget = Math.PI * 0.5;
+                            this.zoomTarget = 1.15;
                         }
                     } else {
                         // Continue drifting out through door
@@ -7131,7 +7088,8 @@ checkPOVThreshold(now, currentMx) {
 
         gl.clearColor(0,0,0,1); gl.clear(gl.COLOR_BUFFER_BIT);
         
-        if (this.voidFBO && this.centerPhase !== 'falling') {
+        const needFBO = this.activePOV !== 'center' || this.centerPhase !== 'void';
+        if (this.voidFBO && this.centerPhase !== 'falling' && needFBO) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.voidFBO.fbo); 
             gl.viewport(0, 0, cWidth, cHeight);
             gl.clearColor(0,0,0,1); gl.clear(gl.COLOR_BUFFER_BIT);
@@ -7144,7 +7102,7 @@ checkPOVThreshold(now, currentMx) {
             gl.viewport(0, 0, cWidth, cHeight);
         }
 
-        if (this.activePOV === 'left' && this.isAltRoute && this.bedroomProg) {
+        if (this.activePOV === 'right' && this.isAltRoute && this.bedroomProg) {
             gl.useProgram(this.bedroomProg);
             gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.texBedroom);
             gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.voidFBO.tex);
@@ -7282,6 +7240,8 @@ checkPOVThreshold(now, currentMx) {
         if (this.voidMode) this.voidMode.destroy();
         if (this.voidFBO) { gl.deleteTexture(this.voidFBO.tex); gl.deleteFramebuffer(this.voidFBO.fbo); }
         gl.deleteProgram(this.bathroomProg); gl.deleteProgram(this.bedroomProg); gl.deleteProgram(this.centerProg); gl.deleteProgram(this.fallProg); gl.deleteProgram(this.voidScreenProg); gl.deleteProgram(this.blackholeProg);
+        if (this._overlayProg) gl.deleteProgram(this._overlayProg);
+        if (this._portalCompositeProg) gl.deleteProgram(this._portalCompositeProg);
         gl.deleteTexture(this.texBathroomHole); gl.deleteTexture(this.texBedroom); gl.deleteTexture(this.texDoorClosed);
         gl.deleteTexture(this.texDoorOpen); gl.deleteTexture(this.texCockpit);
         gl.deleteTexture(this.texHallLeft); gl.deleteTexture(this.texHallRight);
