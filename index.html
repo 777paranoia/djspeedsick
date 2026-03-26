@@ -254,6 +254,14 @@ function updateIntelligence() {
 function toggleConky() {
     const sidebar = document.getElementById('conky-sidebar');
     const tickers = document.querySelectorAll('.ticker-wrap');
+
+    // ── Arm black hole escape on any conky click while in z3b void ──
+    if (window.currentZone3 && window.currentZone3.isAltRoute && 
+        window.currentZone3.centerPhase === 'void' && 
+        window.currentZone3.bhEscapePhase === 'none') {
+        window.currentZone3.bhEscapeArmed = true;
+        window.currentZone3.bhEscapeBlinkCount = 0;
+    }
     
     if (sidebar.style.display === 'none' || sidebar.style.display === '') {
         sidebar.style.display = 'block';
@@ -2278,7 +2286,6 @@ uniform float u_wake;
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     uv.y = 1.0 - uv.y;
-
     float screenAspect = u_resolution.x / u_resolution.y;
     float imgAspect = 1080.0 / 1920.0;
     float visibleAspect = mix(imgAspect, 1.0, smoothstep(0.7, 1.4, screenAspect));
@@ -2295,13 +2302,8 @@ void main() {
     tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;
     tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;
     tuv = clamp(tuv, 0.0, 1.0);
-
     vec4 room = texture2D(u_texEnv1, tuv);
     float fade = (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake);
-
-    // Painter's algorithm: output PNG's own alpha so the transparent mirror cutout
-    // reveals the mirrorFBO rendered underneath in engine2.js.
-    // No UV math needed — the PNG shape does all the masking.
     gl_FragColor = vec4(room.rgb * fade, room.a);
 }
 `;// mode-right2.js
@@ -2342,38 +2344,22 @@ void main() {
     tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;
     tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;
     tuv = clamp(tuv, 0.0, 1.0);
-
     vec4 room = texture2D(u_texEnv1, tuv);
     vec3 col = room.rgb;
-
-
     if (room.a < 0.1) {
         float fboAspect = u_resolution.x / u_resolution.y;
-        float wxMin = 480.0 / 1243.0;
-        float wxMax = 820.0 / 1243.0;
-        float wyMin = 680.0 / 2048.0;
-        float wyMax = 1350.0 / 2048.0;
-        vec2 winUV = vec2(
-            (tuv.x - wxMin) / (wxMax - wxMin),
-            1.0 - ((tuv.y - wyMin) / (wyMax - wyMin))
-        );
+        float wxMin = 480.0 / 1243.0; float wxMax = 820.0 / 1243.0;
+        float wyMin = 680.0 / 2048.0; float wyMax = 1350.0 / 2048.0;
+        vec2 winUV = vec2((tuv.x - wxMin) / (wxMax - wxMin), 1.0 - ((tuv.y - wyMin) / (wyMax - wyMin)));
         float winAspect = (wxMax - wxMin) * 1243.0 / ((wyMax - wyMin) * 2048.0);
         vec2 centered = winUV - 0.5;
-        if (fboAspect < winAspect) {
-            centered.y *= fboAspect / winAspect;
-        } else {
-            centered.x *= winAspect / fboAspect;
-        }
+        if (fboAspect < winAspect) centered.y *= fboAspect / winAspect;
+        else centered.x *= winAspect / fboAspect;
         winUV = centered + 0.5;
         col = texture2D(u_windowTex, clamp(winUV, 0.0, 1.0)).rgb;
     }
-
-
     bool isGreen = room.g > 0.4 && room.r < 0.25 && room.b < 0.25;
-    if (isGreen) {
-        col = texture2D(u_bcTex, tuv).rgb;
-    }
-
+    if (isGreen) { col = texture2D(u_bcTex, tuv).rgb; }
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;
@@ -2386,89 +2372,52 @@ window.GLSL.modules = window.GLSL.modules || {};
 
 GLSL.modules['z3_bathroom'] = `
 precision mediump float;
-
-uniform vec2  u_resolution;
-uniform vec2  u_mouse;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
 uniform float u_time;
 uniform float u_blink;
 uniform float u_wake;
-
-uniform sampler2D u_texEnv1;      
-uniform sampler2D u_voidTex;      
+uniform sampler2D u_texEnv1;
+uniform sampler2D u_voidTex;
 
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     uv.y = 1.0 - uv.y;
-
     float screenAspect = u_resolution.x / u_resolution.y;
     float imgAspect = 1080.0 / 1920.0;
     float visibleAspect = mix(imgAspect, 1.0, smoothstep(0.7, 1.4, screenAspect));
     float panRangeX = mix(0.06, 0.10, smoothstep(0.7, 1.4, screenAspect));
     float panRangeY = mix(0.06, 0.28, smoothstep(0.7, 1.4, screenAspect));
     vec2 tuv;
-    if (screenAspect > visibleAspect) {
-        float scale = visibleAspect / screenAspect;
-        tuv = vec2(uv.x, (uv.y - 0.5) * scale + 0.5);
-    } else {
-        float scale = screenAspect / visibleAspect;
-        tuv = vec2((uv.x - 0.5) * scale + 0.5, uv.y);
-    }
+    if (screenAspect > visibleAspect) { float scale = visibleAspect / screenAspect; tuv = vec2(uv.x, (uv.y - 0.5) * scale + 0.5); }
+    else { float scale = screenAspect / visibleAspect; tuv = vec2((uv.x - 0.5) * scale + 0.5, uv.y); }
     tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;
     tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;
     tuv = clamp(tuv, 0.0, 1.0);
-
     vec4 room = texture2D(u_texEnv1, tuv);
-
-    
     vec3 col = room.rgb;
-
     if (room.a < 0.15) {
-        
         float fboAspect = u_resolution.x / u_resolution.y;
-
-        
-        float hxMin = 0.25;
-        float hxMax = 0.75;
-        float hyMin = 0.20;
-        float hyMax = 0.80;
-
-        vec2 holeUV = vec2(
-            (tuv.x - hxMin) / (hxMax - hxMin),
-            1.0 - ((tuv.y - hyMin) / (hyMax - hyMin))
-        );
-
+        float hxMin = 0.25; float hxMax = 0.75; float hyMin = 0.20; float hyMax = 0.80;
+        vec2 holeUV = vec2((tuv.x - hxMin) / (hxMax - hxMin), 1.0 - ((tuv.y - hyMin) / (hyMax - hyMin)));
         float holeAspect = (hxMax - hxMin) * 1437.0 / ((hyMax - hyMin) * 2048.0);
         vec2 centered = holeUV - 0.5;
-        if (fboAspect < holeAspect) {
-            centered.y *= fboAspect / holeAspect;
-        } else {
-            centered.x *= holeAspect / fboAspect;
-        }
+        if (fboAspect < holeAspect) centered.y *= fboAspect / holeAspect;
+        else centered.x *= holeAspect / fboAspect;
         holeUV = centered + 0.5;
-
         vec3 voidCol = texture2D(u_voidTex, clamp(holeUV, 0.0, 1.0)).rgb;
-
-        
         float edgeBlend = smoothstep(0.0, 0.15, room.a);
         col = mix(voidCol, room.rgb, edgeBlend);
-
-        
         float dustNoise = fract(sin(dot(tuv * 200.0, vec2(12.9898, 78.233)) + u_time * 0.3) * 43758.5453);
         float dustMask = smoothstep(0.0, 0.2, room.a) * (1.0 - smoothstep(0.2, 0.35, room.a));
         col += vec3(0.15, 0.10, 0.06) * dustNoise * dustMask * 0.3;
     }
-
-    
     vec2 vuv = gl_FragCoord.xy / u_resolution;
     float dmgVig = 1.0 - 0.3 * pow(length((vuv - 0.5) * vec2(1.4, 1.0)), 1.6);
     col *= dmgVig;
-
-
     float fogMix = 0.12 + 0.04 * sin(u_time * 0.2);
     col = mix(col, vec3(0.06, 0.07, 0.09), fogMix);
-
     col *= (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake);
-
     gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -3174,7 +3123,6 @@ class ActiveMode {
             shake: gl.getUniformLocation(this.prog,"u_shake"), wake: gl.getUniformLocation(this.prog,"u_wake"),
             modeSeed: gl.getUniformLocation(this.prog,"u_modeSeed"), audio: gl.getUniformLocation(this.prog,"u_audio"),
             texSize: gl.getUniformLocation(this.prog,"u_texSize"),
-            isOOB: gl.getUniformLocation(this.prog, "u_isOOB"),
             modeTime: gl.getUniformLocation(this.prog, "u_modeTime"),
             trip: gl.getUniformLocation(this.prog, "u_trip")
         };
@@ -4658,8 +4606,9 @@ class Zone2RoomMode {
             shake: gl.getUniformLocation(this.prog, "u_shake"),
             flash: gl.getUniformLocation(this.prog, "u_flash"),
             audio: gl.getUniformLocation(this.prog, "u_audio"),
-            modeSeed: gl.getUniformLocation(this.prog, "u_modeSeed")
+            modeSeed: gl.getUniformLocation(this.prog, "u_modeSeed"),
         };
+
     }
     
     render(now, cx, cy, blink, windowFBOTex, shake, flash, audioIntensity, trip, modeSeed) {
@@ -4707,6 +4656,7 @@ class Zone2RoomMode {
         if (this.U.flash !== null) gl.uniform1f(this.U.flash, flash || 0.0);
         if (this.U.audio !== null) gl.uniform1f(this.U.audio, audioIntensity || 0.0);
         if (this.U.modeSeed !== null) gl.uniform1f(this.U.modeSeed, modeSeed || 0.0);
+
         
         if (!this.quadBuffer) {
             this.quadBuffer = gl.createBuffer();
@@ -4929,6 +4879,7 @@ class Zone2Engine {
         this.z3bTurbulenceStart = -1;
         this.z3TransitionStarted = false;
         this.isDead = false;
+
     }
 
     makeFBO() {
@@ -5171,6 +5122,7 @@ this.tickSlide(now);
                     this.z2Trip = 0.2 + Math.random() * 1.5;
                     this.z2FractalSeed = Math.random() * 100.0;
                     this.z2BlinkPeakTime = now;
+
                 }
             } else if (el < 320) {
                 this.rBlink = 1.0 - ((el - 200) / 120);
@@ -5600,50 +5552,35 @@ window.GLSL.modules = window.GLSL.modules || {};
 
 GLSL.modules['z3_bedroom'] = `
 precision mediump float;
-
-uniform vec2  u_resolution;
-uniform vec2  u_mouse;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
 uniform float u_time;
 uniform float u_blink;
 uniform float u_wake;
-
 uniform sampler2D u_texEnv1;
 uniform sampler2D u_voidTex;
 
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     uv.y = 1.0 - uv.y;
-
     float screenAspect = u_resolution.x / u_resolution.y;
     float imgAspect = 1080.0 / 1920.0;
     float visibleAspect = mix(imgAspect, 1.0, smoothstep(0.7, 1.4, screenAspect));
     float panRangeX = mix(0.06, 0.10, smoothstep(0.7, 1.4, screenAspect));
     float panRangeY = mix(0.06, 0.28, smoothstep(0.7, 1.4, screenAspect));
     vec2 tuv;
-    if (screenAspect > visibleAspect) {
-        float scale = visibleAspect / screenAspect;
-        tuv = vec2(uv.x, (uv.y - 0.5) * scale + 0.5);
-    } else {
-        float scale = screenAspect / visibleAspect;
-        tuv = vec2((uv.x - 0.5) * scale + 0.5, uv.y);
-    }
+    if (screenAspect > visibleAspect) { float scale = visibleAspect / screenAspect; tuv = vec2(uv.x, (uv.y - 0.5) * scale + 0.5); }
+    else { float scale = screenAspect / visibleAspect; tuv = vec2((uv.x - 0.5) * scale + 0.5, uv.y); }
     tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;
     tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;
     tuv = clamp(tuv, 0.0, 1.0);
-
     vec4 room = texture2D(u_texEnv1, tuv);
     vec3 col = room.rgb;
-
     if (room.a < 0.1) {
         float fboAspect = u_resolution.x / u_resolution.y;
-        float wxMin = 480.0 / 1243.0;
-        float wxMax = 820.0 / 1243.0;
-        float wyMin = 680.0 / 2048.0;
-        float wyMax = 1350.0 / 2048.0;
-        vec2 winUV = vec2(
-            (tuv.x - wxMin) / (wxMax - wxMin),
-            1.0 - ((tuv.y - wyMin) / (wyMax - wyMin))
-        );
+        float wxMin = 480.0 / 1243.0; float wxMax = 820.0 / 1243.0;
+        float wyMin = 680.0 / 2048.0; float wyMax = 1350.0 / 2048.0;
+        vec2 winUV = vec2((tuv.x - wxMin) / (wxMax - wxMin), 1.0 - ((tuv.y - wyMin) / (wyMax - wyMin)));
         float winAspect = (wxMax - wxMin) * 1243.0 / ((wyMax - wyMin) * 2048.0);
         vec2 centered = winUV - 0.5;
         if (fboAspect < winAspect) centered.y *= fboAspect / winAspect;
@@ -5651,16 +5588,11 @@ void main() {
         winUV = centered + 0.5;
         col = texture2D(u_voidTex, clamp(winUV, 0.0, 1.0)).rgb;
     }
-
     bool isGreen = room.g > 0.4 && room.r < 0.25 && room.b < 0.25;
-    if (isGreen) {
-        col = texture2D(u_voidTex, tuv).rgb;
-    }
-
+    if (isGreen) { col = texture2D(u_voidTex, tuv).rgb; }
     float fogMix = 0.10 + 0.03 * sin(u_time * 0.2);
     col = mix(col, vec3(0.04, 0.05, 0.08), fogMix);
     col *= (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake);
-
     gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -6376,7 +6308,7 @@ class Zone3Engine {
         this.texCockpit      = loadStaticTex("files/img/rooms/z3/cockpit.png");
         
         this.texHallLeft     = loadStaticTex("files/img/rooms/z2/hallway/RIGHTWALL.png");
-        this.texHallRight    = loadStaticTex("files/img/rooms/z2/hallway/LEFTWALL.png");
+        this.texHallRight    = loadStaticTex("files/img/rooms/z2/hallway/LEFTWALL_B.png");
         this.texHallTop      = loadStaticTex("files/img/rooms/z2/hallway/TOP.png");
         this.texHallBottom   = loadStaticTex("files/img/rooms/z2/hallway/GROUND.png");
         
@@ -6438,9 +6370,16 @@ this.lastRenderTime = performance.now();
         this.blinkSeeded = false;
         this.rBlink      = 0.0;
 
+
         // Red continuation from engine2 crash impact
         this.z3RedStart = performance.now();
         this.z3RedDone = false;
+
+        // ── Black hole escape sequence (z3b void + conky toggle) ──
+        this.bhEscapeArmed = false;      // conky was clicked during z3b void
+        this.bhEscapeBlinkCount = 0;     // blinks counted after conky click
+        this.bhEscapePhase = 'none';     // none → rising → sucking → warp → black → falling
+        this.bhEscapeStart = 0;          // timestamp for current escape phase
 
         // Audio
         this._resetBlackholeStart();
@@ -6516,11 +6455,39 @@ this.lastRenderTime = performance.now();
                         ai = n > 0 ? sum / (n * 255.0) : 0.0;
                     }
                 } catch(_) {}
+                
+                // ── BH escape audio override ──
+                if (this.bhEscapePhase === 'rising') {
+                    const ep = Math.min((now - this.bhEscapeStart) / 3000.0, 1.0);
+                    if (wet)  wet.gain.setTargetAtTime(0.34 + ep * 0.15, t, 0.3);
+                    if (filt) filt.frequency.setTargetAtTime(180.0 - ep * 80.0, t, 0.3);
+                    if (this._humGain) this._humGain.gain.setTargetAtTime(0.025 + ep * 0.03, t, 0.3);
+                    if (this._humOsc)  this._humOsc.frequency.setTargetAtTime(42.0 + ep * 20.0, t, 0.3);
+                } else if (this.bhEscapePhase === 'sucking') {
+                    const ep = Math.min((now - this.bhEscapeStart) / 4000.0, 1.0);
+                    if (wet)  wet.gain.setTargetAtTime(0.49 + ep * 0.20, t, 0.2);
+                    if (dry)  dry.gain.setTargetAtTime(0.30 - ep * 0.20, t, 0.2);
+                    if (filt) filt.frequency.setTargetAtTime(100.0 - ep * 50.0, t, 0.2);
+                    if (this._humGain) this._humGain.gain.setTargetAtTime(0.055 + ep * 0.04, t, 0.2);
+                    if (this._humOsc)  this._humOsc.frequency.setTargetAtTime(62.0 + ep * 40.0, t, 0.2);
+                } else if (this.bhEscapePhase === 'warp') {
+                    if (wet)  wet.gain.setTargetAtTime(0.69, t, 0.08);
+                    if (dry)  dry.gain.setTargetAtTime(0.05, t, 0.08);
+                    if (filt) filt.frequency.setTargetAtTime(40.0, t, 0.08);
+                    if (this._humGain) this._humGain.gain.setTargetAtTime(0.10, t, 0.08);
+                    if (this._humOsc)  this._humOsc.frequency.setTargetAtTime(120.0, t, 0.08);
+                } else if (this.bhEscapePhase === 'black' || this.bhEscapePhase === 'falling') {
+                    if (wet) wet.gain.setTargetAtTime(0.0, t, 0.3);
+                    if (dry) dry.gain.setTargetAtTime(0.0, t, 0.3);
+                    if (this._humGain) this._humGain.gain.setTargetAtTime(0.0, t, 0.2);
+                } else {
+                    // Normal void audio
                 if (wet)  wet.gain.setTargetAtTime(0.34 + ai * 0.18, t, 0.45);
                 if (dry)  dry.gain.setTargetAtTime(0.22 + ai * 0.08, t, 0.45);
                 if (filt) filt.frequency.setTargetAtTime(180.0 + ai * 260.0 + Math.sin(now * 0.0017) * 25.0, t, 0.35);
                 if (this._humGain) this._humGain.gain.setTargetAtTime(0.020 + ai * 0.028, t, 0.35);
                 if (this._humOsc)  this._humOsc.frequency.setTargetAtTime(42.0 + ai * 18.0, t, 0.35);
+                }
             } else {
                 if (wet) wet.gain.setTargetAtTime(0.0, t, 0.7);
                 if (dry) dry.gain.setTargetAtTime(0.0, t, 0.7);
@@ -6763,6 +6730,7 @@ this.lastRenderTime = performance.now();
 checkPOVThreshold(now, currentMx) {
     if (this.slideState !== 'idle' || (now - this.povSwitchTime) < 600) return;
 
+
     if (this.centerPhase === 'hallway') {
         if (this.isAltRoute) {
             if (this.activePOV === 'right') {
@@ -6887,6 +6855,113 @@ checkPOVThreshold(now, currentMx) {
             }
         } else if (this.centerPhase === 'void') {
             if (this.isAltRoute) {
+                
+                // ── BLACK HOLE ESCAPE SEQUENCE ──
+                if (this.bhEscapePhase !== 'none') {
+                    const escElapsed = now - this.bhEscapeStart;
+                    
+                    if (this.bhEscapePhase === 'rising') {
+                        // Phase 1 (0-3s): Universe distorts, you rise off the path
+                        // Camera lifts up, ground drops away, slight pull toward BH
+                        const t = Math.min(escElapsed / 3000.0, 1.0);
+                        const ease = t * t; // accelerating
+                        
+                        // Rise up off the path
+                        this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.85 + ease * 25.0;
+                        // Slight drift toward BH
+                        this.bhCamPos.z -= 2.0 * (timeScale / 60.0) * ease;
+                        // Pitch down to see the ground receding
+                        this.bhPitch = -0.05 - ease * 0.15;
+                        // Shake increases
+                        this.suctionShake = ease * 0.03;
+                        
+                        // Keep move phase going for visual continuity
+                        this.bhMovePhase += 2.0 * (timeScale / 60.0);
+                        this.bhSpeed = 0.3 + ease * 0.4;
+                        
+                        if (t >= 1.0) {
+                            this.bhEscapePhase = 'sucking';
+                            this.bhEscapeStart = now;
+                        }
+                        
+                    } else if (this.bhEscapePhase === 'sucking') {
+                        // Phase 2 (0-4s): Slowly getting pulled toward the BH
+                        // Camera accelerates toward the black hole, universe warps
+                        const t = Math.min(escElapsed / 4000.0, 1.0);
+                        const ease = t * t * t; // cubic acceleration - slow then fast
+                        
+                        // Accelerate toward BH
+                        const pullSpeed = 30.0 + ease * 200.0;
+                        this.bhCamPos.z -= pullSpeed * (timeScale / 60.0);
+                        
+                        // Rise higher as pulled in
+                        this.bhCamPos.y += ease * 8.0 * (timeScale / 60.0);
+                        
+                        // Pitch tilts to look at BH center
+                        this.bhPitch = -0.20 + ease * 0.15;
+                        
+                        // Yaw spirals slightly
+                        this.bhYaw += ease * 0.02 * timeScale;
+                        
+                        // Increasing shake and trip
+                        this.suctionShake = 0.03 + ease * 0.06;
+                        this.z3Trip = Math.min(3.0, this.z3Trip + 0.008 * timeScale);
+                        
+                        // Speed ramps for ground texture scrolling
+                        this.bhMovePhase += (10.0 + ease * 40.0) * (timeScale / 60.0);
+                        this.bhSpeed = 0.7 + ease * 0.8;
+                        
+                        // Path center still tracks so ground looks right
+                        this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z);
+                        
+                        if (t >= 1.0) {
+                            this.bhEscapePhase = 'warp';
+                            this.bhEscapeStart = now;
+                        }
+                        
+                    } else if (this.bhEscapePhase === 'warp') {
+                        // Phase 3 (0-1.5s): WARP SPEED — instant jump to max velocity
+                        // Everything elongates, streaks, then smash cut to black
+                        const t = Math.min(escElapsed / 1500.0, 1.0);
+                        
+                        // Extreme speed
+                        this.bhCamPos.z -= 800.0 * (timeScale / 60.0);
+                        this.bhMovePhase += 120.0 * (timeScale / 60.0);
+                        this.bhSpeed = 1.5;
+                        
+                        // Max shake, increasing trip
+                        this.suctionShake = 0.09;
+                        this.z3Trip = 3.0;
+                        
+                        // Spiral into BH center
+                        this.bhYaw += 0.06 * timeScale;
+                        this.bhPitch += 0.02 * timeScale;
+                        
+                        if (t >= 1.0) {
+                            this.bhEscapePhase = 'black';
+                            this.bhEscapeStart = now;
+                            this.suctionShake = 0.0;
+                            this.bhSpeed = 0.0;
+                        }
+                        
+                    } else if (this.bhEscapePhase === 'black') {
+                        // Phase 4 (0-1.2s): Hold on black, then transition to falling
+                        const t = Math.min(escElapsed / 1200.0, 1.0);
+                        // rBlink forced to 1.0 in render (screen is black)
+                        
+                        if (t >= 1.0) {
+                            this.bhEscapePhase = 'falling';
+                            this.centerPhase = 'falling';
+                            this.fallStart = now;
+                            this.cx = 0; this.cy = 0;
+                        }
+                    }
+                    
+                    // Skip normal void walking during escape
+                    this.z3IsOOB = 1.0;
+                    
+                } else {
+                    // ── Normal z3b void walking ──
                 const walkAmt = isWalking ? (1.20 * timeScale) : 0.0;
                 if (walkAmt > 0.0) {
                     this.bhCamPos.z -= 18.0 * (timeScale / 60.0);
@@ -6911,6 +6986,7 @@ checkPOVThreshold(now, currentMx) {
                 this.bhYaw += (yawT - this.bhYaw) * Math.min(1.0, 0.10 * timeScale);
                 this.bhPitch += (pitchT - this.bhPitch) * Math.min(1.0, 0.10 * timeScale);
                 this.z3IsOOB = 1.0;
+                }
             } else {
                 if (isWalking) this.z3Trip = Math.min(2.35, this.z3Trip + 0.0035 * timeScale);
                 this.z3IsOOB = 1.0;
@@ -6993,8 +7069,13 @@ checkPOVThreshold(now, currentMx) {
         if (typeof this.cx === 'undefined') { this.cx = currentMx; this.cy = currentMy; }
         
         if (this.centerPhase !== 'falling') {
+            // Freeze mouse during late escape phases
+            if (this.bhEscapePhase === 'warp' || this.bhEscapePhase === 'black') {
+                // Lock camera - no mouse input
+            } else {
             this.cx += (currentMx - this.cx) * Math.min(1.0, 0.12 * timeScale); 
             this.cy += (currentMy - this.cy) * Math.min(1.0, 0.12 * timeScale);
+            }
         } else {
             this.cx = currentMx;
             this.cy = currentMy;
@@ -7025,6 +7106,17 @@ checkPOVThreshold(now, currentMx) {
                     this.z3IsOOB    = Math.random() > 0.4 ? 1.0 : 0.0;
                     this.z3ModeStart = now;
                     this.z3BlinkPeakTime = now;
+
+                    
+                    // ── BH escape blink counting ──
+                    if (this.bhEscapeArmed && this.bhEscapePhase === 'none' && 
+                        this.isAltRoute && this.centerPhase === 'void') {
+                        this.bhEscapeBlinkCount++;
+                        if (this.bhEscapeBlinkCount >= 2) {
+                            this.bhEscapePhase = 'rising';
+                            this.bhEscapeStart = now;
+                        }
+                    }
                 }
             }
             else if (el < 320) this.rBlink = 1.0-((el-200)/120); 
@@ -7043,6 +7135,10 @@ checkPOVThreshold(now, currentMx) {
         else if (this.cabinState === 'suction') stateBoost = 2.5;
         if (this.centerPhase === 'falling') stateBoost = 3.0;
         if (this.fractalActive > 0.5) stateBoost += 0.5;
+        // BH escape escalation
+        if (this.bhEscapePhase === 'rising') stateBoost = 2.0;
+        else if (this.bhEscapePhase === 'sucking') stateBoost = 3.5;
+        else if (this.bhEscapePhase === 'warp') stateBoost = 5.0;
         // Walk depth into cabin escalates
         var depthBoost = 0;
         if (this.centerPhase === 'cabin') {
@@ -7109,6 +7205,27 @@ checkPOVThreshold(now, currentMx) {
                 const voidAge = (now - (this.voidStart || now)) * 0.001;
                 const redPulse = Math.max(0.0, Math.min(0.25, voidAge * 0.03));
                 if (redPulse > 0.001) this._drawOverlay(0.16, 0.0, 0.0, redPulse);
+                
+                // ── BH escape visual overlays ──
+                if (this.bhEscapePhase === 'rising') {
+                    // Slight vignette darkening as you lift off
+                    const t = Math.min((now - this.bhEscapeStart) / 3000.0, 1.0);
+                    this._drawOverlay(0.0, 0.0, 0.02, t * 0.15);
+                } else if (this.bhEscapePhase === 'sucking') {
+                    // Increasing purple/dark vignette as BH pulls
+                    const t = Math.min((now - this.bhEscapeStart) / 4000.0, 1.0);
+                    this._drawOverlay(0.06, 0.0, 0.08, t * 0.4);
+                } else if (this.bhEscapePhase === 'warp') {
+                    // Rapid white flash then fade to dark — warp streaks
+                    const t = Math.min((now - this.bhEscapeStart) / 1500.0, 1.0);
+                    const whiteFlash = Math.max(0.0, 1.0 - t * 4.0); // flash at start
+                    const blackFade = Math.max(0.0, (t - 0.3) / 0.7);  // black creeps in
+                    if (whiteFlash > 0.001) this._drawOverlay(1.0, 1.0, 1.0, whiteFlash * 0.7);
+                    if (blackFade > 0.001) this._drawOverlay(0.0, 0.0, 0.0, blackFade);
+                } else if (this.bhEscapePhase === 'black') {
+                    // Full black screen
+                    this._drawOverlay(0.0, 0.0, 0.0, 1.0);
+                }
                 
             } else if (this.centerPhase === 'void' && this.voidScreenProg) {
                 gl.useProgram(this.voidScreenProg);
@@ -7829,6 +7946,7 @@ window.makeUI = function() {
       <button id="z3cabin">Z3 Cabin</button><br>
       <button id="z3bbed">Z3b Bed</button>
       <button id="z3bvoid">Z3b Void</button>
+      <button id="z3besc">Z3b Esc</button>
     </div>
   `;
 
@@ -7902,6 +8020,8 @@ window.makeUI = function() {
           info += ' pov:' + z3.activePOV;
           if (z3.centerPhase === 'hallway') info += ' hallZ:' + z3.camZ.toFixed(1);
           else info += ' walk:' + (z3.cabinProgress||z3.fallProgress||0).toFixed(2);
+          if (z3.bhEscapePhase && z3.bhEscapePhase !== 'none') info += ' ESC:' + z3.bhEscapePhase + '(' + z3.bhEscapeBlinkCount + ')';
+          else if (z3.bhEscapeArmed) info += ' ARM:' + z3.bhEscapeBlinkCount;
           seqEl.innerText = info;
         } else if (z2) {
           seqEl.innerText = 'z2 ' + (z2.seqState||'?') + ' pov:' + z2.activePOV;
@@ -7943,6 +8063,10 @@ window.makeUI = function() {
   box.querySelector('#z3bvoid').onclick = () => {
     killAll(); window.startZone3('z3b');
     after(50, ()=>{ const z3 = window.currentZone3; if (z3){ z3.activePOV='center'; z3.centerPhase='void'; z3.voidStart=performance.now(); z3.camZ=z3.HALL_END_Z; }});
+  };
+  box.querySelector('#z3besc').onclick = () => {
+    killAll(); window.startZone3('z3b');
+    after(50, ()=>{ const z3 = window.currentZone3; if (z3){ z3.activePOV='center'; z3.centerPhase='void'; z3.voidStart=performance.now(); z3.camZ=z3.HALL_END_Z; z3.bhEscapeArmed=true; z3.bhEscapeBlinkCount=2; z3.bhEscapePhase='rising'; z3.bhEscapeStart=performance.now(); }});
   };
 };
 </script>
