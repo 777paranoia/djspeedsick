@@ -99,7 +99,7 @@
   <script src="lodash.js"></script>
   <script src="butterchurn.js"></script>
   <script src="butterchurnPresets.min.js"></script>
-  <script>/* ===== player.js ===== */
+  <script>
 const IPINFO_TOKEN = '4b45867ce7c229';
 const RSS_SOURCES = [
   "https://thegrayzone.com/feed/",
@@ -151,7 +151,7 @@ function toggleConky() {
   const sidebar = document.getElementById('conky-sidebar');
   const tickers = document.querySelectorAll('.ticker-wrap');
 
-  // ── Arm black hole escape on any conky click while in z3b void ──
+  
   if (window.currentZone3 && window.currentZone3.isAltRoute &&
     window.currentZone3.centerPhase === 'void' &&
     window.currentZone3.bhEscapePhase === 'none') {
@@ -166,12 +166,12 @@ function toggleConky() {
     updateSystemParams();
     updateIntelligence();
 
-    // Brain monitor — init on first open, restart on re-open
+    
     setTimeout(function() {
       if (typeof initBrainMonitor === 'function') initBrainMonitor();
     }, 100);
 
-    // Auto-scale sidebar to fit viewport height
+    
     setTimeout(function() {
       sidebar.style.transformOrigin = 'top left';
       var maxH = window.innerHeight * 0.90;
@@ -227,7 +227,7 @@ function getNearestSmokes(lat, lng) {
   const display = document.getElementById('cig-display');
   const linkDiv = document.getElementById('cig-link');
 
-  // Try Google Places first, fall back to Overpass (OpenStreetMap)
+  
   let resolved = false;
 
   function showResult(name, rlat, rlng) {
@@ -239,7 +239,7 @@ function getNearestSmokes(lat, lng) {
 
   function tryOverpass() {
     if (resolved) return;
-    // Overpass API — query convenience stores and tobacco shops within 3km
+    
     var query = '[out:json][timeout:10];(' +
       'node["shop"="tobacco"](around:3000,' + lat + ',' + lng + ');' +
       'node["shop"="convenience"](around:3000,' + lat + ',' + lng + ');' +
@@ -254,7 +254,7 @@ function getNearestSmokes(lat, lng) {
         if (resolved) return;
         var elements = data.elements || [];
         if (elements.length > 0) {
-          // Sort by distance
+          
           elements.sort(function(a, b) {
             var da = (a.lat - lat) * (a.lat - lat) + (a.lon - lng) * (a.lon - lng);
             var db = (b.lat - lat) * (b.lat - lat) + (b.lon - lng) * (b.lon - lng);
@@ -272,7 +272,7 @@ function getNearestSmokes(lat, lng) {
       });
   }
 
-  // Try Google Places if available
+  
   if (typeof google !== 'undefined' && google.maps && google.maps.places) {
     try {
       var dummyDiv = document.getElementById('maps-dummy');
@@ -288,7 +288,7 @@ function getNearestSmokes(lat, lng) {
         radius: 5000,
         keyword: 'cigarettes tobacco convenience'
       };
-      // If Google doesn't respond in 6s, fall back
+      
       var googleTimeout = setTimeout(function() {
         tryOverpass();
       }, 6000);
@@ -306,7 +306,7 @@ function getNearestSmokes(lat, lng) {
       tryOverpass();
     }
   } else {
-    // Google not loaded at all — go straight to Overpass
+    
     tryOverpass();
   }
 }
@@ -324,7 +324,7 @@ let sDrag = false,
   sPanX = 0,
   sPanY = 0;
 
-// Desktop: rotate the actual images -90deg and oversize for drag slack
+
 if (window.innerWidth > 768 && window.innerWidth > window.innerHeight) {
   var splashImgs = bgContainer.querySelectorAll('img');
   for (var si = 0; si < splashImgs.length; si++) {
@@ -587,7 +587,7 @@ window.enterSite = function() {
     window.startWakeSequence = true;
   }
 
-  // Auto-open conky sidebar + brain monitor on entry
+  
   setTimeout(function() {
     var sidebar = document.getElementById('conky-sidebar');
     if (sidebar && (sidebar.style.display === 'none' || sidebar.style.display === '')) {
@@ -596,8 +596,8 @@ window.enterSite = function() {
   }, 300);
 };
 
-// Resume AudioContext and re-unlock videos on any touch after entry
-// Handles iOS suspending context mid-session and late-created videos (zone2/3)
+
+
 document.addEventListener('touchstart', function(e) {
   if (!window._siteEntered) return;
   if (window.__audioCtx && window.__audioCtx.state === 'suspended') {
@@ -607,7 +607,7 @@ document.addEventListener('touchstart', function(e) {
 }, {
   passive: false
 });</script>
-  <script>/* ===== modes_core.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -940,16 +940,16 @@ void setupCamera(out vec3 ro, out vec3 rd, out vec3 clean_rd, float intensity) {
 }
 `;
 
-// Shared hallucination overlay — inject into any shader that declares the required uniforms.
-// Required uniforms: u_fractalSeed, u_blinkAge, u_trip, u_time, u_resolution
-// Call: col = applyHallucination(col, screenUV, u_fractalSeed, u_blinkAge, u_trip, u_time);
+
+
+
 GLSL.hallucinationFn = `
-// ═══ INLINE HALLUCINATION HELPERS ═══
-// WebGL1-safe (no break). Available to any shader that includes GLSL.core.
+
+
 float _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float _hh1(float x){ return fract(sin(x*127.1)*43758.5453); }
 
-// Burning Ship fractal — melting cityscape structures
+
 float burningShip(vec2 c){
     vec2 z=vec2(0.0); float si=0.0;
     #ifdef MOBILE
@@ -969,7 +969,7 @@ float burningShip(vec2 c){
     #endif
 }
 
-// Julia set — organic tendrils
+
 float juliaSet(vec2 z, vec2 c){
     float si=0.0;
     #ifdef MOBILE
@@ -987,7 +987,7 @@ float juliaSet(vec2 z, vec2 c){
     #endif
 }
 
-// Clifford attractor density
+
 float clifford(vec2 p, float seed) {
     float a =  1.5 + sin(seed * 1.3) * 0.5;
     float b = -1.8 + cos(seed * 0.7) * 0.4;
@@ -1016,19 +1016,19 @@ vec3 sickNeonPal(float t, float seed){
     return a + b * cos(6.28318*(c*t+d));
 }
 
-// Apply hallucination inline — call from any shader's final output
-// Returns modified baseCol with fractal bleeding, grain, and horror tint
+
+
 vec3 applyHallucination(vec3 baseCol, vec2 screenUV, float fractalSeed, float blinkAge, float trip, float time){
     if(trip < 0.05) return baseCol;
     float r = length(screenUV);
     float periph = smoothstep(0.25, 0.9, r);
 
-    // Base + surge envelope
+    
     float surge = smoothstep(6.0, 0.0, blinkAge) * 0.35;
     float strength = (trip * 0.15 + surge) * periph;
     if(strength < 0.005) return baseCol;
 
-    // Fractal type selection
+    
     float typeRoll = _hh1(fractalSeed * 3.7);
     float zoom = mix(0.6, 3.0, _hh1(fractalSeed * 1.3));
     vec2 drift = vec2(sin(time*0.03+fractalSeed)*0.2, cos(time*0.02+fractalSeed*1.7)*0.2);
@@ -1050,20 +1050,20 @@ vec3 applyHallucination(vec3 baseCol, vec2 screenUV, float fractalSeed, float bl
     fracCol *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);
     float pulse = 0.55 + 0.45 * sin(time * 0.9 + fractalSeed);
 
-    // Film grain
+    
     float grain = (_hh2(screenUV * 400.0 + floor(time * 24.0) * 7.3) - 0.5) * trip * 0.08;
 
-    // Horror vignette darken
+    
     float vignette = smoothstep(0.3, 1.1, r) * trip * 0.12 * (0.5 + 0.5 * sin(time * 0.7));
 
     vec3 result = baseCol;
-    result += fracCol * strength * pulse;         // fractal glow
-    result += vec3(grain);                         // grain
-    result = mix(result, result * vec3(0.85, 0.7, 0.75), vignette); // horror darken
+    result += fracCol * strength * pulse;         
+    result += vec3(grain);                         
+    result = mix(result, result * vec3(0.85, 0.7, 0.75), vignette); 
     return result;
 }
 `;</script>
-  <script>/* ===== mode1.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1106,7 +1106,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.60*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode2.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1153,7 +1153,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.60*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode3.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1203,7 +1203,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode4.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1273,7 +1273,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.60*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode5.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1314,7 +1314,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.85*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode6.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1353,7 +1353,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.85*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode7.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1394,7 +1394,7 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode8.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1512,7 +1512,7 @@ void main() {
   gl_FragColor = vec4(col * (1.0 - u_blink) * 0.80 * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode9.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1714,8 +1714,8 @@ void main() {
   gl_FragColor=vec4(col*(1.0-u_blink)*0.60*smoothstep(0.0,0.8,u_wake), 1.0);
 }
 `;
-// /Users/studio/CommentRemover/untitled folder/mode-right.js</script>
-  <script>/* ===== mode-right.js ===== */
+
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -1800,7 +1800,7 @@ void main() {
     uv.y = 1.0 - uv.y;
     float screenAspect = u_resolution.x / u_resolution.y;
     float imgAspect = 1080.0 / 1920.0;
-    // Adaptive: on mobile (portrait) show full image, on desktop (landscape) show center crop
+    
     float visibleAspect = mix(imgAspect, 0.62, smoothstep(0.7, 2.0, screenAspect));
     float panRangeX = mix(0.06, 0.10, smoothstep(0.7, 1.4, screenAspect));
     float panRangeY = mix(0.06, 0.28, smoothstep(0.7, 1.4, screenAspect));
@@ -1867,7 +1867,7 @@ void main() {
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode-back.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2012,7 +2012,7 @@ void main() {
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode-left.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2099,7 +2099,7 @@ void main() {
     
     float screenAspect = u_resolution.x / u_resolution.y;
     float imgAspect = 1080.0 / 1920.0;
-    // Adaptive: on mobile (portrait) show full image, on desktop (landscape) show center crop
+    
     float visibleAspect = mix(imgAspect, 0.62, smoothstep(0.7, 2.0, screenAspect));
     float panRangeX = mix(0.06, 0.10, smoothstep(0.7, 1.4, screenAspect));
     float panRangeY = mix(0.06, 0.28, smoothstep(0.7, 1.4, screenAspect));
@@ -2162,8 +2162,8 @@ void main() {
     gl_FragColor = vec4(col, 1.0);
 }
 `;
-// mode-left2.js</script>
-  <script>/* ===== mode-left2.js ===== */
+
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2199,8 +2199,8 @@ void main() {
     float fade = (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake);
     gl_FragColor = vec4(room.rgb * fade, room.a);
 }
-`; // mode-right2.js</script>
-  <script>/* ===== mode-right2.js ===== */
+`; 
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2253,7 +2253,7 @@ void main() {
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== mode-left3.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2308,7 +2308,7 @@ void main() {
     gl_FragColor = vec4(col, 1.0);
 }
 `;</script>
-  <script>/* ===== mode-cabin.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -2510,7 +2510,7 @@ void main(){
 
     float prog = clamp(u_progress, 0.0, 1.0);
     float walkZ = mix(-HALF_LEN + 2.2, HALF_LEN - 1.8, prog);
-    // Lateral pull toward door during suction
+    
     vec3 ro = vec3(u_camX * FUSE_R * 0.6, FLOOR_Y + 1.10, walkZ);
 
     float yaw   = (-u_mouse.x * 0.42) + u_yawOffset;
@@ -2520,11 +2520,11 @@ void main(){
     vec3 right = normalize(cross(fwd, vec3(0,1,0)));
     vec3 up    = cross(right, fwd);
 
-    // Shake applied to ray
+    
     float shakeX = sin(u_time * 37.0) * u_shake * 0.04;
     float shakeY = cos(u_time * 29.0) * u_shake * 0.04;
 
-    // FOV zoom
+    
     float fovScale = mix(1.0, 0.6, clamp(u_zoom - 1.0, 0.0, 1.0));
     vec3 rd = normalize(fwd + (uv.x * fovScale + shakeX) * right + (uv.y * fovScale + shakeY) * up);
 
@@ -2626,17 +2626,17 @@ void main(){
     }
 
     col *= 1.0 - 0.3 * length((gl_FragCoord.xy/u_resolution - 0.5)*vec2(1.0, u_resolution.y/u_resolution.x));
-    // Turbulence flash
+    
     col += vec3(u_flash * 0.6);
-    // Darkened lighting after cockpit visit
+    
     col *= mix(1.0, 0.45, u_postCockpit);
-    // Suction fade to white before falling
+    
     col = mix(col, vec3(1.0), u_suctionFade);
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
 `;</script>
-  <script>/* ===== engine.js ===== */
-// engine.js
+  <script>
+
 const IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
 
 const canvas = document.getElementById("c");
@@ -2647,7 +2647,7 @@ const gl = canvas.getContext("webgl", {
 });
 gl.getExtension("OES_texture_float") || gl.getExtension("OES_texture_half_float");
 
-// GL context loss recovery — prevent browser default, don't reload (causes loop)
+
 canvas.addEventListener('webglcontextlost', function(e) {
   e.preventDefault();
   console.warn('[GL] Context lost');
@@ -2802,7 +2802,7 @@ function loadStaticTex(url) {
   img.onload = () => {
     tex._w = img.naturalWidth || img.width || 1;
     tex._h = img.naturalHeight || img.height || 1;
-    gl.activeTexture(gl.TEXTURE0); // was TEXTURE15 — mobile only has 8
+    gl.activeTexture(gl.TEXTURE0); 
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
   };
@@ -2811,7 +2811,7 @@ function loadStaticTex(url) {
 }
 
 if (IS_MOBILE) {
-  // Mobile: 3 building textures, duplicated to save GPU memory
+  
   staticAssets.b1 = loadStaticTex(`files/img/void/building01.png`);
   staticAssets.b2 = loadStaticTex(`files/img/void/building09.png`);
   staticAssets.b3 = loadStaticTex(`files/img/void/building08.png`);
@@ -2870,7 +2870,7 @@ function buildProgram(fragKey) {
 
   let fragSrc = isStandalone ? GLSL.modules[fragKey] : GLSL.core + GLSL.modules[fragKey];
   if (!fragSrc || fragSrc.includes("undefined")) return null;
-  // Inject mobile define for reduced shader complexity
+  
   if (IS_MOBILE) fragSrc = '#define MOBILE\n' + fragSrc;
 
   const fragShader = compile(gl.FRAGMENT_SHADER, fragSrc);
@@ -2933,7 +2933,7 @@ function makeFBO() {
 
 function rebuildFBOs() {
   if (IS_MOBILE) {
-    // Mobile: create minimal dummy textures so references don't crash
+    
     var dummyTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, dummyTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
@@ -3048,7 +3048,7 @@ class ActiveMode {
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texEnv6"), 12);
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texEnv5"), 13);
     } else {
-      // Mobile: 8 units max — env textures share unit 7 (window tex)
+      
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texEnv1"), 7);
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texEnv2"), 7);
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texEnv3"), 7);
@@ -3151,7 +3151,7 @@ class ActiveMode {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      gl.activeTexture(gl.TEXTURE0); // was TEXTURE15 — mobile only has 8
+      gl.activeTexture(gl.TEXTURE0); 
       gl.bindTexture(gl.TEXTURE_2D, this.galleryTex[i]);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -3221,10 +3221,10 @@ class ActiveMode {
     gl.bindTexture(gl.TEXTURE_2D, texs[ping]);
     gl.activeTexture(gl.TEXTURE7);
     if (IS_MOBILE && (this.id === 98 || this.id === 99 || this.id === 97)) {
-      // For the side rooms on mobile, bind the mobile panorama to unit 7
+      
       gl.bindTexture(gl.TEXTURE_2D, this.env1);
     } else {
-      // Otherwise, bind the standard window/OOB mask
+      
       gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
     }
 
@@ -3320,7 +3320,7 @@ class ActiveMode {
         gl.activeTexture(gl.TEXTURE13);
         gl.bindTexture(gl.TEXTURE_2D, mirrorFBO ? mirrorFBO.tex : DUMMY_BLACK);
       }
-    } // end !IS_MOBILE
+    } 
 
     gl.uniform1f(this.U.audio, audioIntensity);
     gl.uniform2f(this.U.res, canvas.width, canvas.height);
@@ -3390,24 +3390,24 @@ var leftEngine = null,
 var backZoom = 0.0,
   backZoomTarget = 0.0;
 
-// ═══════════════════════════════════════════════════════════════
-//  HALLUCINATION ENGINE — layered reality degradation system
-//  Layers: grain → scanline tears → fractal bleed → horror vignette
-//  All layers build with trip intensity across the full session.
-//  Blinks don't gate visibility — they surge/shuffle the character.
-// ═══════════════════════════════════════════════════════════════
+
+
+
+
+
+
 
 var fractalSeed = Math.random() * 100.0;
 var blinkPeakTime = performance.now();
 var hallucinationProg = null;
 var hallucinationQuadBuf = null;
 var hallucinationU = null;
-var _tripAccum = 0.0; // slowly ratchets up across the session — never goes down
+var _tripAccum = 0.0; 
 
 function initHallucinationOverlay() {
-  // ── FRAGMENT SHADER ──────────────────────────────────────
-  // WebGL1-safe: NO break in loops. Uses step() to skip iterations.
-  // Premultiplied alpha output: blend with gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+  
+  
+  
   const fragSrc = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
   precision highp float;
@@ -3416,13 +3416,13 @@ function initHallucinationOverlay() {
 #endif
 uniform vec2  u_resolution;
 uniform float u_time;
-uniform float u_trip;        // current zone trip intensity
-uniform float u_tripAccum;   // session accumulator — only grows
+uniform float u_trip;        
+uniform float u_tripAccum;   
 uniform float u_fractalSeed;
-uniform float u_blinkAge;    // seconds since last blink peak
-uniform float u_zone;        // 1.0, 2.0, or 3.0 — controls decay rate
+uniform float u_blinkAge;    
+uniform float u_zone;        
 
-// ── HASHES ──
+
 float hh(float x){ return fract(sin(x*127.1)*43758.5453); }
 float hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float noise(vec2 p){
@@ -3431,9 +3431,9 @@ float noise(vec2 p){
                mix(hh2(i+vec2(0,1)),hh2(i+vec2(1,1)),u.x),u.y);
 }
 
-// ── BURNING SHIP FRACTAL ──
-// z_{n+1} = (|Re(z)| + i|Im(z)|)^2 + c
-// Produces inverted cityscapes / melting buildings — fits the void city aesthetic
+
+
+
 float burningShip(vec2 c){
     vec2 z = vec2(0.0);
     float escaped = 0.0;
@@ -3441,14 +3441,14 @@ float burningShip(vec2 c){
     for(int n=0; n<48; n++){
         z = vec2(abs(z.x), abs(z.y));
         z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
-        // WebGL1-safe: no break — accumulate with step
+        
         float esc = step(4.0, dot(z,z));
-        smooth_i += (1.0 - esc);  // count pre-escape iterations
+        smooth_i += (1.0 - esc);  
     }
     return smooth_i / 48.0;
 }
 
-// ── JULIA SET ──
+
 float julia(vec2 z, vec2 c){
     float smooth_i = 0.0;
     for(int n=0; n<40; n++){
@@ -3458,9 +3458,9 @@ float julia(vec2 z, vec2 c){
     return smooth_i / 40.0;
 }
 
-// ── PALETTE — sickly neon with seed-driven hue ──
+
 vec3 sickPal(float t, float seed){
-    // Horror palette: shifted toward reds/magentas/acid greens
+    
     vec3 a = vec3(0.5, 0.4, 0.45);
     vec3 b = vec3(0.5, 0.35, 0.5);
     vec3 c = vec3(1.0, 0.8, 1.0);
@@ -3476,18 +3476,18 @@ void main(){
     float trip = clamp(u_trip, 0.0, 2.0);
     float accum = clamp(u_tripAccum, 0.0, 8.0);
 
-    // Base intensity: grows with accumulator, scaled by zone
-    // Z1/Z2: base is subtle, effects come from blink surges
-    // Z3: base is always present and thick
+    
+    
+    
     float zoneBase = (u_zone < 2.5) ? 0.04 : 0.12;
     float baseStrength = trip * zoneBase + accum * 0.025;
 
-    // Blink surge: snaps in at blink, decay time varies by zone
-    // Z1: 1.8s — sharp flash then gone. Z2: 2.8s — lingers a beat. Z3: 6s — persistent
+    
+    
     float decayTime = (u_zone < 1.5) ? 1.8 : ((u_zone < 2.5) ? 2.8 : 6.0);
     float surge = smoothstep(decayTime, 0.0, u_blinkAge) * trip * 0.4;
 
-    // Z1/Z2: random intermittent gate — effects only fire ~40% of blinks
+    
     float blinkGate = 1.0;
     if(u_zone < 2.5) {
         blinkGate = step(0.55, hh(floor(u_fractalSeed * 7.0 + u_blinkAge)));
@@ -3498,49 +3498,49 @@ void main(){
 
     if(totalStrength < 0.008){ gl_FragColor = vec4(0.0); return; }
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 1: FILM GRAIN — always on, scales with trip
-    //  Survival horror film stock damage
-    // ════════════════════════════════════════════════════════
-    float grainSeed = floor(t * 24.0); // 24fps grain refresh
+    
+    
+    
+    
+    float grainSeed = floor(t * 24.0); 
     float grain = hh2(screenUV * u_resolution * 0.5 + grainSeed * 7.3) - 0.5;
-    // Heavier grain in dark areas (shadow noise) — peripheral weighting
+    
     float grainAmt = totalStrength * 0.12 * (1.0 + r * 0.6);
-    // Occasional heavy grain bursts
+    
     float grainBurst = step(0.92, hh(grainSeed * 3.1 + u_fractalSeed)) * trip;
     grainAmt += grainBurst * 0.25;
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 2: VHS SCANLINE CORRUPTION
-    //  Horizontal bands that tear/shift — PT hallway vibes
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
     float scanY = screenUV.y * u_resolution.y;
-    float scanBand = floor(scanY / 3.0); // 3px band height
+    float scanBand = floor(scanY / 3.0); 
     float scanRoll = hh(scanBand * 7.7 + floor(t * 6.0));
-    // Tear probability increases with trip
+    
     float tearProb = 0.985 - totalStrength * 0.06;
     float isTear = step(tearProb, scanRoll);
-    // Tear color: dark desaturated band or bright white flash
+    
     float tearBright = step(0.7, hh(scanBand * 13.3 + floor(t * 12.0)));
     vec3 tearColor = mix(vec3(0.0, 0.0, 0.02), vec3(0.9, 0.85, 0.95), tearBright);
     float tearAlpha = isTear * totalStrength * 0.5;
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 3: FRACTAL PERIPHERAL BLEED
-    //  Burning Ship + Julia sets in the outer vision
-    //  Like seeing geometry that shouldn't exist
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
+    
     float periph = smoothstep(0.20, 0.95, r);
     float fracAlpha = 0.0;
     vec3 fracCol = vec3(0.0);
 
 #ifndef MOBILE
     if(periph * totalStrength > 0.01) {
-        // Seed picks fractal type and region
+        
         float typeRoll = hh(u_fractalSeed * 3.7);
         float zoom = mix(0.6, 3.0, hh(u_fractalSeed * 1.3));
 
-        // Slow drift — fractal region crawls over time
+        
         vec2 drift = vec2(
             sin(t * 0.03 + u_fractalSeed) * 0.2,
             cos(t * 0.02 + u_fractalSeed * 1.7) * 0.2
@@ -3550,27 +3550,27 @@ void main(){
         float val = 0.0;
 
         if(typeRoll < 0.4) {
-            // Burning Ship — melting cityscape structures
+            
             vec2 region = vec2(-1.76, -0.028) + vec2(hh(u_fractalSeed*5.1)-0.5, hh(u_fractalSeed*7.3)-0.5) * 0.3;
             val = burningShip(sampleUV * 0.5 + region);
         } else if(typeRoll < 0.7) {
-            // Julia set — organic/alien tendrils
+            
             vec2 jc = vec2(
                 -0.8 + sin(t * 0.015 + u_fractalSeed) * 0.15,
                  0.156 + cos(t * 0.012 + u_fractalSeed * 2.0) * 0.1
             );
             val = julia(sampleUV * 0.8, jc);
         } else {
-            // Burning Ship zoomed into the "mast" — tower structures
+            
             vec2 region = vec2(-1.755, -0.022);
             float deepZoom = mix(2.0, 8.0, hh(u_fractalSeed * 9.1));
             val = burningShip(sampleUV * 0.15 / deepZoom + region);
         }
 
-        // Animate color cycling — slow, nauseous
+        
         val = fract(val * 3.5 + t * 0.04 * (0.3 + hh(u_fractalSeed * 9.0)));
         fracCol = sickPal(val, u_fractalSeed * 11.3);
-        // Kill deep interior (val near 1.0 = never escaped = boring)
+        
         fracCol *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);
 
         float fracPulse = 0.6 + 0.4 * sin(t * (0.8 + hh(u_fractalSeed*4.0)) + u_fractalSeed);
@@ -3578,19 +3578,19 @@ void main(){
     }
 #endif
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 4: HORROR VIGNETTE — dark red peripheral creep
-    //  The edges of vision darken and pulse, like blood pressure
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
     float vignPulse = 0.5 + 0.5 * sin(t * 0.7 + sin(t * 0.3) * 2.0);
     float vignStrength = smoothstep(0.35, 1.1, r) * totalStrength * 0.28 * vignPulse;
-    // Asymmetric — heavier at bottom (gravity, blood pooling)
+    
     vignStrength *= 1.0 + max(0.0, -uv.y) * 0.8;
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 5: DATAMOSH BLOCKS — random rectangles of wrong color
-    //  Like frame buffer corruption / Enter the Void blink cuts
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
     float moshAlpha = 0.0;
     vec3 moshCol = vec3(0.0);
 #ifndef MOBILE
@@ -3609,10 +3609,10 @@ void main(){
     }
 #endif
 
-    // ════════════════════════════════════════════════════════
-    //  LAYER 6: AFTERIMAGE GHOST — faint echo of fractal from
-    //  previous blink, still fading. Creates persistence of vision.
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
     float ghostAge = u_blinkAge + 4.0;
     float ghostAlpha = 0.0;
     vec3 ghostCol = vec3(0.0);
@@ -3628,42 +3628,42 @@ void main(){
     }
 #endif
 
-    // ════════════════════════════════════════════════════════
-    //  COMPOSITE — premultiplied alpha
-    //  Grain: additive noise
-    //  Tears: replace bands
-    //  Fractals: additive glow in periphery
-    //  Vignette: darken edges
-    //  Mosh: color replacement blocks
-    //  Ghost: faint additive persistence
-    // ════════════════════════════════════════════════════════
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     vec3 outRGB = vec3(0.0);
     float outA = 0.0;
 
-    // Grain — additive, very subtle
+    
     outRGB += vec3(grain * grainAmt);
 
-    // Fractal glow — additive peripheral
+    
     outRGB += fracCol * fracAlpha;
-    outA = max(outA, fracAlpha * 0.5); // slight background darken behind fractals
+    outA = max(outA, fracAlpha * 0.5); 
 
-    // Tears — opaque bands
+    
     outRGB = mix(outRGB, tearColor * tearAlpha, tearAlpha);
     outA = max(outA, tearAlpha);
 
-    // Horror vignette — darkening
+    
     outA = max(outA, vignStrength);
-    outRGB = mix(outRGB, vec3(0.03, 0.0, 0.0), vignStrength); // dark red-black
+    outRGB = mix(outRGB, vec3(0.03, 0.0, 0.0), vignStrength); 
 
-    // Mosh blocks
+    
     outRGB = mix(outRGB, moshCol * moshAlpha, moshAlpha);
     outA = max(outA, moshAlpha);
 
-    // Ghost afterimage
+    
     outRGB += ghostCol * ghostAlpha;
 
-    // Premultiplied output
+    
     gl_FragColor = vec4(outRGB, outA);
 }`;
 
@@ -3710,15 +3710,15 @@ function drawHallucinationOverlay(now, tripOverride, seedOverride, ageOverride, 
   const seed = (seedOverride !== undefined) ? seedOverride : fractalSeed;
   const zone = (zoneOverride !== undefined) ? zoneOverride : 1.0;
 
-  // Accumulator: ratchets up across the session, never decreases
+  
   _tripAccum += trip * 0.00008;
 
-  // No early return — base layer is always active when trip > 0
+  
   if (trip < 0.02 && _tripAccum < 0.1) return;
 
   gl.useProgram(hallucinationProg);
   gl.enable(gl.BLEND);
-  // Premultiplied alpha: output.rgb already contains color*alpha
+  
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
   gl.uniform2f(hallucinationU.res, canvas.width, canvas.height);
@@ -3746,11 +3746,11 @@ var isDragging = false;
 var lastDragX = 0;
 var lastDragY = 0;
 
-// Blink transition — close/open timing
-const BLINK_CLOSE_MS = 140; // eyelids shutting
-const BLINK_HOLD_MS = 80; // dark, swap POV here
-const BLINK_OPEN_MS = 200; // eyelids opening — slower than close
-var blinkTransitionAlpha = 0; // 0-1, driven by tickSlide
+
+const BLINK_CLOSE_MS = 140; 
+const BLINK_HOLD_MS = 80; 
+const BLINK_OPEN_MS = 200; 
+var blinkTransitionAlpha = 0; 
 
 window.isEngine1Dead = false;
 
@@ -3897,7 +3897,7 @@ canvas.addEventListener("pointerup", function(e) {
 });
 
 function simStep(now) {
-  if (IS_MOBILE) return; // skip particle sim on mobile — saves FBO ping-pong + shader pass
+  if (IS_MOBILE) return; 
   gl.activeTexture(gl.TEXTURE6);
   gl.bindTexture(gl.TEXTURE_2D, texs[ping]);
   gl.activeTexture(gl.TEXTURE7);
@@ -4164,7 +4164,7 @@ function render(now) {
     drawHallucinationOverlay(now);
   }
 
-  // Blink transition overlay — drawn last, on top of everything
+  
   if (blinkTransitionAlpha > 0.001) {
     gl.useProgram(BACKLIGHT.prog);
     const blLoc = gl.getAttribLocation(BACKLIGHT.prog, "p");
@@ -4197,8 +4197,8 @@ function __frameGovernor(now) {
 }
 
 requestAnimationFrame(__frameGovernor);</script>
-  <script>/* ===== engine2.js ===== */
-/* engine2.js */
+  <script>
+
 
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
@@ -4243,18 +4243,18 @@ void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
     float trip = clamp(u_trip, 0.0, 2.0);
     
-    // ── LIQUID WARP — scales with trip, not just a tiny fixed amount ──
+    
     float warpAmp = 0.004 + trip * 0.012;
     float liquidX = sin(uv.y * 12.0 + u_time * 0.4) * warpAmp + cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;
     float liquidY = cos(uv.x * 14.0 + u_time * 0.3) * warpAmp + sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;
-    // Audio shake amplifies
+    
     liquidX += sin(u_time * 30.0) * 0.01 * u_shake;
     liquidY += cos(u_time * 25.0) * 0.01 * u_shake;
-    // Trip adds a slower, sicker oscillation layer
+    
     liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;
     liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;
     
-    // ── GLITCH SCANLINE — random horizontal UV tears ──
+    
     float gTick = floor(u_time * 14.0);
     float glitchProb = 0.985 - trip * 0.04;
     if(step(glitchProb, _hh(gTick * 133.77)) > 0.0) {
@@ -4322,11 +4322,11 @@ void main() {
     if (isCutout && wallID != 4) {
         vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
         if (wallID == 2) {
-            // Sample video zoomed into center — black hole fills the portal
+            
             vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
-            // Zoom in 2x on center of video so the black hole is prominent
+            
             vec2 vidUV = (vuv - 0.5) * 0.5 + 0.5;
-            vidUV = 1.0 - vidUV; // flip 180
+            vidUV = 1.0 - vidUV; 
             finalCol = texture2D(u_voidVid, vidUV).rgb;
             outAlpha = 1.0;
             isVideoPortal = true;
@@ -4339,8 +4339,8 @@ void main() {
     
     if (wallID == 4 && isCutout) finalCol = vec3(0.0);
     
-    // ── FOG — thicker with trip, more oppressive ──
-    // Skip fog for the video portal — it should glow through the darkness
+    
+    
     if (!isVideoPortal) {
         float fogThickness = 0.5 + trip * 0.15;
         float fogFactor = exp(-t * fogThickness);
@@ -4349,16 +4349,16 @@ void main() {
         finalCol = mix(fogColor, finalCol, fogFactor);
     }
     
-    // ── EERIE TINT — desaturate + shift to cold/warm based on trip ──
+    
     float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));
     vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1); 
     finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);
     
-    // ── EMERGENCY LIGHT FLICKER — faint red pulse on floor ──
+    
     float floorGlow = smoothstep(-0.3, -0.8, nPos.y) * (0.4 + 0.6 * sin(u_time * 1.3 + pos.z * 0.4));
     finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);
     
-    // ── LIGHT FLICKER — random brightness drops ──
+    
     float flicker = 1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;
     finalCol *= flicker;
 
@@ -4427,7 +4427,7 @@ vec3 camForward(float yaw, float pitch){
 vec3 camRight(vec3 fwd){ return normalize(cross(fwd,vec3(0,1,0))); }
 vec3 camUp(vec3 fwd, vec3 right){ return normalize(cross(right,fwd)); }
 
-// ─── PATH — curves up into the black hole center ───
+
 float pathCenterX(float z){
   float k = clamp((-z-50.0)/2800.0, 0.0, 1.0);
   return sin(z*0.00165+0.7)*22.0*k + sin(z*0.006+1.8)*3.5;
@@ -4440,7 +4440,7 @@ float pathHalfWidth(float z){
   return mix(1.3, 18.0, t*t);
 }
 
-// ─── GROUND TEXTURE ───
+
 vec3 groundColor(vec3 hp, vec3 ro){
   float flowZ = hp.z + u_movePhase * mix(28.0, 64.0, clamp(u_speed,0.0,1.5));
   vec2 guv = vec2(hp.x*0.12+0.5, fract(flowZ*0.035));
@@ -4458,7 +4458,7 @@ vec3 groundColor(vec3 hp, vec3 ro){
   return tex;
 }
 
-// ─── COSMOS — dense, from standalone ───
+
 vec3 cosmos(vec3 rd, vec3 ro){
   vec3 d=normalize(rd); vec3 col=vec3(0.0);
   vec3 p1=normalize(d*900.0+ro*0.012);
@@ -4474,7 +4474,7 @@ vec3 cosmos(vec3 rd, vec3 ro){
   return col;
 }
 
-// ─── VOID FRACTAL — engine1's sdFractal + colorPickover ───
+
 vec3 neonPalette(float t){
   return vec3(0.5)+vec3(0.5)*cos(6.28318*(vec3(1.0)*t+vec3(0.00,0.33,0.67)));
 }
@@ -4505,7 +4505,7 @@ vec3 colorPickoverVoid(vec3 p){
 vec3 marchVoidFractal(vec3 ro, vec3 rd, vec3 fracPos, float fracScale, float power, float rotA, float rotB){
   vec3 lro=(ro-fracPos)/fracScale;
   vec3 lrd=rd;
-  // Bounding sphere — skip if ray misses entirely
+  
   float boundR=1.8;
   vec3 oc=lro;
   float b=dot(oc,lrd); float c_=dot(oc,oc)-boundR*boundR;
@@ -4537,7 +4537,7 @@ vec3 marchVoidFractal(vec3 ro, vec3 rd, vec3 fracPos, float fracScale, float pow
 }
 
 
-// ─── ACCRETION — from standalone ───
+
 vec3 accretionGlow(vec3 p, float closestR){
   vec3 rel=p-BH_CENTER; float r=length(rel); float plane=abs(rel.y); float ringR=length(rel.xz);
   float disk=exp(-plane*0.085)*smoothstep(BH_RADIUS*2.6,BH_RADIUS*1.08,ringR)*smoothstep(BH_RADIUS*1.02,BH_RADIUS*1.30,ringR);
@@ -4549,12 +4549,12 @@ vec3 accretionGlow(vec3 p, float closestR){
   return glow*(0.013+u_audio*0.006+u_trip*0.003);
 }
 
-// ─── MAIN ───
+
 void main(){
   vec2 uv=(gl_FragCoord.xy-0.5*u_resolution.xy)/u_resolution.y;
 
-  // ── Liquid warp — EXACT same as z3_merged: mix(0.015, 0.10, isOOB) * trip ──
-  // In void phase, isOOB = 1.0, so this is 0.10 * trip
+  
+  
   float liqAmp = 0.10 * u_trip;
   if(liqAmp > 0.001){
     float tw=u_time*0.15;
@@ -4564,14 +4564,14 @@ void main(){
     uv += (vec2(n3,n4)-0.5) * liqAmp;
   }
 
-  // ── Surge / snap — EXACT same as z3_merged ──
+  
   float mt=u_time;
   float w1=sin(mt*0.4+u_seed); float w2=sin(mt*0.9+u_seed*2.0); float w3=sin(mt*1.5+u_seed*3.0);
   float surge=smoothstep(0.8,1.0,(w1+w2+w3)/3.0);
   float snap=pow(surge,2.0)*12.0;
   uv*=1.0+mt*0.003+snap*0.015;
 
-  // ── Glitch scanline — EXACT same as z3_merged ──
+  
   float gTick=floor(u_time*16.0);
   if(step(0.979,hash1(gTick*133.77+u_seed))>0.0)
     uv.x+=(hash1(floor(uv.y*mix(10.0,30.0,hash1(gTick*2.1)))+gTick)-0.5)*0.18*clamp(u_trip,0.0,1.5);
@@ -4581,7 +4581,7 @@ void main(){
   vec3 rd=normalize(fwd+right*uv.x+up*uv.y);
   vec3 col=vec3(0.0);
 
-  // ── 3D fractal — engine1's sdFractal + colorPickover ──
+  
   float fracAngle=hash1(u_seed*7.7)*6.28;
   vec3 fracPos=vec3(sin(fracAngle)*45.0, pathCenterY(u_camPos.z-300.0)+10.0, u_camPos.z-300.0);
   float fracPow=mix(6.0,10.0,hash1(u_seed*5.3))+sin(u_time*0.05)*1.5;
@@ -4590,7 +4590,7 @@ void main(){
   vec3 fracResult=marchVoidFractal(ro, rd, fracPos, 10.0, fracPow, fracRotA, fracRotB);
   bool hitFractal=length(fracResult)>0.001;
 
-  // ── Ground ──
+  
   bool hitGround=false;
   if(!hitFractal && rd.y<0.05){
     for(int gi=0;gi<40;gi++){
@@ -4607,7 +4607,7 @@ void main(){
     }
   }
 
-  // ── BH raymarching ──
+  
   if(!hitGround && !hitFractal){
     vec3 p=ro; float traveled=0.0; float closestR=1e9; bool hitBH=false;
     for(int i=0;i<MARCH_STEPS;i++){
@@ -4638,17 +4638,17 @@ void main(){
 
   if(hitFractal) col=fracResult;
 
-  // ── Fog ──
+  
   col=mix(col,vec3(0.008,0.010,0.016), hitGround ? 0.12 : 0.20);
 
-  // ── Cold desaturation ──
+  
   float lum=dot(col,vec3(0.299,0.587,0.114));
   col=mix(col,vec3(lum*0.88,lum*0.90,lum*1.04),0.15);
 
-  // ── Vignette ──
+  
   col*=0.78+0.22*(1.0-smoothstep(0.75,1.5,length(uv)));
 
-  // ── Tonemap ──
+  
   col=1.0-exp(-col*1.08);
 
   gl_FragColor=vec4(col,1.0);
@@ -4785,7 +4785,7 @@ class Zone2RoomMode {
 window.z2SpaceHeld = window.z2SpaceHeld || false;
 window.z2TouchHeld = window.z2TouchHeld || false;
 
-// Shared mobile walk zone — bottom centre of screen, consistent across all zones
+
 window.__mobileWalkZoneContains = window.__mobileWalkZoneContains || function(x, y) {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -4885,10 +4885,10 @@ class Zone2Engine {
     this.voidVid.setAttribute("playsinline", "");
     this.voidVid.setAttribute("webkit-playsinline", "");
     this.voidVid.src = "files/mov/bh3.mp4";
-    // Register with global video pool so iOS unlock applies
+    
     if (window.__ALL_VIDEOS) window.__ALL_VIDEOS.push(this.voidVid);
     this.voidVid.play().catch(() => {});
-    // Fallback: if play was blocked, retry when browser says it can play
+    
     this.voidVid.addEventListener('canplay', () => {
       if (this.voidVid.paused) this.voidVid.play().catch(() => {});
     }, {
@@ -5078,26 +5078,26 @@ class Zone2Engine {
         this.slideStart = now;
         this.activePOV = this.pendingPOV;
 
-        // --- CORE BRANCHING LOGIC ---
+        
         if (this.seqState === 'blood' && this.activePOV === 'right') {
-          // First visit to bedroom
+          
           this.seqState = 'bedroom_visited';
           this.zone3Route = 'z3';
         } else if (this.seqState === 'bedroom_visited' && this.activePOV === 'left') {
-          // OPTION A: Turn to bathroom -> Triggers Original Z3
+          
           this.seqState = 'hole';
           this.zone3Route = 'z3';
           if (this.leftRoom) this.leftRoom.tex = this.texBathroomHole;
           this.mode9_T_hole = performance.now();
         } else if (this.seqState === 'bedroom_visited' && this.activePOV === 'right') {
-          // OPTION B: Turned back to the bedroom for a SECOND time.
-          // The green-screen surface now becomes the black-hole route.
+          
+          
           this.seqState = 'bedroom_2';
           this.zone3Route = 'z3b';
           this.rightBlinkCount = 0;
           this.z3bTurbulenceStart = -1;
         }
-        // -----------------------------
+        
 
         window.dispatchEvent(new Event('mouseup'));
         window.dispatchEvent(new Event('touchend'));
@@ -5155,8 +5155,8 @@ class Zone2Engine {
 
     if (this.readyForZone3 && !this.z3TransitionStarted) {
       this.z3TransitionStarted = true;
-      // WebGL red overlay already fills the screen — no CSS fade needed.
-      // Destroy engine2 and start engine3 immediately while red is still up.
+      
+      
       const route = (
         this.seqState === 'bedroom_2' ||
         this.seqState === 'z3b_turbulence' ||
@@ -5195,7 +5195,7 @@ class Zone2Engine {
 
     let shake = audioIntensity * 0.1;
 
-    // ── Composite neural intensity — exposed for brain monitor ──
+    
     var seqBoost = 0;
     if (this.seqState === 'blood') seqBoost = 0.4;
     if (this.seqState === 'hole') seqBoost = 1.2;
@@ -5204,7 +5204,7 @@ class Zone2Engine {
     if (this.seqState === 'bedroom_2') seqBoost = 0.8;
     if (this.seqState === 'z3b_turbulence') seqBoost = 1.3;
     if (this.seqState === 'z3b_red') seqBoost = 1.8;
-    // leftBlinkCount escalation — each bathroom visit ratchets it
+    
     var visitBoost = Math.min(1.0, this.leftBlinkCount * 0.15);
     this.neuralIntensity = this.z2Trip + seqBoost + visitBoost + audioIntensity * 0.3;
 
@@ -5420,7 +5420,7 @@ class Zone2Engine {
           if (elapsedHole >= 4400) {
             this.seqState = 'red';
             this.redStartTime = now;
-            // Kill the plane: freeze holeFBO to black so nothing shows through the hole
+            
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.holeFBO.fbo);
             gl.clearColor(0, 0, 0, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -5428,7 +5428,7 @@ class Zone2Engine {
           }
         }
 
-        // Painter layer 1: holeProg already blitted the plane above
+        
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         this.leftRoom.render(now, this.cx, this.cy, 0.0, this.mirrorFBO.tex, shake, 0.0, audioIntensity, this.z2Trip, this.z2ModeSeed);
@@ -5478,7 +5478,7 @@ class Zone2Engine {
           drawHallucinationOverlay(now, this.z2Trip, this.z2FractalSeed, (now - this.z2BlinkPeakTime) * 0.001, 2.0);
       }
 
-      // Blink applied as top-level black overlay — works correctly over the painter composite
+      
       if (this.rBlink > 0.001) this.drawOverlay(0.0, 0.0, 0.0, this.rBlink);
 
     } else if (this.activePOV === 'right' && this.rightRoom) {
@@ -5547,12 +5547,12 @@ class Zone2Engine {
         gl.bindTexture(gl.TEXTURE_2D, this.texVoidVid);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.voidVid);
       } else if (this.voidVid && this.voidVid.paused) {
-        // Video not ready — keep nudging it
+        
         this.voidVid.play().catch(function() {});
       }
 
-      // Painter layer 1: hallway backdrop. Normal path keeps the old video portal,
-      // but the alternate bedroom route must preview the same black-hole source that the handoff actually uses.
+      
+      
       const useAltHallForward = (this.seqState !== 'initial');
       const centerBackdropTex = altBedroomRouteActive ?
         ((this.rightHolePostFBO && this.rightHolePostFBO.tex) ? this.rightHolePostFBO.tex : (this.rightHoleFBO ? this.rightHoleFBO.tex : this.texVoidVid)) :
@@ -5667,8 +5667,8 @@ class Zone2Engine {
 window.startZone2 = function() {
   window.currentZone2 = new Zone2Engine();
 
-  // voidVid was just added to __ALL_VIDEOS in Zone2Engine constructor.
-  // Unlock now so it plays without needing a walk touch first.
+  
+  
   if (window.__unlockAllVideos) window.__unlockAllVideos();
 
   let fadeOverlay = document.getElementById("zone-fade-overlay");
@@ -5713,7 +5713,7 @@ window.startZone2 = function() {
   };
   checkStart();
 };</script>
-  <script>/* ===== engine3.js ===== */
+  <script>
 window.GLSL = window.GLSL || {};
 window.GLSL.modules = window.GLSL.modules || {};
 
@@ -5800,7 +5800,7 @@ float _mHash(float x){ return fract(sin(x*127.1)*43758.5453); }
 float _burningShip(vec2 c){ return 0.5; }
 float _julia(vec2 z, vec2 c){ return 0.5; }
 #else
-// Burning Ship — melting building structures, WebGL1-safe (no break)
+
 float _burningShip(vec2 c){
     vec2 z=vec2(0.0); float si=0.0;
     #ifdef MOBILE
@@ -5819,7 +5819,7 @@ float _burningShip(vec2 c){
     return si / 48.0;
     #endif
 }
-// Julia set — organic alien tendrils
+
 float _julia(vec2 z, vec2 c){
     float si=0.0;
     #ifdef MOBILE
@@ -5838,7 +5838,7 @@ float _julia(vec2 z, vec2 c){
 }
 #endif
 vec3 _mPal(float t, float seed){
-    // Horror palette — sickly neon
+    
     vec3 a=vec3(0.5,0.4,0.45);
     vec3 b=vec3(0.5,0.35,0.5);
     vec3 c_=vec3(1.0,0.8,1.0);
@@ -5950,7 +5950,7 @@ bool isWindowHit(vec3 p){
 }
 
 float sdFractalStern(vec3 p) {
-    // Fractal floats at the back end of the cabin (stern) — visible after 180 turn
+    
     vec3 z = p - vec3(0.0, FLOOR_Y + 1.1, ROW_START + 0.5);
     z.xy *= rot(u_time * 0.13);
     z.yz *= rot(u_time * 0.17);
@@ -6016,7 +6016,7 @@ void main() {
     float liqAmp = mix(0.015, 0.10, u_isOOB) * u_trip;
     uv += (warpR - 0.5) * liqAmp;
 
-    // Surge / snap — driven by modeSeed, randomizes on each blink
+    
     float mt = u_modeTime * u_isOOB;
     float w1 = sin(mt * 0.4 + u_modeSeed);
     float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);
@@ -6025,13 +6025,13 @@ void main() {
     float snap  = pow(surge, 2.0) * 8.0 * u_isOOB;
     uv *= 1.0 + mt * 0.003 + snap * 0.015;
 
-    // Glitch scanline — random horizontal offset burst
+    
     float gTick = floor(u_time * 16.0);
     if(step(0.979, hash1(gTick * 133.77 + u_modeSeed)) > 0.0)
         uv.x += (hash1(floor(uv.y * mix(10.0, 30.0, hash1(gTick * 2.1))) + gTick) - 0.5)
                  * 0.18 * clamp(u_trip, 0.0, 1.5);
 
-    // Shake
+    
     float latShake = u_shake * 5.0;
     uv.x += sin(u_time * 40.0) * 0.012 * latShake;
     uv.y += cos(u_time * 25.0) * 0.012 * latShake;
@@ -6092,12 +6092,12 @@ void main() {
         } else if (wallID != 3) {
             vec4 tcol = (wallID==1) ? texture2D(u_texRight, tileUV) : ((wallID==0) ? texture2D(u_texLeft, tileUV) : vec4(1.0));
             if (tcol.a < 0.1 || (tcol.g > 0.4 && tcol.r < 0.25 && tcol.b < 0.25)) {
-                // Doorway — show dark interior room glimpse, not empty void
+                
                 float depthFog = exp(-t_box * 0.4);
                 vec3 roomCol = (wallID == 0)
-                    ? vec3(0.06, 0.04, 0.04)   // left door: dark bathroom warm
-                    : vec3(0.04, 0.04, 0.07);  // right door: dark bedroom cool
-                // Subtle voidTex bleed so it's not completely dead
+                    ? vec3(0.06, 0.04, 0.04)   
+                    : vec3(0.04, 0.04, 0.07);  
+                
                 vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
                 vec3 voidHint = texture2D(u_voidTex, vuv).rgb * 0.15;
                 finalCol = mix(roomCol + voidHint, vec3(0.03, 0.01, 0.01), 1.0 - depthFog);
@@ -6157,21 +6157,21 @@ void main() {
                 }
 
             } else if(mid > 10.5 && mid < 11.5) {
-                // Stern fractal — visible after 180 turn at cockpit
-                // Pulsing, breathing geometry that shouldn't exist
+                
+                
                 vec3 n = calcNormal(p);
                 float pulse = 0.5 + 0.5 * sin(u_time * 2.5 + length(p) * 3.0);
                 float pulse2 = 0.5 + 0.5 * sin(u_time * 1.1 + p.y * 5.0);
-                // Deep red → magenta → void black cycling
+                
                 vec3 fracCol = mix(vec3(0.6, 0.02, 0.08), vec3(0.8, 0.05, 0.5), pulse);
                 fracCol = mix(fracCol, vec3(0.02, 0.0, 0.05), pulse2 * 0.4);
-                // Lighting: overhead + emergency strip glow
+                
                 float diff = max(dot(n, normalize(vec3(0.0, 1.0, 1.0))), 0.0) * 0.8 + 0.2;
-                // Inner glow — brighter at the core
+                
                 float coreDist = length(p - vec3(0.0, FLOOR_Y + 1.1, ROW_START + 0.5));
                 float coreGlow = exp(-coreDist * 2.0) * 1.5;
                 col = fracCol * diff + vec3(0.9, 0.1, 0.3) * coreGlow;
-                // Fractal ignores fog — it glows through the darkness
+                
 
             } else if(mid < 1.5 && isWindowHit(p)) {
                 vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
@@ -6192,15 +6192,15 @@ void main() {
                 col = matCol * (ambient + emergencyStrip(p) + cockpitLit);
                 col = mix(col, fogCol, fogAmt);
 
-                // ── EXIT DOOR TEXTURE — mapped onto the port wall ──
-                // Door area: port side wall, near EXIT_ROW_Z
+                
+                
                 if(mid < 1.5 && p.x < -0.5) {
                     float doorH = 1.8;
                     float doorW = 1.0;
                     float doorBottom = FLOOR_Y + 0.08;
                     float doorLeft = EXIT_ROW_Z - doorW * 0.5;
                     
-                    // UV mapping: Z maps to U, Y maps to V
+                    
                     float du = (p.z - doorLeft) / doorW;
                     float dv = 1.0 - (p.y - doorBottom) / doorH;
                     
@@ -6211,11 +6211,11 @@ void main() {
                             : texture2D(u_doorClosedTex, doorUV);
                         
                         if(u_doorSwitched > 0.5 && dTex.a < 0.3) {
-                            // Transparent part of door-open.png — show the void
+                            
                             vec2 vuv = gl_FragCoord.xy / u_resolution.xy;
                             col = texture2D(u_voidTex, vuv).rgb * 1.2;
                         } else {
-                            // Door texture visible
+                            
                             col = dTex.rgb * 0.8;
                         }
                     }
@@ -6229,14 +6229,14 @@ void main() {
     
     finalCol *= smoothstep(1.3, 0.2, length(uv)) * 0.65;
 
-    // ═══ CABIN HALLUCINATION — Burning Ship/Julia bleeding into reality ═══
-    // Active after cockpit. Builds from peripheral halos to full-screen horror.
+    
+    
     if (u_fractalActive > 0.5) {
         vec2 suv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
         float r = length(suv);
         float periph = smoothstep(0.18, 0.85, r);
 
-        // Blink surge + persistent base (never fully gone)
+        
         float env = smoothstep(6.0, 0.0, u_blinkAge) * 0.35 + 0.15;
         float strength = periph * env * u_trip;
 
@@ -6248,15 +6248,15 @@ void main() {
             float val = 0.0;
 
             if(typeRoll < 0.45) {
-                // Burning Ship — melting buildings
+                
                 vec2 region = vec2(-1.76, -0.028) + vec2(_mHash(u_fractalSeed*5.1)-0.5, _mHash(u_fractalSeed*7.3)-0.5)*0.3;
                 val = _burningShip(sUV * 0.5 + region);
             } else if(typeRoll < 0.75) {
-                // Julia set — organic tendrils
+                
                 vec2 jc = vec2(-0.8+sin(u_time*0.015+u_fractalSeed)*0.15, 0.156+cos(u_time*0.012)*0.1);
                 val = _julia(sUV * 0.8, jc);
             } else {
-                // Deep Burning Ship zoom — antenna/mast structures
+                
                 val = _burningShip(sUV * 0.08 + vec2(-1.755, -0.022));
             }
 
@@ -6266,7 +6266,7 @@ void main() {
             float pulse = 0.55 + 0.45 * sin(u_time * (0.9 + _mHash(u_fractalSeed*4.0)) + u_fractalSeed);
             finalCol += fracHalo * strength * pulse;
 
-            // Second layer: faint ghost from different region — creates depth
+            
             float ghost = _burningShip(suv * 0.3 + vec2(-1.77, -0.01) + drift * 0.5);
             ghost = fract(ghost * 2.0 + u_time * 0.025);
             vec3 ghostCol = _mPal(ghost, u_fractalSeed * 7.0 + 50.0) * smoothstep(0.0, 0.15, ghost);
@@ -6554,7 +6554,7 @@ class Zone3Engine {
     this.cy = 0;
     this.lastRenderTime = performance.now();
 
-    // Camera warp state — randomizes on each blink
+    
     this.z3ModeSeed = Math.random() * 100.0;
     this.blackholeSeed = Math.random() * 10000.0;
     this.z3Trip = 0.5;
@@ -6563,7 +6563,7 @@ class Zone3Engine {
     this.z3ModeStart = performance.now();
     this.z3BlinkPeakTime = performance.now();
 
-    // Blink state
+    
     this.lastBlinkTime = performance.now();
     this.nextBlinkInterval = 3000 + Math.random() * 6000;
     this.blinking = false;
@@ -6571,17 +6571,17 @@ class Zone3Engine {
     this.blinkSeeded = false;
     this.rBlink = 0.0;
 
-    // Red continuation from engine2 crash impact
+    
     this.z3RedStart = performance.now();
     this.z3RedDone = false;
 
-    // ── Black hole escape sequence (z3b void + conky toggle) ──
-    this.bhEscapeArmed = false; // conky was clicked during z3b void
-    this.bhEscapeBlinkCount = 0; // blinks counted after conky click
-    this.bhEscapePhase = 'none'; // none → rising → sucking → warp → black → falling
-    this.bhEscapeStart = 0; // timestamp for current escape phase
+    
+    this.bhEscapeArmed = false; 
+    this.bhEscapeBlinkCount = 0; 
+    this.bhEscapePhase = 'none'; 
+    this.bhEscapeStart = 0; 
 
-    // Audio
+    
     this._resetBlackholeStart();
     this._initAudio();
   }
@@ -6589,8 +6589,8 @@ class Zone3Engine {
   _initAudio() {
     const ctx = window.__audioCtx;
     if (!ctx) return;
-    // Leave wet/dry exactly where engine2 left them.
-    // Only add the cabin hum oscillator.
+    
+    
     try {
       this._humOsc = ctx.createOscillator();
       this._humGain = ctx.createGain();
@@ -6623,19 +6623,19 @@ class Zone3Engine {
       const p = Math.max(0, Math.min(1,
         (this.camZ - this.HALL_END_Z) / (this.COCKPIT_Z - this.HALL_END_Z)));
 
-      // Music stays, filter closes and reverb drops as you go deeper
+      
       if (wet) wet.gain.setTargetAtTime(0.3 - p * 0.15, t, 2.0);
       if (filt) filt.frequency.setTargetAtTime(500 - p * 220, t, 2.0);
 
-      // Hum builds
+      
       if (this._humGain) this._humGain.gain.setTargetAtTime(p * 0.025, t, 3.0);
 
-      // Turbulence: filter stutters
+      
       if (this.cabinState === 'cockpit_turbulence') {
         if (filt) filt.frequency.setTargetAtTime(200 + Math.random() * 150, t, 0.08);
       }
 
-      // Suction: filter closes hard, hum rises
+      
       if (this.cabinState === 'suction') {
         const pull = Math.abs(this.camX) / 1.1;
         if (filt) filt.frequency.setTargetAtTime(Math.max(80, 280 - pull * 200), t, 0.4);
@@ -6656,7 +6656,7 @@ class Zone3Engine {
           }
         } catch (_) {}
 
-        // ── BH escape audio override ──
+        
         if (this.bhEscapePhase === 'rising') {
           const ep = Math.min((now - this.bhEscapeStart) / 3000.0, 1.0);
           if (wet) wet.gain.setTargetAtTime(0.34 + ep * 0.15, t, 0.3);
@@ -6681,7 +6681,7 @@ class Zone3Engine {
           if (dry) dry.gain.setTargetAtTime(0.0, t, 0.3);
           if (this._humGain) this._humGain.gain.setTargetAtTime(0.0, t, 0.2);
         } else {
-          // Normal void audio
+          
           if (wet) wet.gain.setTargetAtTime(0.34 + ai * 0.18, t, 0.45);
           if (dry) dry.gain.setTargetAtTime(0.22 + ai * 0.08, t, 0.45);
           if (filt) filt.frequency.setTargetAtTime(180.0 + ai * 260.0 + Math.sin(now * 0.0017) * 25.0, t, 0.35);
@@ -6838,7 +6838,7 @@ class Zone3Engine {
   }
 
   _bhPathCenterY(z) {
-    // Match GLSL: smoothstep(-2400, -3100, z) * 30.0
+    
     const t = Math.max(0, Math.min(1, (z - (-2400.0)) / (-3100.0 - (-2400.0))));
     const ss = t * t * (3.0 - 2.0 * t);
     return -1.25 + ss * 30.0;
@@ -7046,7 +7046,7 @@ class Zone3Engine {
         this.bhCamPos.z = 120.0 - hallP * 50.0;
         this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z);
         this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.20;
-        // Don't drive movePhase/speed during hallway — path shouldn't scroll yet
+        
         this.bhMovePhase = 0.0;
         this.bhSpeed = 0.0;
       }
@@ -7066,26 +7066,26 @@ class Zone3Engine {
     } else if (this.centerPhase === 'void') {
       if (this.isAltRoute) {
 
-        // ── BLACK HOLE ESCAPE SEQUENCE ──
+        
         if (this.bhEscapePhase !== 'none') {
           const escElapsed = now - this.bhEscapeStart;
 
           if (this.bhEscapePhase === 'rising') {
-            // Phase 1 (0-3s): Universe distorts, you rise off the path
-            // Camera lifts up, ground drops away, slight pull toward BH
+            
+            
             const t = Math.min(escElapsed / 3000.0, 1.0);
-            const ease = t * t; // accelerating
+            const ease = t * t; 
 
-            // Rise up off the path
+            
             this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.85 + ease * 25.0;
-            // Slight drift toward BH
+            
             this.bhCamPos.z -= 2.0 * (timeScale / 60.0) * ease;
-            // Pitch down to see the ground receding
+            
             this.bhPitch = -0.05 - ease * 0.15;
-            // Shake increases
+            
             this.suctionShake = ease * 0.03;
 
-            // Keep move phase going for visual continuity
+            
             this.bhMovePhase += 2.0 * (timeScale / 60.0);
             this.bhSpeed = 0.3 + ease * 0.4;
 
@@ -7095,33 +7095,33 @@ class Zone3Engine {
             }
 
           } else if (this.bhEscapePhase === 'sucking') {
-            // Phase 2 (0-4s): Slowly getting pulled toward the BH
-            // Camera accelerates toward the black hole, universe warps
+            
+            
             const t = Math.min(escElapsed / 4000.0, 1.0);
-            const ease = t * t * t; // cubic acceleration - slow then fast
+            const ease = t * t * t; 
 
-            // Accelerate toward BH
+            
             const pullSpeed = 30.0 + ease * 200.0;
             this.bhCamPos.z -= pullSpeed * (timeScale / 60.0);
 
-            // Rise higher as pulled in
+            
             this.bhCamPos.y += ease * 8.0 * (timeScale / 60.0);
 
-            // Pitch tilts to look at BH center
+            
             this.bhPitch = -0.20 + ease * 0.15;
 
-            // Yaw spirals slightly
+            
             this.bhYaw += ease * 0.02 * timeScale;
 
-            // Increasing shake and trip
+            
             this.suctionShake = 0.03 + ease * 0.06;
             this.z3Trip = Math.min(3.0, this.z3Trip + 0.008 * timeScale);
 
-            // Speed ramps for ground texture scrolling
+            
             this.bhMovePhase += (10.0 + ease * 40.0) * (timeScale / 60.0);
             this.bhSpeed = 0.7 + ease * 0.8;
 
-            // Path center still tracks so ground looks right
+            
             this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z);
 
             if (t >= 1.0) {
@@ -7130,20 +7130,20 @@ class Zone3Engine {
             }
 
           } else if (this.bhEscapePhase === 'warp') {
-            // Phase 3 (0-1.5s): WARP SPEED — instant jump to max velocity
-            // Everything elongates, streaks, then smash cut to black
+            
+            
             const t = Math.min(escElapsed / 1500.0, 1.0);
 
-            // Extreme speed
+            
             this.bhCamPos.z -= 800.0 * (timeScale / 60.0);
             this.bhMovePhase += 120.0 * (timeScale / 60.0);
             this.bhSpeed = 1.5;
 
-            // Max shake, increasing trip
+            
             this.suctionShake = 0.09;
             this.z3Trip = 3.0;
 
-            // Spiral into BH center
+            
             this.bhYaw += 0.06 * timeScale;
             this.bhPitch += 0.02 * timeScale;
 
@@ -7155,9 +7155,9 @@ class Zone3Engine {
             }
 
           } else if (this.bhEscapePhase === 'black') {
-            // Phase 4 (0-1.2s): Hold on black, then transition to falling
+            
             const t = Math.min(escElapsed / 1200.0, 1.0);
-            // rBlink forced to 1.0 in render (screen is black)
+            
 
             if (t >= 1.0) {
               this.bhEscapePhase = 'falling';
@@ -7168,15 +7168,15 @@ class Zone3Engine {
             }
           }
 
-          // Skip normal void walking during escape
+          
           this.z3IsOOB = 1.0;
 
         } else {
-          // ── Normal z3b void walking ──
+          
           const walkAmt = isWalking ? (1.20 * timeScale) : 0.0;
           if (walkAmt > 0.0) {
             this.bhCamPos.z -= 18.0 * (timeScale / 60.0);
-            // Clamp — never pass the BH, infinite approach
+            
             this.bhCamPos.z = Math.max(this.bhCamPos.z, -3050.0);
             this.bhMovePhase += 7.5 * (timeScale / 60.0);
             this.bhSpeed += (1.0 - this.bhSpeed) * Math.min(1.0, 0.24 * timeScale);
@@ -7186,7 +7186,7 @@ class Zone3Engine {
           }
           const bobY = isWalking ? Math.sin(this.bhMovePhase * 2.0) * 0.07 : 0.0;
           const swayX = isWalking ? Math.sin(this.bhMovePhase) * 0.05 : 0.0;
-          // Idle body sway — subtle weight shift + breathing even when still
+          
           const idleTime = now * 0.001;
           const breathY = Math.sin(idleTime * 0.8) * 0.012 + Math.sin(idleTime * 1.3) * 0.006;
           const weightX = Math.sin(idleTime * 0.35) * 0.015 + Math.sin(idleTime * 0.57) * 0.008;
@@ -7244,7 +7244,7 @@ class Zone3Engine {
         case 'suction':
           this.suctionShake = 0.015;
           if (!this.suctionYawSnapped) {
-            // Drift toward port door (-X)
+            
             this.camX += (-1.1 - this.camX) * Math.min(1.0, 0.004 * timeScale);
             if (this.camX < -0.55) {
               this.suctionYawSnapped = true;
@@ -7252,7 +7252,7 @@ class Zone3Engine {
               this.zoomTarget = 1.15;
             }
           } else {
-            // Continue drifting out through door
+            
             this.camX += (-1.4 - this.camX) * Math.min(1.0, 0.006 * timeScale);
             if (this.camX < -1.2) {
               this.centerPhase = 'falling';
@@ -7287,7 +7287,7 @@ class Zone3Engine {
     if (this.isResetting) return;
 
     let dt = now - this.lastRenderTime;
-    if (dt > 250 || dt <= 0) dt = 33.33; // cap at 4fps, default to 30fps
+    if (dt > 250 || dt <= 0) dt = 33.33; 
     this.lastRenderTime = now;
     window.lastNow = now;
 
@@ -7299,9 +7299,9 @@ class Zone3Engine {
     }
 
     if (this.centerPhase !== 'falling') {
-      // Freeze mouse during late escape phases
+      
       if (this.bhEscapePhase === 'warp' || this.bhEscapePhase === 'black') {
-        // Lock camera - no mouse input
+        
       } else {
         this.cx += (currentMx - this.cx) * Math.min(1.0, 0.12 * timeScale);
         this.cy += (currentMy - this.cy) * Math.min(1.0, 0.12 * timeScale);
@@ -7331,7 +7331,7 @@ class Zone3Engine {
       if (el < 120) this.rBlink = el / 120;
       else if (el < 200) {
         this.rBlink = 1.0;
-        // Randomize warp seed at blink peak
+        
         if (!this.blinkSeeded) {
           this.blinkSeeded = true;
           this.z3ModeSeed = Math.random() * 100.0;
@@ -7340,7 +7340,7 @@ class Zone3Engine {
           this.z3ModeStart = now;
           this.z3BlinkPeakTime = now;
 
-          // ── BH escape blink counting ──
+          
           if (this.bhEscapeArmed && this.bhEscapePhase === 'none' &&
             this.isAltRoute && this.centerPhase === 'void') {
             this.bhEscapeBlinkCount++;
@@ -7363,18 +7363,18 @@ class Zone3Engine {
     if (this.activePOV === 'center') this.updateCenterState(now, timeScale);
     this._updateAudio(now);
 
-    // ── Composite neural intensity — exposed for brain monitor ──
+    
     var stateBoost = 0;
     if (this.cabinState === 'cockpit_turbulence') stateBoost = 1.5;
     else if (this.cabinState === 'backward') stateBoost = 0.8;
     else if (this.cabinState === 'suction') stateBoost = 2.5;
     if (this.centerPhase === 'falling') stateBoost = 3.0;
     if (this.fractalActive > 0.5) stateBoost += 0.5;
-    // BH escape escalation
+    
     if (this.bhEscapePhase === 'rising') stateBoost = 2.0;
     else if (this.bhEscapePhase === 'sucking') stateBoost = 3.5;
     else if (this.bhEscapePhase === 'warp') stateBoost = 5.0;
-    // Walk depth into cabin escalates
+    
     var depthBoost = 0;
     if (this.centerPhase === 'cabin') {
       depthBoost = Math.max(0, (this.camZ - this.HALL_END_Z) / (this.COCKPIT_Z - this.HALL_END_Z)) * 0.6;
@@ -7447,24 +7447,24 @@ class Zone3Engine {
         const redPulse = Math.max(0.0, Math.min(0.25, voidAge * 0.03));
         if (redPulse > 0.001) this._drawOverlay(0.16, 0.0, 0.0, redPulse);
 
-        // ── BH escape visual overlays ──
+        
         if (this.bhEscapePhase === 'rising') {
-          // Slight vignette darkening as you lift off
+          
           const t = Math.min((now - this.bhEscapeStart) / 3000.0, 1.0);
           this._drawOverlay(0.0, 0.0, 0.02, t * 0.15);
         } else if (this.bhEscapePhase === 'sucking') {
-          // Increasing purple/dark vignette as BH pulls
+          
           const t = Math.min((now - this.bhEscapeStart) / 4000.0, 1.0);
           this._drawOverlay(0.06, 0.0, 0.08, t * 0.4);
         } else if (this.bhEscapePhase === 'warp') {
-          // Rapid white flash then fade to dark — warp streaks
+          
           const t = Math.min((now - this.bhEscapeStart) / 1500.0, 1.0);
-          const whiteFlash = Math.max(0.0, 1.0 - t * 4.0); // flash at start
-          const blackFade = Math.max(0.0, (t - 0.3) / 0.7); // black creeps in
+          const whiteFlash = Math.max(0.0, 1.0 - t * 4.0); 
+          const blackFade = Math.max(0.0, (t - 0.3) / 0.7); 
           if (whiteFlash > 0.001) this._drawOverlay(1.0, 1.0, 1.0, whiteFlash * 0.7);
           if (blackFade > 0.001) this._drawOverlay(0.0, 0.0, 0.0, blackFade);
         } else if (this.bhEscapePhase === 'black') {
-          // Full black screen
+          
           this._drawOverlay(0.0, 0.0, 0.0, 1.0);
         }
 
@@ -7545,7 +7545,7 @@ class Zone3Engine {
       }
     }
 
-    // Red continuation from engine2 crash — starts full red, slow fade out
+    
     if (!this.z3RedDone) {
       let elapsed = now - this.z3RedStart;
       let redAlpha = 0.0;
@@ -7559,7 +7559,7 @@ class Zone3Engine {
       if (redAlpha > 0.001) this._drawOverlay(0.8, 0.0, 0.0, redAlpha);
     }
 
-    // Hallucination overlay — trip climaxing by cabin
+    
     if (typeof drawHallucinationOverlay === 'function' && this.centerPhase !== 'falling') {
       drawHallucinationOverlay(now, this.z3Trip, this.z3ModeSeed, (now - this.z3BlinkPeakTime) * 0.001, 3.0);
     }
@@ -7611,18 +7611,18 @@ window.startZone3 = function(route) {
     }
   };
   requestAnimationFrame(window.__zone3Governor);
-}; // ═══════════════════════════════════════════════════════════════
-//  BRAIN-MONITOR.JS — DTI Tractography visualization
-//  Long sweeping fiber bundles that fill the canvas,
-//  colored by direction like real diffusion tensor imaging.
-//  Fixed bottom-right overlay, transparent, conky magenta palette.
-// ═══════════════════════════════════════════════════════════════</script>
-  <script>/* ===== brain-scanner.js ===== */
+}; 
+
+
+
+
+
+  <script>
 (function() {
 
   var cvs, ctx;
   var running = false;
-  var fibers = []; // each fiber is a full curve with many points
+  var fibers = []; 
   var pulses = [];
   var monitorStartTime = 0;
   var readoutLines = [];
@@ -7635,7 +7635,7 @@ window.startZone3 = function(route) {
   var READOUT_INTERVAL = 2200;
   var POINTS_PER_FIBER = 30;
 
-  // ── READOUTS ──
+  
   var NORMAL_READOUTS = [
     function() {
       return '\u0421\u0435\u0440\u043E\u0442\u043E\u043D\u0438\u043D 5-HT2A: ' + (72 + Math.random() * 15).toFixed(1) + '%';
@@ -7710,9 +7710,9 @@ window.startZone3 = function(route) {
     },
   ];
 
-  // ── FIBER GENERATION ──
-  // Each fiber is a smooth curve defined by control points, rendered as a polyline.
-  // Bundles: multiple fibers with similar but slightly varied paths.
+  
+  
+  
 
   function makeFiber(w, h, bundleAngle, bundleOrigin, bundleSpread, hue, trip) {
     var pts = [];
@@ -7724,13 +7724,13 @@ window.startZone3 = function(route) {
     var angle = bundleAngle + (Math.random() - 0.5) * 0.5;
     var speed = 3.5 + Math.random() * 4;
 
-    // Brain ellipse center (will be set properly by spawnBundle)
+    
     var bcx = w * 0.48,
       bcy = h * 0.42,
       brx = w * 0.38,
       bry = h * 0.35;
 
-    // Curvature — strong arcing for weaving
+    
     var curveDrift = (Math.random() - 0.5) * 0.06;
 
     for (var i = 0; i < numPts; i++) {
@@ -7739,15 +7739,15 @@ window.startZone3 = function(route) {
         y: y
       });
 
-      // Natural curve
+      
       angle += curveDrift + (Math.random() - 0.5) * 0.1;
 
-      // Pull fiber toward brain center if it's drifting out — creates the contained shape
+      
       var dx = (x - bcx) / brx;
       var dy = (y - bcy) / bry;
       var distFromCenter = Math.sqrt(dx * dx + dy * dy);
       if (distFromCenter > 0.7) {
-        // Curve back toward center
+        
         var pullAngle = Math.atan2(bcy - y, bcx - x);
         var pullStrength = (distFromCenter - 0.7) * 0.08;
         angle += (pullAngle - angle) * pullStrength;
@@ -7778,59 +7778,59 @@ window.startZone3 = function(route) {
 
     var bundleSize = 6 + Math.floor(Math.random() * 10 + trip * 3);
 
-    // Brain center and dimensions — elliptical boundary
+    
     var brainCX = w * 0.48;
     var brainCY = h * 0.42;
-    var brainRX = w * 0.38; // horizontal radius
-    var brainRY = h * 0.35; // vertical radius
+    var brainRX = w * 0.38; 
+    var brainRY = h * 0.35; 
 
-    // Pick a tract type — each has a characteristic shape and color
+    
     var tractType = Math.floor(Math.random() * 6);
     var ox, oy, angle, hue, spread, curveStrength;
 
     if (tractType === 0) {
-      // Corpus callosum — arcs left-to-right across the top (RED)
+      
       ox = brainCX - brainRX * (0.3 + Math.random() * 0.5);
       oy = brainCY - brainRY * (0.2 + Math.random() * 0.4);
-      angle = -0.3 + Math.random() * 0.6; // roughly rightward
-      hue = 350 + Math.random() * 25; // deep red to magenta
+      angle = -0.3 + Math.random() * 0.6; 
+      hue = 350 + Math.random() * 25; 
       spread = 8 + Math.random() * 12;
       curveStrength = 0.03 + Math.random() * 0.02;
     } else if (tractType === 1) {
-      // Corticospinal — vertical from bottom upward (BLUE/PURPLE)
+      
       ox = brainCX + (Math.random() - 0.5) * brainRX * 0.3;
       oy = brainCY + brainRY * (0.4 + Math.random() * 0.3);
-      angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; // upward
-      hue = 220 + Math.random() * 60; // blue to purple
+      angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; 
+      hue = 220 + Math.random() * 60; 
       spread = 6 + Math.random() * 10;
       curveStrength = 0.01 + Math.random() * 0.02;
     } else if (tractType === 2) {
-      // Arcuate fasciculus — curves front-to-back (GREEN/CYAN)
+      
       ox = brainCX - brainRX * (0.1 + Math.random() * 0.3);
       oy = brainCY + (Math.random() - 0.5) * brainRY * 0.4;
-      angle = 0.3 + Math.random() * 0.8; // forward-downward arc
-      hue = 100 + Math.random() * 60; // green to cyan
+      angle = 0.3 + Math.random() * 0.8; 
+      hue = 100 + Math.random() * 60; 
       spread = 10 + Math.random() * 15;
       curveStrength = 0.04 + Math.random() * 0.03;
     } else if (tractType === 3) {
-      // Cingulum — follows cortex curve, top of brain (ORANGE/YELLOW)
+      
       var t = Math.random() * Math.PI;
       ox = brainCX + Math.cos(t) * brainRX * 0.6;
       oy = brainCY - Math.sin(t) * brainRY * 0.6;
-      angle = t + Math.PI / 2 + (Math.random() - 0.5) * 0.3; // tangent to curve
-      hue = 30 + Math.random() * 40; // orange to yellow
+      angle = t + Math.PI / 2 + (Math.random() - 0.5) * 0.3; 
+      hue = 30 + Math.random() * 40; 
       spread = 5 + Math.random() * 8;
       curveStrength = 0.05 + Math.random() * 0.02;
     } else if (tractType === 4) {
-      // Uncinate — hooks from frontal down to temporal (MAGENTA/PINK)
+      
       ox = brainCX - brainRX * (0.2 + Math.random() * 0.2);
       oy = brainCY - brainRY * 0.1;
       angle = Math.PI * 0.6 + (Math.random() - 0.5) * 0.4;
-      hue = 300 + Math.random() * 40; // magenta to pink
+      hue = 300 + Math.random() * 40; 
       spread = 8 + Math.random() * 10;
       curveStrength = 0.06 + Math.random() * 0.03;
     } else {
-      // Radiating corona — fans outward from center (MULTI-COLOR)
+      
       ox = brainCX + (Math.random() - 0.5) * brainRX * 0.2;
       oy = brainCY + (Math.random() - 0.5) * brainRY * 0.2;
       angle = Math.random() * Math.PI * 2;
@@ -7839,7 +7839,7 @@ window.startZone3 = function(route) {
       curveStrength = 0.02 + Math.random() * 0.04;
     }
 
-    // At high trip, occasional wild neon colors
+    
     if (trip > 0.7 && Math.random() < 0.3) hue = 280 + Math.random() * 80;
 
     for (var i = 0; i < bundleSize; i++) {
@@ -7858,10 +7858,10 @@ window.startZone3 = function(route) {
   }
 
   function pruneOldFibers() {
-    // Remove oldest fully-grown fibers to make room
+    
     if (fibers.length < MAX_FIBERS * 0.9) return;
     var removeCount = Math.floor(MAX_FIBERS * 0.15);
-    // Sort by age descending, remove oldest
+    
     var aged = [];
     for (var i = 0; i < fibers.length; i++) {
       if (fibers[i].growProgress >= 1) aged.push(i);
@@ -7878,47 +7878,47 @@ window.startZone3 = function(route) {
     });
   }
 
-  // ── DRAW ──
+  
   function drawFibers(t, trip) {
     for (var i = 0; i < fibers.length; i++) {
       var f = fibers[i];
 
-      // Grow animation
+      
       f.growProgress = Math.min(1, f.growProgress + f.growSpeed);
       f.age++;
 
       var visiblePts = Math.max(2, Math.floor(f.points.length * f.growProgress));
 
-      // Sway — entire fiber oscillates gently
+      
       var swayX = Math.sin(t * 0.3 + f.swayPhase) * f.swayAmp;
       var swayY = Math.cos(t * 0.25 + f.swayPhase * 1.3) * f.swayAmp * 0.7;
-      // Trip amplifies sway
+      
       swayX *= (1 + trip * 0.8);
       swayY *= (1 + trip * 0.8);
 
-      // Fire glow
+      
       f.fireTimer = Math.max(0, f.fireTimer - 0.01);
       var fireBright = f.fireTimer;
 
-      // Color
-      var hue = f.hue + Math.sin(t * 0.2 + i * 0.1) * 5; // subtle hue drift
+      
+      var hue = f.hue + Math.sin(t * 0.2 + i * 0.1) * 5; 
       var sat = f.saturation;
       var light = 45 + fireBright * 35;
       var alpha = f.alpha * (0.85 + 0.15 * Math.sin(t * 0.5 + f.swayPhase));
 
-      // Fade in new fibers, fade out old fully-grown ones slightly
+      
       if (f.growProgress < 0.3) alpha *= f.growProgress / 0.3;
 
       ctx.beginPath();
       ctx.moveTo(f.points[0].x + swayX, f.points[0].y + swayY);
 
       for (var p = 1; p < visiblePts; p++) {
-        // Per-point sway increases toward the tip
+        
         var tipFactor = p / f.points.length;
         var ptSwayX = swayX + Math.sin(t * 0.8 + p * 0.3 + f.swayPhase) * tipFactor * 2 * (1 + trip);
         var ptSwayY = swayY + Math.cos(t * 0.6 + p * 0.4 + f.swayPhase) * tipFactor * 1.5 * (1 + trip);
 
-        // Smooth curve through points
+        
         if (p < visiblePts - 1) {
           var next = f.points[p + 1];
           var cpx = f.points[p].x + ptSwayX;
@@ -7939,7 +7939,7 @@ window.startZone3 = function(route) {
       ctx.lineJoin = 'round';
       ctx.stroke();
 
-      // Glow on fired fibers
+      
       if (fireBright > 0.1) {
         ctx.strokeStyle = 'hsla(' + (hue | 0) + ',100%,70%,' + (fireBright * 0.3).toFixed(3) + ')';
         ctx.lineWidth = f.thickness + fireBright * 5;
@@ -7949,7 +7949,7 @@ window.startZone3 = function(route) {
   }
 
   function drawPulses(t, trip) {
-    // Spawn
+    
     if (pulses.length < MAX_PULSES && fibers.length > 0 && Math.random() < 0.04 + trip * 0.06) {
       var fi = Math.floor(Math.random() * fibers.length);
       if (fibers[fi].growProgress > 0.5) {
@@ -7978,7 +7978,7 @@ window.startZone3 = function(route) {
         continue;
       }
 
-      // Find position along fiber
+      
       var ptIdx = Math.floor(p.progress * (f.points.length - 1) * f.growProgress);
       ptIdx = Math.min(ptIdx, f.points.length - 1);
       var pt = f.points[ptIdx];
@@ -8001,7 +8001,7 @@ window.startZone3 = function(route) {
     }
   }
 
-  // ── READOUT ──
+  
   function updateReadout(now, trip, zone) {
     if (now - lastReadout < READOUT_INTERVAL) return;
     lastReadout = now;
@@ -8031,7 +8031,7 @@ window.startZone3 = function(route) {
     if (!el) return;
     var hz = (pulses.length * 3.8).toFixed(0);
     var st, sc;
-    // Cycle language based on time
+    
     var lang = Math.floor(Date.now() / 4000) % 3;
     if (trip < 0.3) {
       sc = '#00cc88';
@@ -8049,7 +8049,7 @@ window.startZone3 = function(route) {
     el.innerHTML = '<span style="color:' + sc + ';font-weight:bold;">' + st + '</span> Z' + zone + ' | ' + fibers.length + ' | ' + hz + ' Hz';
   }
 
-  // ── GET TRIP STATE ──
+  
   function getTripState() {
     var z3 = window.currentZone3;
     if (z3) return {
@@ -8071,7 +8071,7 @@ window.startZone3 = function(route) {
     };
   }
 
-  // ── MAIN LOOP ──
+  
   function render() {
     if (!running || !cvs || !ctx) return;
     var now = performance.now();
@@ -8081,12 +8081,12 @@ window.startZone3 = function(route) {
     var state = getTripState();
     var trip = state.trip;
 
-    // Clear — fully transparent
+    
     ctx.clearRect(0, 0, w, h);
 
-    // Spawn new bundles continuously
+    
     fiberSpawnTimer++;
-    var spawnRate = 8 + Math.floor(20 / (1 + trip)); // faster at high trip
+    var spawnRate = 8 + Math.floor(20 / (1 + trip)); 
     if (fiberSpawnTimer % spawnRate === 0) {
       pruneOldFibers();
       spawnBundle(w, h, trip);
@@ -8101,7 +8101,7 @@ window.startZone3 = function(route) {
     requestAnimationFrame(render);
   }
 
-  // ── INIT ──
+  
   window.initBrainMonitor = function() {
     var container = document.getElementById('brain-monitor-wrap');
 
@@ -8144,7 +8144,7 @@ window.startZone3 = function(route) {
     ctx = cvs.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    // Seed initial bundles
+    
     fibers = [];
     pulses = [];
     readoutLines = [];
@@ -8152,7 +8152,7 @@ window.startZone3 = function(route) {
     fiberSpawnTimer = 0;
     monitorStartTime = performance.now();
 
-    // Spawn bundles immediately — dense from the start
+    
     var _initBundles = _bmMobile ? 6 : 16;
     for (var i = 0; i < _initBundles; i++) {
       spawnBundle(lw, lh, 0.3);
@@ -8170,8 +8170,8 @@ window.startZone3 = function(route) {
     if (el) el.style.display = 'none';
   };
 
-  // ── HINT OVERLAY SYSTEM ──
-  // h1-h5 images shown in top-right of RSS box while holding brain-scanner
+  
+  
   (function(){
     var hintEl = null;
     var hintVisible = false;
@@ -8182,26 +8182,26 @@ window.startZone3 = function(route) {
       var z3 = window.currentZone3;
       var z2 = window.currentZone2;
 
-      // h5: the plane (z3 cabin phase)
+      
       if (z3 && z3.centerPhase === 'cabin') return 'files/img/h/h5.png';
 
-      // h4: alternate black-hole route (z3b, or z2 bedroom_2/z3b_turbulence/z3b_red)
+      
       if (z3 && z3.isAltRoute) return 'files/img/h/h4.png';
       if (z2 && (z2.seqState === 'bedroom_2' || z2.seqState === 'z3b_turbulence' || z2.seqState === 'z3b_red'))
         return 'files/img/h/h4.png';
 
-      // h3: after the two-blinks sequence begins (bathroom blood state onward)
+      
       if (z2 && (z2.seqState === 'blood' || z2.seqState === 'hole' || z2.seqState === 'red'))
         return 'files/img/h/h3.png';
 
-      // h2: before bathroom two-blinks (z2 exists, still in initial or bedroom_visited)
+      
       if (z2 && (z2.seqState === 'initial' || z2.seqState === 'bedroom_visited'))
         return 'files/img/h/h2.png';
 
-      // h1: Zone 1 (no z2 or z3 active)
+      
       if (!z2 && !z3) return 'files/img/h/h1.png';
 
-      // z3 normal route (hallway, fall, void, etc) — show h3
+      
       if (z3 && !z3.isAltRoute) return 'files/img/h/h3.png';
 
       return '';
@@ -8257,7 +8257,7 @@ window.startZone3 = function(route) {
       }, 500);
     }
 
-    // Attach listeners once brain monitor container exists
+    
     var _hintObserver = new MutationObserver(function(){
       var wrap = document.getElementById('brain-monitor-wrap');
       if (!wrap || wrap.__hintBound) return;
@@ -8277,7 +8277,7 @@ window.startZone3 = function(route) {
     });
     _hintObserver.observe(document.body, {childList: true, subtree: true});
 
-    // Also check if it already exists
+    
     var existing = document.getElementById('brain-monitor-wrap');
     if (existing && !existing.__hintBound) {
       existing.__hintBound = true;
@@ -8295,7 +8295,7 @@ window.startZone3 = function(route) {
   })();
 
 })();</script>
-  <script>/* ===== playlist.js ===== */
+  <script>
 window.audioTracks = [
   'files/aud/003.mp3',
   'files/aud/011.mp3',
@@ -8318,7 +8318,7 @@ window.audioTracks = [
   'files/aud/121.mp3',
   'files/aud/124.mp3'
 ];</script>
-  <script>/* ===== videos.js ===== */
+  <script>
 window.MAPPED_VIDEOS = [
   'forcedenlightenment_1.mp4',
   'grate.mp4',
@@ -8337,7 +8337,7 @@ window.MAPPED_VIDEOS = [
   'albionhouse.mp4',
   'z-1.mp4',
 ];</script>
-  <script>/* ===== gallery.js ===== */
+  <script>
 window.galleryImages = [];
 for (var i = 1; i <= 299; i++) {
   window.galleryImages.push(String(i).padStart(5, '0') + '.webp');
