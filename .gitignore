@@ -14,7 +14,15 @@ gallerytest.html
 .style.css
 .javascript.js
 .ignore
-./.ignore/GALLERY DROPIN./.ignore/index copy 2.html./.ignore/index copy.html./.ignore/vindex.test.html./.ignore/index.html.zip./.ignore/patch.sh./.ignore/repo_code_dump.md./.ignore/sandbox.html./.ignore/test.html
+./.ignore/GALLERY DROPIN
+./.ignore/index copy 2.html
+./.ignore/index copy.html
+./.ignore/vindex.test.html
+./.ignore/index.html.zip
+./.ignore/patch.sh
+./.ignore/repo_code_dump.md
+./.ignore/sandbox.html
+./.ignore/test.html
 ./.ignore/milkdrop-preset-converter.min.js
 ./.ignore/ButterchurnPresets.min.js.zip
 ./.ignore/indextest.html
@@ -42,3 +50,8 @@ files/img/rooms/z1/left-mobile-ai.png
 index.backup.html
 index.min.html
 input.html
+.911.js
+.build.js
+.split.js
+test copy.html
+test.html

@@ -1,553 +1,546 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Colossal Black Hole Rail Walk</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-      width: 100%;
-      height: 100%;
-      touch-action: none;
-    }
-
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      cursor: crosshair;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Space Elevator – Elevator + Mode‑Fall City + Improved Earth</title>
+    <style>
+        * { margin: 0; padding: 0; user-select: none; }
+        body { background: #000; overflow: hidden; font-family: monospace; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: grab; outline: none; }
+        canvas:active { cursor: grabbing; }
+        #info {
+            position: fixed; bottom: 18px; left: 18px;
+            color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            padding: 6px 14px; border-radius: 30px; font-size: 13px;
+            pointer-events: none; z-index: 10; border-left: 3px solid #ffaa33;
+        }
+        #controls {
+            position: fixed; bottom: 18px; right: 18px;
+            color: white; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            padding: 6px 14px; border-radius: 30px; font-size: 12px;
+            pointer-events: none; z-index: 10;
+        }
+        #progress {
+            position: fixed; bottom: 30px; left: 20%; width: 60%; height: 4px;
+            background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;
+            pointer-events: none; z-index: 20;
+        }
+        #progress-fill {
+            width: 0%; height: 100%; background: #ffaa33; transition: width 0.05s linear;
+        }
+    </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-
-<script>
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-
-GLSL.modules.z2_alt_blackhole = `
-precision highp float;
-
-uniform vec2  u_resolution;
-uniform float u_time;
-uniform float u_yaw;
-uniform float u_pitch;
-uniform vec3  u_camPos;
-uniform float u_movePhase;
-uniform float u_speed;
-
-const int   MARCH_STEPS = 96;
-const int   BEND_STEPS  = 26;
-const float FAR_CLIP    = 14000.0;
-const float EPS         = 0.045;
-
-const vec3  BH_CENTER   = vec3(0.0, 0.0, -3200.0);
-const float BH_RADIUS   = 520.0;
-
-mat2 rot(float a){
-  float c = cos(a), s = sin(a);
-  return mat2(c,-s,s,c);
-}
-
-float hash1(float p){
-  return fract(sin(p * 127.1) * 43758.5453123);
-}
-
-float hash2(vec2 p){
-  return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123);
-}
-
-float hash3(vec3 p){
-  return fract(sin(dot(p, vec3(127.1,311.7,191.999))) * 43758.5453123);
-}
-
-float noise3(vec3 p){
-  vec3 i = floor(p);
-  vec3 f = fract(p);
-  f = f*f*(3.0-2.0*f);
-
-  float n000 = hash3(i + vec3(0.0,0.0,0.0));
-  float n100 = hash3(i + vec3(1.0,0.0,0.0));
-  float n010 = hash3(i + vec3(0.0,1.0,0.0));
-  float n110 = hash3(i + vec3(1.0,1.0,0.0));
-  float n001 = hash3(i + vec3(0.0,0.0,1.0));
-  float n101 = hash3(i + vec3(1.0,0.0,1.0));
-  float n011 = hash3(i + vec3(0.0,1.0,1.0));
-  float n111 = hash3(i + vec3(1.0,1.0,1.0));
-
-  float nx00 = mix(n000,n100,f.x);
-  float nx10 = mix(n010,n110,f.x);
-  float nx01 = mix(n001,n101,f.x);
-  float nx11 = mix(n011,n111,f.x);
-
-  float nxy0 = mix(nx00,nx10,f.y);
-  float nxy1 = mix(nx01,nx11,f.y);
-
-  return mix(nxy0,nxy1,f.z);
-}
-
-float fbm2(vec3 p){
-  float v = 0.0;
-  v += 0.65 * noise3(p);
-  p *= 2.05;
-  v += 0.35 * noise3(p);
-  return v;
-}
-
-vec3 camForward(float yaw, float pitch){
-  vec3 f = vec3(0.0,0.0,-1.0);
-  f.xz *= rot(yaw);
-  f.yz *= rot(pitch);
-  return normalize(f);
-}
-
-vec3 camRight(vec3 fwd){
-  return normalize(cross(fwd, vec3(0.0,1.0,0.0)));
-}
-
-vec3 camUp(vec3 fwd, vec3 right){
-  return normalize(cross(right, fwd));
-}
-
-float pathCenterX(float z){
-  float k = clamp((-z - 50.0) / 2800.0, 0.0, 1.0);
-  return sin(z * 0.00165 + 0.7) * 22.0 * k + sin(z * 0.006 + 1.8) * 3.5;
-}
-
-float pathCenterY(float z){
-  return -1.25 + smoothstep(-2400.0, -3100.0, z) * 30.0;
-}
-
-float pathHalfWidth(float z){
-  float t = clamp((-z - 20.0) / 3300.0, 0.0, 1.0);
-  return mix(1.3, 18.0, t * t);
-}
-
-float sdWalkway(vec3 p){
-  float cx = pathCenterX(p.z);
-  float cy = pathCenterY(p.z);
-  float width = pathHalfWidth(p.z);
-  float thickness = 0.09 + smoothstep(-2900.0, -3200.0, p.z) * 0.55;
-
-  vec3 q = p - vec3(cx, cy, 0.0);
-  float d = max(abs(q.y) - thickness, abs(q.x) - width);
-  float edgeNoise = (noise3(vec3(q.x * 0.16, q.y * 2.2, p.z * 0.012)) - 0.5) * 0.045;
-  return d + edgeNoise;
-}
-
-float sdSphere(vec3 p, vec3 c, float r){
-  return length(p - c) - r;
-}
-
-vec2 sceneSDF(vec3 p){
-  float dPath = sdWalkway(p);
-  float dBH   = sdSphere(p, BH_CENTER, BH_RADIUS);
-  return (dPath < dBH) ? vec2(dPath,1.0) : vec2(dBH,2.0);
-}
-
-vec3 estimateNormal(vec3 p){
-  vec2 e = vec2(0.012,0.0);
-  float dx = sceneSDF(p + vec3(e.x,e.y,e.y)).x - sceneSDF(p - vec3(e.x,e.y,e.y)).x;
-  float dy = sceneSDF(p + vec3(e.y,e.x,e.y)).x - sceneSDF(p - vec3(e.y,e.x,e.y)).x;
-  float dz = sceneSDF(p + vec3(e.y,e.y,e.x)).x - sceneSDF(p - vec3(e.y,e.y,e.x)).x;
-  return normalize(vec3(dx,dy,dz));
-}
-
-vec3 cosmos(vec3 rd, vec3 ro){
-  vec3 d = normalize(rd);
-  vec3 col = vec3(0.0);
-
-  vec3 p1 = normalize(d * 900.0 + ro * 0.012);
-  vec3 p2 = normalize(d * 1600.0 + ro * 0.020 + vec3(17.3,-9.1,5.7));
-
-  float h1 = hash3(floor(p1 * 320.0));
-  float h2 = hash3(floor(p2 * 520.0));
-
-  float starsA = smoothstep(0.9982, 1.0, h1);
-  float starsB = smoothstep(0.9993, 1.0, h2);
-
-  col += vec3(0.80,0.86,0.96) * starsA * 0.65;
-  col += vec3(0.72,0.76,0.92) * starsB * 0.35;
-
-  vec3 neb = d * 7.0 + ro * vec3(0.0007,0.0003,0.0009);
-  float band = smoothstep(0.42,0.0,abs(d.y + sin(d.x * 2.4 + ro.z * 0.0002) * 0.16));
-  float gal1 = noise3(neb + vec3(0.0,u_time * 0.005,0.0));
-  float gal2 = noise3(neb * 1.9 + vec3(4.2,-2.3,7.7));
-  float gal3 = noise3(neb * 0.8 + vec3(-3.4, 2.0, -6.1));
-
-  col += vec3(0.10,0.13,0.22) * gal1 * band * 0.90;
-  col += vec3(0.08,0.10,0.18) * gal2 * band * 0.70;
-  col += vec3(0.04,0.06,0.12) * gal3 * band * 0.55;
-
-  float overcast = smoothstep(0.85, -0.10, d.y);
-  col += vec3(0.05,0.07,0.12) * overcast * 0.50;
-
-  return col;
-}
-
-vec3 accretionGlow(vec3 p, float closestR){
-  vec3 rel = p - BH_CENTER;
-  float r = length(rel);
-  float plane = abs(rel.y);
-  float ringRadius = length(rel.xz);
-
-  float disk = exp(-plane * 0.085) * smoothstep(BH_RADIUS * 2.6, BH_RADIUS * 1.08, ringRadius);
-  float innerCut = smoothstep(BH_RADIUS * 1.02, BH_RADIUS * 1.30, ringRadius);
-  disk *= innerCut;
-
-  float swirl = 0.55 + 0.45 * sin(atan(rel.z, rel.x) * 7.0 - u_time * 0.8 + ringRadius * 0.008);
-  float turbulence = noise3(rel * vec3(0.006,0.03,0.006) + vec3(0.0,u_time * 0.03,0.0));
-
-  vec3 ember = vec3(1.02,0.42,0.12);
-  vec3 hot   = vec3(1.05,0.63,0.26);
-  vec3 rim   = vec3(0.34,0.40,0.76);
-  float temp = smoothstep(BH_RADIUS * 1.15, BH_RADIUS * 2.2, ringRadius);
-
-  vec3 glow = mix(ember, hot, temp) * disk * (0.72 + 0.48 * swirl + 0.30 * turbulence);
-
-  float photonShell = exp(-abs(r - BH_RADIUS * 1.55) * 0.022) * smoothstep(0.7,0.0,plane * 0.05);
-  glow += rim * photonShell * 0.22;
-
-  float lens = smoothstep(BH_RADIUS * 4.2, BH_RADIUS * 1.0, closestR);
-  glow += vec3(0.10,0.12,0.24) * disk * lens * 0.08;
-
-  return glow * 0.013;
-}
-
-vec3 walkwayMaterial(vec3 p, vec3 rd, vec3 n){
-  float z = p.z;
-  float width = pathHalfWidth(z);
-  float cx = pathCenterX(z);
-  float localX = p.x - cx;
-  float edge = abs(localX / max(width,0.0001));
-  float edgeFade = 1.0 - smoothstep(0.80,1.02,edge);
-
-  float grain = fbm2(vec3(p.x * 0.8, p.y * 10.0, p.z * 0.04));
-
-  float seg = 1.0 - smoothstep(0.0,0.18,abs(fract((p.z + 1000.0) * 0.060) - 0.5));
-  float fastSeg = 1.0 - smoothstep(0.0,0.10,abs(fract((p.z + 1000.0) * 0.16) - 0.5));
-
-  float centerLine = 1.0 - smoothstep(0.0,0.10,abs(localX));
-  float laneGlow = centerLine * (0.04 + 0.07 * seg);
-
-  float edgeGlow = smoothstep(0.90,0.98,edge) * (0.06 + 0.14 * fastSeg);
-
-  float nearPulse = smoothstep(-600.0,300.0,p.z) * (0.4 + 0.6 * sin(u_movePhase * 12.0 + p.z * 0.10));
-  float forwardFlow = fastSeg * nearPulse * u_speed;
-
-  vec3 base   = vec3(0.015,0.018,0.024);
-  vec3 detail = vec3(0.028,0.034,0.046) * grain * 0.72;
-  vec3 line   = vec3(0.10,0.11,0.16) * seg * 0.13;
-  vec3 center = vec3(0.14,0.15,0.22) * laneGlow;
-  vec3 edges  = vec3(0.18,0.20,0.32) * edgeGlow;
-  vec3 motion = vec3(0.18,0.20,0.34) * forwardFlow * 0.10;
-
-  float fres = pow(1.0 - max(dot(-rd, n), 0.0), 3.0);
-  vec3 rim = vec3(0.08,0.10,0.16) * fres * 0.22;
-
-  vec3 col = (base + detail + line + center + edges + motion + rim) * edgeFade;
-
-  float horizonTint = smoothstep(-2800.0,-3200.0,z);
-  col += vec3(0.06,0.07,0.12) * horizonTint * 0.24;
-  col += vec3(0.03,0.04,0.08) * horizonTint * 0.16;
-
-  float warmBounce = smoothstep(BH_RADIUS * 2.9, BH_RADIUS * 1.5, length(p - BH_CENTER));
-  col += vec3(0.07,0.04,0.02) * warmBounce * 0.06;
-
-  return col;
-}
-
-void main(){
-  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
-
-  vec3 ro = u_camPos;
-  vec3 fwd = camForward(u_yaw, u_pitch);
-  vec3 right = camRight(fwd);
-  vec3 up = camUp(fwd, right);
-  vec3 rd = normalize(fwd + right * uv.x + up * uv.y);
-
-  vec3 p = ro;
-  vec3 col = vec3(0.0);
-
-  float traveled = 0.0;
-  float closestR = 1e9;
-  bool hit = false;
-  float hitMat = 0.0;
-
-  for(int i=0; i<MARCH_STEPS; i++){
-    vec3 toBH = BH_CENTER - p;
-    float r = length(toBH);
-    closestR = min(closestR, r);
-
-    if(r < BH_RADIUS){
-      col = vec3(0.0);
-      hit = true;
-      hitMat = 2.0;
-      break;
-    }
-
-    float grav = clamp((BH_RADIUS * 16.0) / (r * r), 0.0, 0.040);
-    rd = normalize(mix(rd, normalize(toBH), grav));
-
-    vec2 s = sceneSDF(p);
-    float d = s.x;
-
-    if(r < BH_RADIUS * 4.8 && mod(float(i), 2.0) < 0.5){
-      col += accretionGlow(p, closestR);
-    }
-
-    if(d < EPS){
-      hit = true;
-      hitMat = s.y;
-      break;
-    }
-
-    float stepLen = clamp(d * 0.95, 0.75, 78.0);
-    stepLen *= 1.0 + smoothstep(BH_RADIUS * 5.5, FAR_CLIP, r) * 1.55;
-
-    p += rd * stepLen;
-    traveled += stepLen;
-
-    if(traveled > FAR_CLIP) break;
-  }
-
-  if(hit && hitMat == 1.0){
-    vec3 n = estimateNormal(p);
-    vec3 matCol = walkwayMaterial(p, rd, n);
-    col += matCol;
-
-    float bhDist = length(p - BH_CENTER);
-    float bounce = smoothstep(BH_RADIUS * 2.2, BH_RADIUS * 1.25, bhDist);
-    col += vec3(0.04,0.05,0.10) * bounce * 0.10;
-  } else if(!hit){
-    vec3 bent = rd;
-    vec3 rp = ro;
-    float bendClosest = 1e9;
-
-    for(int i=0; i<BEND_STEPS; i++){
-      vec3 toBH = BH_CENTER - rp;
-      float r = length(toBH);
-      bendClosest = min(bendClosest, r);
-
-      if(r < BH_RADIUS * 1.03) break;
-
-      float grav = clamp((BH_RADIUS * 14.0) / (r * r), 0.0, 0.032);
-      bent = normalize(mix(bent, normalize(toBH), grav));
-
-      float stepLen = clamp(r * 0.15, 34.0, 180.0);
-      rp += bent * stepLen;
-
-      if(length(rp - ro) > FAR_CLIP) break;
-    }
-
-    vec3 bg = cosmos(bent, ro);
-    float lensRing = exp(-abs(bendClosest - BH_RADIUS * 1.68) * 0.018);
-    bg += vec3(0.16,0.20,0.34) * lensRing * 0.34;
-
-    float shadow = smoothstep(BH_RADIUS * 1.30, BH_RADIUS * 0.96, bendClosest);
-    bg *= 1.0 - shadow;
-
-    col += bg;
-  }
-
-  float vign = 1.0 - smoothstep(0.95, 1.65, length(uv));
-  col *= 0.84 + 0.16 * vign;
-
-  col = 1.0 - exp(-col * 1.10);
-  col = pow(max(col, 0.0), vec3(0.99));
-
-  gl_FragColor = vec4(col, 1.0);
-}
-`;
-
-(() => {
-  const canvas = document.getElementById("c");
-  const gl = canvas.getContext("webgl", {
-    antialias: false,
-    alpha: false,
-    depth: false,
-    stencil: false,
-    preserveDrawingBuffer: false,
-    powerPreference: "low-power"
-  });
-
-  if (!gl) {
-    document.body.innerHTML = '<div style="color:#fff;font-family:monospace;padding:20px">WebGL unavailable.</div>';
-    return;
-  }
-
-  const TARGET_FPS = 30;
-  const FRAME_MS = 1000 / TARGET_FPS;
-
-  function fit() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.max(320, Math.floor(window.innerWidth * dpr * 0.86));
-    canvas.height = Math.max(180, Math.floor(window.innerHeight * dpr * 0.86));
-    gl.viewport(0, 0, canvas.width, canvas.height);
-  }
-
-  window.addEventListener("resize", fit, { passive: true });
-  fit();
-
-  const vertSrc = `
-    attribute vec2 p;
-    void main() {
-      gl_Position = vec4(p, 0.0, 1.0);
-    }
-  `;
-
-  const fragSrc = GLSL.modules.z2_alt_blackhole;
-
-  function compile(type, src) {
-    const sh = gl.createShader(type);
-    gl.shaderSource(sh, src);
-    gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-      throw new Error(gl.getShaderInfoLog(sh) || "Shader compile error");
-    }
-    return sh;
-  }
-
-  const prog = gl.createProgram();
-  gl.attachShader(prog, compile(gl.VERTEX_SHADER, vertSrc));
-  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragSrc));
-  gl.linkProgram(prog);
-
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    throw new Error(gl.getProgramInfoLog(prog) || "Program link error");
-  }
-
-  gl.useProgram(prog);
-
-  const quad = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -1, -1,
-     3, -1,
-    -1,  3
-  ]), gl.STATIC_DRAW);
-
-  const pLoc = gl.getAttribLocation(prog, "p");
-  gl.enableVertexAttribArray(pLoc);
-  gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
-
-  const loc = {
-    resolution: gl.getUniformLocation(prog, "u_resolution"),
-    time: gl.getUniformLocation(prog, "u_time"),
-    camPos: gl.getUniformLocation(prog, "u_camPos"),
-    yaw: gl.getUniformLocation(prog, "u_yaw"),
-    pitch: gl.getUniformLocation(prog, "u_pitch"),
-    movePhase: gl.getUniformLocation(prog, "u_movePhase"),
-    speed: gl.getUniformLocation(prog, "u_speed")
-  };
-
-  const state = {
-    x: 0,
-    y: 0.35,
-    z: 70,
-    yaw: 0,
-    pitch: -0.03,
-    moving: false,
-    lookX: 0,
-    lookY: 0,
-    bobPhase: 0
-  };
-
-  function reset() {
-    state.x = 0;
-    state.y = 0.35;
-    state.z = 70;
-    state.yaw = 0;
-    state.pitch = -0.03;
-    state.lookX = 0;
-    state.lookY = 0;
-    state.moving = false;
-    state.bobPhase = 0;
-  }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") {
-      state.moving = true;
-      e.preventDefault();
-    }
-    if (e.code === "KeyR") {
-      reset();
-    }
-  });
-
-  window.addEventListener("keyup", (e) => {
-    if (e.code === "Space") state.moving = false;
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    const nx = (e.clientX / window.innerWidth) * 2 - 1;
-    const ny = (e.clientY / window.innerHeight) * 2 - 1;
-    state.lookX = nx;
-    state.lookY = ny;
-  }, { passive: true });
-
-  function pathXjs(z) {
-    const k = Math.max(0, Math.min(1, (-z - 50.0) / 2800.0));
-    return Math.sin(z * 0.00165 + 0.7) * 22.0 * k + Math.sin(z * 0.006 + 1.8) * 3.5;
-  }
-
-  function pathYjs(z) {
-    const t = Math.max(0, Math.min(1, (z + 2400.0) / (-700.0)));
-    return -1.25 + t * 30.0;
-  }
-
-  const start = performance.now();
-  let prevLogic = start;
-  let prevRender = start;
-
-  function loop(now) {
-    const rawDt = Math.min(now - prevLogic, 50);
-    prevLogic = now;
-    const dtSec = rawDt * 0.001;
-
-    const moveSpeed = state.moving ? 18.0 : 0.0;
-    const speedNorm = moveSpeed / 18.0;
-
-    if (state.moving) {
-      state.z -= moveSpeed * dtSec;
-      state.bobPhase += dtSec * 7.5;
-    }
-
-    const bobY = state.moving ? Math.sin(state.bobPhase * 2.0) * 0.07 : 0.0;
-    const swayX = state.moving ? Math.sin(state.bobPhase) * 0.05 : 0.0;
-    const rollLook = state.moving ? Math.sin(state.bobPhase) * 0.06 : 0.0;
-
-    state.x = pathXjs(state.z) + swayX;
-    state.y = pathYjs(state.z) + 3.85 + bobY;
-
-    const lookSpeed = 0.90;
-    state.yaw = state.lookX * lookSpeed + rollLook * 0.22;
-    state.pitch = Math.max(-1.0, Math.min(1.0, -state.lookY * 0.52 - 0.05 + bobY * 0.08));
-
-    if (now - prevRender >= FRAME_MS) {
-      prevRender = now - ((now - prevRender) % FRAME_MS);
-
-      gl.uniform2f(loc.resolution, canvas.width, canvas.height);
-      gl.uniform1f(loc.time, (now - start) * 0.001);
-      gl.uniform3f(loc.camPos, state.x, state.y, state.z);
-      gl.uniform1f(loc.yaw, state.yaw);
-      gl.uniform1f(loc.pitch, state.pitch);
-      gl.uniform1f(loc.movePhase, state.bobPhase);
-      gl.uniform1f(loc.speed, speedNorm);
-
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    }
-
-    requestAnimationFrame(loop);
-  }
-
-  reset();
-  requestAnimationFrame(loop);
-})();
-</script>
+    <div id="info">🚀 ELEVATOR PLATFORM | MODE‑FALL CITY | IMPROVED EARTH</div>
+    <div id="controls">🖱️ DRAG to look | ␣ HOLD to rotate platform</div>
+    <div id="progress"><div id="progress-fill"></div></div>
+    <canvas id="glcanvas" tabindex="0"></canvas>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('glcanvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                document.body.innerHTML = '<div style="color:white; padding:2rem;">WebGL not supported</div>';
+                return;
+            }
+
+            // --- user interaction (exactly as in your original) ---
+            let mouseX = 0, mouseY = 0;
+            let isDragging = false;
+            let spacePressed = false;
+            let walkAngle = 0;
+
+            canvas.addEventListener('mousedown', () => { isDragging = true; canvas.focus(); });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    mouseX += e.movementX * 0.003;
+                    mouseY += e.movementY * 0.003;
+                    mouseY = Math.max(-1.3, Math.min(1.3, mouseY));
+                }
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') { spacePressed = true; e.preventDefault(); }
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space') { spacePressed = false; }
+            });
+            canvas.focus();
+
+            function resize() {
+                canvas.width = window.innerWidth * devicePixelRatio;
+                canvas.height = window.innerHeight * devicePixelRatio;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // --- vertex shader ---
+            const vsSource = `attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+
+            // --- fragment shader: elevator (from second code) + mode‑fall city (from first code) + improved Earth ---
+            const fsSource = `
+            #ifdef GL_FRAGMENT_PRECISION_HIGH
+                precision highp float;
+            #else
+                precision mediump float;
+            #endif
+
+            uniform vec2 u_res;
+            uniform float u_time;
+            uniform float u_progress;
+            uniform vec2 u_mouse;
+            uniform float u_walk_angle;
+
+            #define PI 3.1415926538
+            #define MAX_STEPS 100
+            #define MAX_DIST 600.0
+            #define SURF_DIST 0.015
+
+            // ----- common utilities -----
+            float hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+            float hash3(vec3 p) { return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
+            mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+            float sdBox(vec3 p, vec3 b){ vec3 q=abs(p)-b; return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0); }
+            float sdCylinder(vec3 p, float r, float h) {
+                vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+                return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+            }
+            float sdTorus(vec3 p, vec2 t) {
+                vec2 q = vec2(length(p.xz)-t.x, p.y);
+                return length(q)-t.y;
+            }
+
+            // ----- mode‑fall city SDF (exact from your first code, beautiful small buildings) -----
+            vec2 mapCity(vec3 p) {
+                vec2 cell = floor(p.xz * 0.4);
+                vec2 local = fract(p.xz * 0.4) - 0.5;
+                bool isTarget = (cell.x == 0.0 && cell.y == 0.0);
+                float h = isTarget ? 3.0 : hash(cell) * 6.0 + 1.0;
+                float dFloor = p.y;
+                vec3 q = vec3(local.x * 2.5, p.y - h*0.5, local.y * 2.5);
+                float dBldg = sdBox(q, vec3(0.8, h*0.5, 0.8));
+                dBldg /= 2.5;
+                float d = min(dFloor, dBldg);
+                float id = (d == dFloor) ? 1.0 : (isTarget ? 3.0 : 2.0);
+                return vec2(d, id);
+            }
+
+            vec3 calcNormalCity(vec3 p) {
+                vec2 e = vec2(0.01, 0.0);
+                float d = mapCity(p).x;
+                return normalize(vec3(
+                    mapCity(p+e.xyy).x - d,
+                    mapCity(p+e.yxy).x - d,
+                    mapCity(p+e.yyx).x - d
+                ));
+            }
+
+            // ----- ELEVATOR PLATFORM SDF (from your second code, with car id 4.0) -----
+            vec2 mapElevator(vec3 p, float carY) {
+                float d = 1e9; float id = 0.0;
+                // cables
+                float cable = length(p.xz) - 0.6;
+                float r1 = length(p.xz - vec2(1.5, 0.0)) - 0.1;
+                float r2 = length(p.xz - vec2(-1.5, 0.0)) - 0.1;
+                float r3 = length(p.xz - vec2(0.0, 1.5)) - 0.1;
+                float r4 = length(p.xz - vec2(0.0, -1.5)) - 0.1;
+                float c = min(cable, min(min(r1,r2),min(r3,r4)));
+                if(c<d){ d=c; id=1.0; }
+                // periodic rings
+                float sp = 20.0;
+                float ly = mod(p.y + sp*0.5, sp) - sp*0.5;
+                float ring = max(abs(length(p.xz) - 1.1) - 0.06, abs(ly) - 0.12);
+                float beam1 = sdBox(vec3(p.x, ly, p.z), vec3(1.5, 0.06, 0.06));
+                float beam2 = sdBox(vec3(p.x, ly, p.z), vec3(0.06, 0.06, 1.5));
+                float s = min(ring, min(beam1, beam2));
+                if(s<d){ d=s; id=2.0; }
+                // elevator car (platform you stand on)
+                vec3 cp = p - vec3(0.0, carY, 0.0);
+                float floor = max(sdBox(cp, vec3(1.8, 0.08, 1.8)), -(length(cp.xz) - 0.7));
+                float posts = 1e9;
+                for(int i = 0; i < 4; i++){
+                    float a = float(i) * PI * 0.5 + PI * 0.25;
+                    vec3 rp = cp - vec3(cos(a)*1.65, 0.55, sin(a)*1.65);
+                    posts = min(posts, sdBox(rp, vec3(0.08, 0.55, 0.08)));
+                }
+                float rail = max(abs(length(cp.xz) - 1.7) - 0.05, abs(cp.y - 0.55) - 0.05);
+                float glowRing = max(abs(length(cp.xz) - 1.6) - 0.04, abs(cp.y + 0.02) - 0.03);
+                float cr = min(min(floor, posts), min(rail, glowRing));
+                if(cr<d){ d=cr; id=4.0; }
+                return vec2(d, id);
+            }
+
+            vec3 calcNormElevator(vec3 p, float carY) {
+                vec2 e = vec2(0.02, 0.0);
+                float d = mapElevator(p, carY).x;
+                return normalize(vec3(
+                    mapElevator(p+e.xyy, carY).x - d,
+                    mapElevator(p+e.yxy, carY).x - d,
+                    mapElevator(p+e.yyx, carY).x - d
+                ));
+            }
+
+            // combined scene
+            vec2 worldMap(vec3 p, float carY) {
+                vec2 city = mapCity(p);
+                vec2 elev = mapElevator(p, carY);
+                return (elev.x < city.x) ? elev : city;
+            }
+
+            vec3 calcNormalWorld(vec3 p, float carY) {
+                vec2 e = vec2(0.012, 0.0);
+                return normalize(vec3(
+                    worldMap(p+e.xyy, carY).x - worldMap(p-e.xyy, carY).x,
+                    worldMap(p+e.yxy, carY).x - worldMap(p-e.yxy, carY).x,
+                    worldMap(p+e.yyx, carY).x - worldMap(p-e.yyx, carY).x
+                ));
+            }
+
+            // ----- improved Earth (more vivid, better terminator, city lights) -----
+            float fbmEarth(vec2 p, int oct) {
+                float v = 0.0, a = 0.5;
+                for(int i=0; i<oct; i++) {
+                    v += a * sin(p.x*3.14159)*cos(p.y*3.14159);
+                    p = p * 2.1;
+                    a *= 0.5;
+                }
+                return v * 0.5 + 0.5;
+            }
+
+            vec3 renderEarth(vec3 ro, vec3 rd) {
+                float earthR = 5800.0;
+                float earthY = -5000.0;
+                vec3 center = vec3(0.0, earthY, 0.0);
+                vec3 oc = ro - center;
+                float b = dot(rd, oc);
+                float c = dot(oc, oc) - earthR*earthR;
+                float disc = b*b - c;
+                if(disc < 0.0) return vec3(0.0);
+                float t = -b - sqrt(disc);
+                if(t < 0.0) return vec3(0.0);
+                vec3 hit = ro + rd * t;
+                vec3 n = normalize(hit - center);
+                vec2 uv = vec2(atan(n.z, n.x), asin(n.y));
+                uv *= vec2(1.8, 3.2);
+                // continents using sine/cosine patterns
+                float land = sin(uv.x*12.0)*cos(uv.y*8.0) + sin(uv.y*15.0)*0.5;
+                land = clamp(land*0.7+0.4, 0.0, 1.0);
+                vec3 ocean = vec3(0.02, 0.08, 0.25);
+                vec3 ground = vec3(0.12, 0.28, 0.09);
+                vec3 desert = vec3(0.45, 0.38, 0.22);
+                vec3 col = mix(ocean, ground, land);
+                col = mix(col, desert, smoothstep(0.5,0.7,land)*0.5);
+                // clouds
+                float clouds = sin(uv.x*35.0)*cos(uv.y*28.0);
+                clouds = clamp(clouds*0.5+0.5, 0.0, 1.0);
+                col = mix(col, vec3(0.85,0.88,0.95), clouds*0.6);
+                // lighting
+                vec3 sunDir = normalize(vec3(0.5, 0.7, 0.4));
+                float diff = max(0.1, dot(n, sunDir));
+                float ambient = 0.25;
+                col *= (ambient + diff * 1.2);
+                // city lights on night side
+                float nightGlow = (1.0 - smoothstep(0.05, 0.35, diff)) * 0.7;
+                vec2 cityUV = uv * 25.0;
+                float cityLights = fbmEarth(cityUV, 3);
+                cityLights = smoothstep(0.55, 0.85, cityLights);
+                col += vec3(1.0, 0.75, 0.45) * cityLights * nightGlow * 1.5;
+                // atmospheric rim
+                float rim = pow(1.0 - abs(dot(n, normalize(ro-hit))), 4.0);
+                col += vec3(0.2, 0.4, 0.8) * rim * 0.9;
+                return col;
+            }
+
+            // stars (same as your original)
+            vec3 starField(vec3 rd) {
+                vec3 col = vec3(0.0);
+                vec2 coord = rd.xy * 180.0;
+                float star1 = pow(sin(coord.x*80.0)*sin(coord.y*80.0), 16.0);
+                float star2 = pow(sin(coord.x*180.0+1.2)*sin(coord.y*180.0+0.7), 20.0);
+                float star3 = pow(sin(coord.x*350.0-2.0)*sin(coord.y*350.0+1.5), 24.0);
+                float brightness = (star1+star2+star3) * 0.7;
+                brightness = clamp(brightness, 0.0, 0.9);
+                col += vec3(0.9,0.95,1.0) * brightness;
+                return col;
+            }
+
+            // ----- improved cloud layer (smooth, noise‑based, feels like passing through) -----
+            float cloudNoise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f*f*(3.0-2.0*f);
+                float a = hash(i);
+                float b = hash(i+vec2(1.0,0.0));
+                float c = hash(i+vec2(0.0,1.0));
+                float d = hash(i+vec2(1.0,1.0));
+                return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+            }
+            float fbmCloud(vec2 p, int oct) {
+                float v = 0.0, a = 0.5;
+                for(int i=0; i<oct; i++) {
+                    v += a * cloudNoise(p);
+                    p = p * 2.1;
+                    a *= 0.5;
+                }
+                return v;
+            }
+            float cloudDensity(vec3 pos) {
+                float y = pos.y;
+                if(y < 100.0 || y > 550.0) return 0.0;
+                float vert = sin((y - 100.0) / 450.0 * PI);
+                vert = clamp(vert, 0.0, 1.0);
+                vec2 uv = pos.xz * 0.045 + vec2(u_time * 0.01, u_time * 0.008);
+                float density = fbmCloud(uv, 3);
+                float t = (y - 100.0) / 450.0;
+                float threshold = mix(0.65, 0.25, t);
+                density = clamp((density - threshold) / (1.0 - threshold), 0.0, 1.0);
+                density = pow(density, 1.2) * vert;
+                return density;
+            }
+
+            void main() {
+                vec2 uv = (gl_FragCoord.xy - 0.5 * u_res.xy) / u_res.y;
+                float prog = clamp(u_progress, 0.0, 1.0);
+                // Slower ascent: start at 8, reach 5500 at prog=1
+                float altitude = mix(8.0, 5500.0, prog * prog);
+                float carY = altitude - 1.2;
+
+                // Camera attached to elevator
+                vec3 ro = vec3(1.2, altitude + 0.7, 0.6);
+                ro.xz = rot(u_walk_angle) * ro.xz;
+
+                float lookDown = -0.9 + prog * 0.3;
+                vec3 fwd = normalize(vec3(-0.1, lookDown, -0.08));
+                fwd.xz = rot(u_walk_angle) * fwd.xz;
+                fwd.yz = rot(u_mouse.y) * fwd.yz;  
+                fwd.xz = rot(-u_mouse.x) * fwd.xz; 
+                fwd = normalize(fwd);
+                fwd.x += sin(u_time * 0.25) * 0.015;
+                fwd.z += cos(u_time * 0.35) * 0.012;
+                fwd = normalize(fwd);
+
+                vec3 right = normalize(cross(fwd, vec3(0,1,0)));
+                vec3 up = cross(right, fwd);
+                float fov = mix(0.8, 0.45, smoothstep(450.0, 2000.0, altitude));
+                vec3 rd = normalize(fwd * fov + uv.x * right + uv.y * up);
+
+                // ----- raymarch city and elevator -----
+                float t = 0.0;
+                float hitId = 0.0;
+                vec3 hitPoint = vec3(0.0);
+                bool hit = false;
+                for(int i=0; i<MAX_STEPS; i++) {
+                    vec3 p = ro + rd * t;
+                    vec2 d = worldMap(p, carY);
+                    if(d.x < SURF_DIST) {
+                        hit = true;
+                        hitId = d.y;
+                        hitPoint = p;
+                        break;
+                    }
+                    t += max(0.02, d.x * 0.7);
+                    if(t > MAX_DIST) break;
+                }
+
+                // ----- shading: elevator vs city -----
+                vec3 color = vec3(0.01, 0.01, 0.02);
+                if(hit) {
+                    vec3 n = calcNormalWorld(hitPoint, carY);
+                    if(hitId >= 1.0 && hitId < 4.0) {
+                        // elevator parts (cables, rings) – keep original shading
+                        if(hitId == 1.0) color = vec3(0.1,0.11,0.14);
+                        else if(hitId == 2.0) color = vec3(0.15,0.17,0.20);
+                        else color = vec3(0.12,0.13,0.15);
+                        vec3 sunDir = normalize(vec3(0.8, 0.3, -0.5));
+                        float diff = max(dot(n, sunDir), 0.0);
+                        float ambient = mix(0.5, 0.05, smoothstep(200.0, 600.0, altitude));
+                        color = color * (ambient + diff * 0.8);
+                    } else if(hitId == 4.0) {
+                        // elevator car – make it bright and visible
+                        float isDeck = step(0.5, 1.0 - smoothstep(0.0, 0.15, abs(hitPoint.y - (ro.y-0.65))));
+                        float isGlow = step(0.5, 1.0 - smoothstep(0.02, 0.1, abs(hitPoint.y - (ro.y-0.65) + 0.04)));
+                        if(isGlow > 0.5) {
+                            float pulse = 0.6 + 0.4*sin(u_time*3.0);
+                            color = vec3(0.95, 0.4, 0.2) * pulse;
+                        } else if(isDeck > 0.5) {
+                            color = vec3(0.65, 0.7, 0.75);
+                            float grid = step(0.5, fract(hitPoint.x*2.0))*step(0.5, fract(hitPoint.z*2.0));
+                            color += vec3(0.2) * grid;
+                        } else {
+                            color = vec3(0.55, 0.6, 0.65);
+                        }
+                        vec3 sunDir = normalize(vec3(0.8, 0.3, -0.5));
+                        float diff = max(dot(n, sunDir), 0.0);
+                        float ambient = mix(0.5, 0.05, smoothstep(200.0, 600.0, altitude));
+                        color = color * (ambient + diff * 0.8);
+                    } else {
+                        // city shading (mode‑fall style)
+                        if(hitId == 1.0) {
+                            color = vec3(0.04, 0.03, 0.02);
+                            float gridX = smoothstep(0.9, 1.0, sin(hitPoint.x * PI * 0.4));
+                            float gridZ = smoothstep(0.9, 1.0, sin(hitPoint.z * PI * 0.4));
+                            color += vec3(1.0, 0.6, 0.2) * (gridX + gridZ) * 0.7;
+                            float cars = step(0.95, fract(hitPoint.x * 2.0 + u_time * 2.0)) * gridZ;
+                            cars += step(0.95, fract(hitPoint.z * 2.0 - u_time * 2.5)) * gridX;
+                            color += vec3(1.0, 0.2, 0.1) * cars;
+                        } else if(hitId == 2.0) {
+                            color = vec3(0.02, 0.02, 0.03);
+                            if(abs(n.y) < 0.1) {
+                                vec2 winUV = vec2(dot(hitPoint, vec3(1,0,0)) + dot(hitPoint, vec3(0,0,1)), hitPoint.y);
+                                float win = step(0.7, fract(winUV.x * 3.0)) * step(0.7, fract(winUV.y * 3.0));
+                                float r = hash(floor(winUV * 3.0) + floor(hitPoint.xz));
+                                if(r > 0.8) color += vec3(0.8, 0.8, 0.6) * win;
+                                if(r > 0.95) color += vec3(0.4, 0.7, 1.0) * win;
+                            } else {
+                                color = vec3(0.01, 0.01, 0.015);
+                                float ac = step(0.9, fract(hitPoint.x*2.0)*fract(hitPoint.z*2.0));
+                                color += vec3(0.1) * ac;
+                            }
+                        } else if(hitId == 3.0) { // target platform (red ring)
+                            color = vec3(0.03);
+                            if(abs(n.y) > 0.9) {
+                                float dCenter = length(hitPoint.xz);
+                                float ring = smoothstep(0.08, 0.0, abs(dCenter - 0.8));
+                                float pulse = 0.5 + 0.5 * sin(u_time * 4.0);
+                                color += vec3(1.0, 0.1, 0.1) * ring * pulse * 2.0;
+                                float H = smoothstep(0.05, 0.0, abs(hitPoint.x)) * step(abs(hitPoint.z), 0.4) +
+                                          smoothstep(0.05, 0.0, abs(hitPoint.x - 0.4)) * step(abs(hitPoint.z), 0.4) +
+                                          smoothstep(0.05, 0.0, abs(hitPoint.x + 0.4)) * step(abs(hitPoint.z), 0.4) +
+                                          smoothstep(0.05, 0.0, abs(hitPoint.z)) * step(abs(hitPoint.x), 0.4);
+                                color += vec3(0.8) * H;
+                            } else {
+                                vec2 winUV = vec2(dot(hitPoint, vec3(1,0,0)) + dot(hitPoint, vec3(0,0,1)), hitPoint.y);
+                                float win = step(0.7, fract(winUV.x * 3.0)) * step(0.7, fract(winUV.y * 3.0));
+                                if(hash(floor(winUV * 3.0) + floor(hitPoint.xz)) > 0.5) color += vec3(0.9, 0.2, 0.2) * win;
+                            }
+                        }
+                        // fog for distant city
+                        color = mix(color, vec3(0.01, 0.015, 0.02), 1.0 - exp(-t * 0.02));
+                        color += vec3(1.0, 0.5, 0.2) * 0.08 * (1.0 - exp(-t * 0.005));
+                    }
+                }
+
+                // ----- volumetric clouds (world‑space, stationary, natural) -----
+                float cloudAlpha = 0.0;
+                vec3 cloudTint = vec3(0.78, 0.82, 0.88);
+                if(rd.y > 0.0 && altitude < 650.0) {
+                    float startY = max(100.0, ro.y);
+                    float endY = min(550.0, ro.y + 350.0);
+                    if(startY < endY) {
+                        float stepSize = 2.5;
+                        float tCloud = (startY - ro.y) / rd.y;
+                        float maxT = (endY - ro.y) / rd.y;
+                        for(int i=0; i<45; i++) {
+                            if(tCloud >= maxT) break;
+                            vec3 pos = ro + rd * tCloud;
+                            float dens = cloudDensity(pos);
+                            if(dens > 0.01) {
+                                cloudAlpha += dens * stepSize * 0.28;
+                            }
+                            tCloud += stepSize;
+                        }
+                        cloudAlpha = clamp(cloudAlpha, 0.0, 0.96);
+                        // extra density in the thick part
+                        if(altitude > 250.0 && altitude < 520.0) {
+                            cloudAlpha = max(cloudAlpha, smoothstep(250.0, 400.0, altitude) * (1.0 - smoothstep(480.0, 540.0, altitude)) * 0.9);
+                        }
+                    }
+                }
+
+                // ----- space and Earth -----
+                vec3 spaceBg = starField(rd);
+                vec3 earthView = vec3(0.0);
+                float earthAlpha = 0.0;
+                if(altitude > 420.0) {
+                    earthView = renderEarth(ro, rd);
+                    earthAlpha = smoothstep(480.0, 950.0, altitude) * (1.0 - smoothstep(2000.0, 3600.0, altitude));
+                    earthAlpha = clamp(earthAlpha, 0.0, 0.9);
+                }
+
+                // ----- final blend (smooth transition through clouds) -----
+                vec3 finalColor = color;
+                // fade city
+                float cityFade = 1.0 - smoothstep(150.0, 480.0, altitude);
+                finalColor = mix(finalColor, cloudTint, cloudAlpha * 0.85);
+                // fade to space
+                float spaceFade = smoothstep(520.0, 850.0, altitude);
+                finalColor = mix(finalColor, spaceBg, spaceFade);
+                finalColor = mix(finalColor, earthView, earthAlpha * (1.0 - spaceFade * 0.5));
+
+                // vignette
+                float vig = 1.0 - 0.25 * pow(length(uv * 1.1), 1.6);
+                finalColor *= vig;
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+            `;
+
+            function compileShader(type, src) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, src);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error(gl.getShaderInfoLog(shader));
+                    return null;
+                }
+                return shader;
+            }
+
+            const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+            const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+            if (!vs || !fs) {
+                document.body.innerHTML = '<div style="color:white; padding:2rem;">Shader compilation error. Check console.</div>';
+                return;
+            }
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+                document.body.innerHTML = '<div style="color:white; padding:2rem;">Shader link error.</div>';
+                return;
+            }
+            gl.useProgram(program);
+
+            const buf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+            const posLoc = gl.getAttribLocation(program, 'p');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+            const uRes = gl.getUniformLocation(program, 'u_res');
+            const uTime = gl.getUniformLocation(program, 'u_time');
+            const uProgress = gl.getUniformLocation(program, 'u_progress');
+            const uMouse = gl.getUniformLocation(program, 'u_mouse');
+            const uWalkAngle = gl.getUniformLocation(program, 'u_walk_angle');
+
+            const startTime = performance.now();
+            const DURATION = 90000; // 90 seconds – slower, more relaxed ascent
+
+            let currentWalkAngle = 0;
+            function frame(now) {
+                const elapsed = (now - startTime) / 1000;
+                const progress = Math.min(1.0, (now - startTime) / DURATION);
+                document.getElementById('progress-fill').style.width = (progress * 100) + '%';
+                if (spacePressed) {
+                    currentWalkAngle += 0.008;
+                } else {
+                    currentWalkAngle *= 0.98;
+                }
+                gl.uniform2f(uRes, canvas.width, canvas.height);
+                gl.uniform1f(uTime, elapsed);
+                gl.uniform1f(uProgress, progress);
+                gl.uniform2f(uMouse, mouseX, mouseY);
+                gl.uniform1f(uWalkAngle, currentWalkAngle);
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        })();
+    </script>
 </body>
 </html>
