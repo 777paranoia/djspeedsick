@@ -33,7 +33,8 @@
       window.GLSL.modules
     );
   }
-   function z4BuildPsychStationShader() {
+
+  function z4BuildPsychStationShader() {
     return `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -104,6 +105,160 @@ float sdFractal(vec3 p, float power, float rotA, float rotB){
 vec3 neonPalette(float t){
   return vec3(0.5) + vec3(0.5) * cos(6.28318 * (vec3(1.0) * t + vec3(0.00, 0.33, 0.67)));
 }
+
+vec3 colorPickover(vec3 p){
+  vec2 c = vec2(
+    p.x * 0.4 + sin(u_time * 0.07) * 0.3,
+    p.y * 0.4 + cos(u_time * 0.05) * 0.3
+  );
+  vec2 z = vec2(0.0);
+  float minDist = 1e10;
+  float escapeI = 0.0;
+  for(int i = 0; i < 80; i++) {
+    z = clamp(vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c, -1000.0, 1000.0);
+    float d = min(abs(z.x), abs(z.y));
+    if(d < minDist) minDist = d;
+    if(dot(z,z) > 100.0){
+      escapeI = float(i);
+      break;
+    }
+  }
+  return neonPalette(fract(clamp(minDist * 8.0, 0.0, 1.0) * 2.0 + u_time * 0.15 + escapeI * 0.01)) * (0.4 + 0.6 * (1.0 - clamp(minDist * 8.0, 0.0, 1.0)));
+}
+
+vec2 mapScene(vec3 p){
+  vec2 res=vec2(1000.0,-1.0);
+  for(float i=0.0; i<2.0; i++){
+    float id = 37.0 + i;
+    float x = mix(-1.4,  1.4,  hash1(id * 3.1 + 0.13));
+    float y = mix( 0.0,  1.6,  hash1(id * 7.3 + 0.27));
+    float z = mix( 0.0,  3.5,  hash1(id * 11.7 + 0.41));
+    float sc = mix(0.3, 0.6, hash1(id * 13.1)) * 0.7;
+    vec3 fp = p - vec3(x,y,z);
+    float bound = length(fp) - (sc * 1.5);
+    float df = bound;
+    if(bound < 0.2){
+      df = max(
+        bound,
+        sdFractal(
+          fp/sc,
+          mix(6.0,10.0,hash1(id*5.3))+sin(u_time*mix(0.03,0.08,hash1(id*2.1)))*1.5,
+          mix(0.05,0.18,hash1(id*9.7))*(hash1(id*4.1)>0.5?1.0:-1.0),
+          mix(0.04,0.14,hash1(id*6.3))*(hash1(id*8.9)>0.5?1.0:-1.0)
+        ) * sc
+      );
+    }
+    if(df < res.x) res = vec2(df, 10.0);
+  }
+  return res;
+}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-0.5*u_res)/u_res.y;
+
+  vec2 q = vec2(
+    fbm(uv * 2.0 + vec2(0.0, u_time * 0.15)),
+    fbm(uv * 2.0 + vec2(u_time * 0.15, 0.0))
+  );
+  vec2 warpR = vec2(
+    fbm(uv * 2.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * u_time * 0.15),
+    fbm(uv * 2.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * u_time * 0.15)
+  );
+  float liqAmp = mix(0.015, 0.10, u_isOOB) * u_trip;
+  uv += (warpR - 0.5) * liqAmp;
+
+  float mt = u_modeTime * u_isOOB;
+  float w1 = sin(mt * 0.4 + u_modeSeed);
+  float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);
+  float w3 = sin(mt * 1.5 + u_modeSeed * 3.0);
+  float surge = smoothstep(0.8, 1.0, (w1 + w2 + w3) / 3.0);
+  float snap  = pow(surge, 2.0) * 8.0 * u_isOOB;
+  uv *= 1.0 + mt * 0.003 + snap * 0.015;
+
+  float gTick = floor(u_time * 16.0);
+  if(step(0.979, hash1(gTick * 133.77 + u_modeSeed)) > 0.0)
+    uv.x += (hash1(floor(uv.y * mix(10.0, 30.0, hash1(gTick * 2.1))) + gTick) - 0.5)
+      * 0.18 * clamp(u_trip, 0.0, 1.5);
+
+  vec3 ro=u_eye;
+  ro.y += snap * 0.08;
+  vec3 rd=normalize(u_forward*1.55 + uv.x*u_right + uv.y*u_up);
+
+  vec3 tgt = normalize(u_targetDir);
+  vec3 worldUp = vec3(0.0,1.0,0.0);
+  vec3 tgtRight = normalize(cross(worldUp, tgt));
+  if(length(tgtRight) < 0.001) tgtRight = vec3(1.0,0.0,0.0);
+  vec3 tgtUp = normalize(cross(tgt, tgtRight));
+
+  vec3 deepBg = vec3(0.0);
+  float star = step(0.9985, hash2(floor(rd.xy*900.0)+floor(rd.z*300.0)));
+  deepBg += vec3(0.65,0.72,0.84)*star*0.35;
+
+  float t = 0.0;
+  vec2 hit = vec2(0.0);
+  for(int i=0; i<MAX_STEPS; i++){
+    hit = mapScene(ro + rd * t);
+    if(hit.x < SURF_DIST || t > MAX_DIST) break;
+    t += hit.x;
+  }
+
+  vec3 col = deepBg;
+  if(t < MAX_DIST){
+    vec3 p = ro + rd * t;
+    if(hit.y >= 10.0){
+      vec3 fracCol = colorPickover(p);
+      col = mix(col, fracCol, 0.28 + 0.22 * u_trip);
+      col += neonPalette(length(p.xy) * 0.7 + u_time * 0.2) * 0.08 * u_trip;
+    }
+  }
+
+  float lx = dot(rd, tgtRight);
+  float ly = dot(rd, tgtUp);
+  float lz = dot(rd, tgt);
+  if(lz > 0.0){
+    vec2 plane = vec2(lx, ly) / max(lz, 0.0001);
+    float earthRadius = 0.72;
+    float d = length(plane);
+    if(d < earthRadius){
+      vec2 normP = plane / earthRadius;
+      vec2 envUV = vec2(
+        0.5 + normP.x * 0.44,
+        0.50 - normP.y * 0.44 + 0.06
+      );
+      envUV = vec2(1.0 - envUV.x, 1.0 - envUV.y);
+      vec3 earthCol = texture2D(u_env, clamp(envUV, 0.0, 1.0)).rgb;
+      float mask = smoothstep(1.0, 0.94, d);
+      float rim = smoothstep(0.96, 1.0, 1.0 - d);
+      earthCol += vec3(0.10,0.22,0.55) * rim * 0.45;
+      col = mix(col, earthCol, mask);
+    }
+  }
+
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+  }
+
+  function z4BuildPostProcessShader() {
+    return `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 v_uv;
+uniform sampler2D u_sceneTex;
+uniform vec2 u_res;
+uniform float u_time;
+uniform float u_trip;
+uniform float u_fractalSeed;
+uniform float u_blinkAge;
+uniform float u_blink;
+
+float hash1(float x){return fract(sin(x*127.1 + 1.9898)*43758.5);}
+float hash2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
+mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
 
 vec3 sickPal(float t, float seed){
   vec3 a=vec3(0.5,0.4,0.45);
@@ -188,144 +343,21 @@ vec3 applyHallucination(vec3 baseCol, vec2 screenUV, float fractalSeed, float bl
   return result;
 }
 
-vec3 colorPickover(vec3 p){
-  vec2 c = vec2(
-    p.x * 0.4 + sin(u_time * 0.07) * 0.3,
-    p.y * 0.4 + cos(u_time * 0.05) * 0.3
-  );
-  vec2 z = vec2(0.0);
-  float minDist = 1e10;
-  float escapeI = 0.0;
-  for(int i = 0; i < 80; i++) {
-    z = clamp(vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c, -1000.0, 1000.0);
-    float d = min(abs(z.x), abs(z.y));
-    if(d < minDist) minDist = d;
-    if(dot(z,z) > 100.0){
-      escapeI = float(i);
-      break;
-    }
-  }
-  return neonPalette(fract(clamp(minDist * 8.0, 0.0, 1.0) * 2.0 + u_time * 0.15 + escapeI * 0.01)) * (0.4 + 0.6 * (1.0 - clamp(minDist * 8.0, 0.0, 1.0)));
-}
+void main() {
+  vec3 baseCol = texture2D(u_sceneTex, v_uv).rgb;
+  vec2 screenUV = (v_uv * u_res - 0.5 * u_res) / u_res.y;
 
-vec2 mapScene(vec3 p){
-  vec2 res=vec2(1000.0,-1.0);
-  for(float i=0.0; i<2.0; i++){
-    float id = 37.0 + i;
-    float x = mix(-1.4,  1.4,  hash1(id * 3.1 + 0.13));
-    float y = mix( 0.0,  1.6,  hash1(id * 7.3 + 0.27));
-    float z = mix( 0.0,  3.5,  hash1(id * 11.7 + 0.41));
-    float sc = mix(0.3, 0.6, hash1(id * 13.1)) * 0.7;
-    vec3 fp = p - vec3(x,y,z);
-    float bound = length(fp) - (sc * 1.5);
-    float df = bound;
-    if(bound < 0.2){
-      df = max(
-        bound,
-        sdFractal(
-          fp/sc,
-          mix(6.0,10.0,hash1(id*5.3))+sin(u_time*mix(0.03,0.08,hash1(id*2.1)))*1.5,
-          mix(0.05,0.18,hash1(id*9.7))*(hash1(id*4.1)>0.5?1.0:-1.0),
-          mix(0.04,0.14,hash1(id*6.3))*(hash1(id*8.9)>0.5?1.0:-1.0)
-        ) * sc
-      );
-    }
-    if(df < res.x) res = vec2(df, 10.0);
-  }
-  return res;
-}
-
-void main(){
-  vec2 uv=(gl_FragCoord.xy-0.5*u_res)/u_res.y;
-  vec2 screenUV = uv;
-
-  vec2 q = vec2(
-    fbm(uv * 2.0 + vec2(0.0, u_time * 0.15)),
-    fbm(uv * 2.0 + vec2(u_time * 0.15, 0.0))
-  );
-  vec2 warpR = vec2(
-    fbm(uv * 2.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * u_time * 0.15),
-    fbm(uv * 2.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * u_time * 0.15)
-  );
-  float liqAmp = mix(0.015, 0.10, u_isOOB) * u_trip;
-  uv += (warpR - 0.5) * liqAmp;
-
-  float mt = u_modeTime * u_isOOB;
-  float w1 = sin(mt * 0.4 + u_modeSeed);
-  float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);
-  float w3 = sin(mt * 1.5 + u_modeSeed * 3.0);
-  float surge = smoothstep(0.8, 1.0, (w1 + w2 + w3) / 3.0);
-  float snap  = pow(surge, 2.0) * 8.0 * u_isOOB;
-  uv *= 1.0 + mt * 0.003 + snap * 0.015;
-
-  float gTick = floor(u_time * 16.0);
-  if(step(0.979, hash1(gTick * 133.77 + u_modeSeed)) > 0.0)
-    uv.x += (hash1(floor(uv.y * mix(10.0, 30.0, hash1(gTick * 2.1))) + gTick) - 0.5)
-      * 0.18 * clamp(u_trip, 0.0, 1.5);
-
-  vec3 ro=u_eye;
-  ro.y += snap * 0.08;
-  vec3 rd=normalize(u_forward*1.55 + uv.x*u_right + uv.y*u_up);
-
-  vec3 tgt = normalize(u_targetDir);
-  vec3 worldUp = vec3(0.0,1.0,0.0);
-  vec3 tgtRight = normalize(cross(worldUp, tgt));
-  if(length(tgtRight) < 0.001) tgtRight = vec3(1.0,0.0,0.0);
-  vec3 tgtUp = normalize(cross(tgt, tgtRight));
-
-  vec3 deepBg = vec3(0.0);
-  float star = step(0.9985, hash2(floor(rd.xy*900.0)+floor(rd.z*300.0)));
-  deepBg += vec3(0.65,0.72,0.84)*star*0.35;
-
-  float t = 0.0;
-  vec2 hit = vec2(0.0);
-  for(int i=0; i<MAX_STEPS; i++){
-    hit = mapScene(ro + rd * t);
-    if(hit.x < SURF_DIST || t > MAX_DIST) break;
-    t += hit.x;
-  }
-
-  vec3 col = deepBg;
-  if(t < MAX_DIST){
-    vec3 p = ro + rd * t;
-    if(hit.y >= 10.0){
-      vec3 fracCol = colorPickover(p);
-      col = mix(col, fracCol, 0.28 + 0.22 * u_trip);
-      col += neonPalette(length(p.xy) * 0.7 + u_time * 0.2) * 0.08 * u_trip;
-    }
-  }
-
-  float lx = dot(rd, tgtRight);
-  float ly = dot(rd, tgtUp);
-  float lz = dot(rd, tgt);
-  if(lz > 0.0){
-    vec2 plane = vec2(lx, ly) / max(lz, 0.0001);
-    float earthRadius = 0.72;
-    float d = length(plane);
-    if(d < earthRadius){
-      vec2 normP = plane / earthRadius;
-      vec2 envUV = vec2(
-        0.5 + normP.x * 0.44,
-        0.50 - normP.y * 0.44 + 0.06
-      );
-      envUV = vec2(1.0 - envUV.x, 1.0 - envUV.y);
-      vec3 earthCol = texture2D(u_env, clamp(envUV, 0.0, 1.0)).rgb;
-      float mask = smoothstep(1.0, 0.94, d);
-      float rim = smoothstep(0.96, 1.0, 1.0 - d);
-      earthCol += vec3(0.10,0.22,0.55) * rim * 0.45;
-      col = mix(col, earthCol, mask);
-    }
-  }
-
-  col = applyHallucination(col, screenUV, u_fractalSeed, u_blinkAge, u_trip, u_time);
+  vec3 col = applyHallucination(baseCol, screenUV, u_fractalSeed, u_blinkAge, u_trip, u_time);
   col *= (1.0 - u_blink);
-  float vign=1.0-0.22*pow(length(screenUV*vec2(0.9,1.0)),2.0);
-  col*=vign;
-  col=1.0-exp(-col*1.10);
-  gl_FragColor=vec4(col,1.0);
+  float vign = 1.0 - 0.22 * pow(length(screenUV * vec2(0.9, 1.0)), 2.0);
+  col *= vign;
+  col = 1.0 - exp(-col * 1.10);
+
+  gl_FragColor = vec4(col, 1.0);
 }
 `;
   }
+
   let z4SpaceHeld = window.z4SpaceHeld || false;
   let z4TouchHeld = window.z4TouchHeld || false;
 
@@ -491,7 +523,17 @@ void main(){
         src.stationVertMesh,
         src.stationMeshFrag
       );
+      this.postProcessProg = this._buildRawProgram(
+        "attribute vec2 p; varying vec2 v_uv; void main(){ v_uv = p*0.5+0.5; gl_Position = vec4(p,0.0,1.0); }",
+        z4BuildPostProcessShader()
+      );
       this.overlayProg = this._buildOverlayProgram();
+
+      this.fboTexture = gl.createTexture();
+      this.fboDepth = gl.createRenderbuffer();
+      this.fbo = gl.createFramebuffer();
+      this.fboWidth = 0;
+      this.fboHeight = 0;
 
       this.fullTri = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, this.fullTri);
@@ -1436,7 +1478,7 @@ void main(){
     }
 
     _renderStation(now) {
-      if (!this.stationBgProg || !this.stationMeshProg) return;
+      if (!this.stationBgProg || !this.stationMeshProg || !this.postProcessProg) return;
 
       this._updateVideoTexture(this.stationTextures.earth, this.earthVideo);
 
@@ -1449,10 +1491,31 @@ void main(){
       const proj = this._perspective(Math.PI / 3.2, canvas.width / canvas.height, 0.05, 220.0);
       const view = this._lookAt(eye, this._add(eye, fwd), [0, 1, 0]);
 
+      // Handle Framebuffer resizing
+      if (this.fboWidth !== canvas.width || this.fboHeight !== canvas.height) {
+        this.fboWidth = canvas.width;
+        this.fboHeight = canvas.height;
+        gl.bindTexture(gl.TEXTURE_2D, this.fboTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        
+        gl.bindRenderbuffer(gl.RENDERBUFFER, this.fboDepth);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, canvas.width, canvas.height);
+      }
+
+      // Bind the Framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.fboTexture, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.fboDepth);
+
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.clearColor(0.01, 0.01, 0.015, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+      // Draw standard background to FBO
       gl.disable(gl.DEPTH_TEST);
       gl.useProgram(this.stationBgProg);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.screenQuad);
@@ -1482,6 +1545,7 @@ void main(){
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+      // Draw meshes on top of background in FBO
       gl.enable(gl.DEPTH_TEST);
       gl.useProgram(this.stationMeshProg);
       gl.uniformMatrix4fv(gl.getUniformLocation(this.stationMeshProg, "u_proj"), false, proj);
@@ -1492,6 +1556,29 @@ void main(){
         this._bindStationMesh(this.stationMeshes[i]);
         gl.drawArrays(gl.TRIANGLES, 0, this.stationMeshes[i].count);
       }
+
+      // --- Post-Processing Pass (Draws hallucination globally) ---
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.disable(gl.DEPTH_TEST);
+      gl.useProgram(this.postProcessProg);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.screenQuad);
+
+      const ppPos = gl.getAttribLocation(this.postProcessProg, "p");
+      gl.enableVertexAttribArray(ppPos);
+      gl.vertexAttribPointer(ppPos, 2, gl.FLOAT, false, 0, 0);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.fboTexture);
+      gl.uniform1i(gl.getUniformLocation(this.postProcessProg, "u_sceneTex"), 0);
+
+      gl.uniform2f(gl.getUniformLocation(this.postProcessProg, "u_res"), canvas.width, canvas.height);
+      gl.uniform1f(gl.getUniformLocation(this.postProcessProg, "u_time"), now * 0.001);
+      gl.uniform1f(gl.getUniformLocation(this.postProcessProg, "u_trip"), this.z4Trip);
+      gl.uniform1f(gl.getUniformLocation(this.postProcessProg, "u_fractalSeed"), this.z4FractalSeed);
+      gl.uniform1f(gl.getUniformLocation(this.postProcessProg, "u_blinkAge"), 0.001 * (now - this.z4BlinkPeakTime));
+      gl.uniform1f(gl.getUniformLocation(this.postProcessProg, "u_blink"), this.rBlink);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
     render(now, mx, my) {
@@ -1557,6 +1644,11 @@ void main(){
       if (this.stationBgProg) gl.deleteProgram(this.stationBgProg);
       if (this.stationMeshProg) gl.deleteProgram(this.stationMeshProg);
       if (this.overlayProg && this.overlayProg.prog) gl.deleteProgram(this.overlayProg.prog);
+      if (this.postProcessProg) gl.deleteProgram(this.postProcessProg);
+
+      if (this.fbo) gl.deleteFramebuffer(this.fbo);
+      if (this.fboTexture) gl.deleteTexture(this.fboTexture);
+      if (this.fboDepth) gl.deleteRenderbuffer(this.fboDepth);
 
       if (this.fullTri) gl.deleteBuffer(this.fullTri);
       if (this.screenQuad) gl.deleteBuffer(this.screenQuad);
