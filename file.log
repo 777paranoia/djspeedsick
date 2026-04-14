@@ -1,0 +1,283 @@
+.
+├── 2test.html
+├── A
+├── brain-monitor.js
+├── butterchurn-presets
+│   └── lib
+│       ├── butterchurnPresetsExtra.min.js
+│       └── webpaack.config.js
+├── butterchurn.js
+├── butterchurnPresets.min.js
+├── CNAME
+├── debug-ui.js
+├── engine.js
+├── engine2.js
+├── engine3.js
+├── engine4.js
+├── favicon.ico
+├── file.log
+├── files
+│   ├── aud
+│   │   └── *.mp3
+│   ├── font
+│   │   ├── *.woff
+│   │   └── *.woff2
+│   ├── img
+│   │   ├── buttin.png
+│   │   ├── gallery
+│   │   │   └── *.webp
+│   │   ├── h
+│   │   │   ├── h1.png
+│   │   │   ├── h2.png
+│   │   │   ├── h3.png
+│   │   │   ├── h4.png
+│   │   │   └── h5.png
+│   │   ├── index.png
+│   │   ├── iphone
+│   │   │   ├── back-iphone.png
+│   │   │   ├── bathroom-iphone.png
+│   │   │   ├── bedrooom-iphone.png
+│   │   │   ├── canalpost-iphone.png
+│   │   │   ├── iphone
+│   │   │   ├── left-iphone.png
+│   │   │   └── right-iphone.png
+│   │   ├── me.jpg
+│   │   ├── rooms
+│   │   │   ├── ctrls.png
+│   │   │   ├── oob
+│   │   │   │   ├── bathroom-blood-oob.png
+│   │   │   │   ├── bathroom-hole-oob.png
+│   │   │   │   ├── bathroom-oob.png
+│   │   │   │   ├── bedrooom-oob.png
+│   │   │   │   └── FORWARD-oob.png
+│   │   │   ├── z1
+│   │   │   │   ├── back.png
+│   │   │   │   ├── deadcity.png
+│   │   │   │   ├── door.png
+│   │   │   │   ├── left-mobile-ai.png
+│   │   │   │   ├── left-mobile.png
+│   │   │   │   ├── mirror-b.png
+│   │   │   │   ├── mirror-v1.png
+│   │   │   │   ├── mirror-v2.png
+│   │   │   │   ├── mirror-v3.png
+│   │   │   │   ├── ocean.png
+│   │   │   │   └── right-mobile.png
+│   │   │   ├── z2
+│   │   │   │   ├── bathroom-blood.png
+│   │   │   │   ├── bathroom-hole.png
+│   │   │   │   ├── bathroom-wall.png
+│   │   │   │   ├── bathroom.png
+│   │   │   │   ├── bedroom-wall.png
+│   │   │   │   ├── bedrooom.png
+│   │   │   │   └── hallway
+│   │   │   │       ├── BACK-ALT.png
+│   │   │   │       ├── BACK.png
+│   │   │   │       ├── FENCE.png
+│   │   │   │       ├── FORWARD-alt.png
+│   │   │   │       ├── FORWARD.png
+│   │   │   │       ├── GROUND.png
+│   │   │   │       ├── LEFTWALL_B.png
+│   │   │   │       ├── LEFTWALL.png
+│   │   │   │       ├── RIGHTWALL.png
+│   │   │   │       └── TOP.png
+│   │   │   ├── z3
+│   │   │   │   ├── cockpit.png
+│   │   │   │   ├── door-closed.png
+│   │   │   │   ├── door-open.png
+│   │   │   │   └── FORWARD-alt.png
+│   │   │   └── z4
+│   │   │       ├── SPACE-CEILING.png
+│   │   │       ├── SPACE-FLOOR.png
+│   │   │       ├── SPACE-LP1.png
+│   │   │       ├── SPACE-LP2.png
+│   │   │       ├── SPACE-LP3.png
+│   │   │       ├── SPACE-RP1.png
+│   │   │       ├── SPACE-RP2.png
+│   │   │       └── SPACE-RP3.png
+│   │   ├── splash
+│   │   │   ├── aerial.gif
+│   │   │   ├── aerial.png
+│   │   │   ├── ctrls.png
+│   │   │   ├── enter-button.gif
+│   │   │   └── load.gif
+│   │   └── void
+│   │       ├── building01.png
+│   │       ├── building02.png
+│   │       ├── building03.png
+│   │       ├── building04.png
+│   │       ├── building05.png
+│   │       ├── building06.png
+│   │       ├── building07.png
+│   │       ├── building08.png
+│   │       ├── building09.png
+│   │       ├── canalport-mask.png
+│   │       ├── gorebuilding01.png
+│   │       ├── gorebuilding02.png
+│   │       ├── gorebuilding03.png
+│   │       ├── goresky.png
+│   │       ├── gorewater.png
+│   │       ├── oob-mask.png
+│   │       ├── skyline.png
+│   │       └── skyline2.png
+│   ├── mov
+│   │   ├── acne1.mp4
+│   │   ├── acne2.mp4
+│   │   ├── acne3.mp4
+│   │   ├── acne4.mp4
+│   │   ├── bh2.mp4
+│   │   ├── bh3.mp4
+│   │   ├── camper1.mp4
+│   │   ├── camper2.mp4
+│   │   ├── camper3.mp4
+│   │   ├── compreelnu1.mp4
+│   │   ├── compreelnu2.mp4
+│   │   ├── earth.mp4
+│   │   ├── fly.mp4
+│   │   ├── gstar1.mp4
+│   │   ├── gstar2.mp4
+│   │   ├── gstar3.mp4
+│   │   ├── gstar4.mp4
+│   │   ├── mapped
+│   │   │   ├── albionhouse.mp4
+│   │   │   ├── chemlove.mp4
+│   │   │   ├── crywolf.mp4
+│   │   │   ├── emptybottle.mp4
+│   │   │   ├── forcedenlightenment_1.mp4
+│   │   │   ├── forcedenlightenment_2.mp4
+│   │   │   ├── grate.mp4
+│   │   │   ├── lotusmotel.mp4
+│   │   │   ├── mattlistendarkenlightenmenttrack.mp4
+│   │   │   ├── smtiaie.mp4
+│   │   │   ├── thom_1.mp4
+│   │   │   ├── thom_2.mp4
+│   │   │   ├── untitled.mp4
+│   │   │   ├── uwmadison.mp4
+│   │   │   ├── yfpmms.mp4
+│   │   │   └── z-1.mp4
+│   │   ├── marg1.mp4
+│   │   ├── marg2.mp4
+│   │   ├── mmxgm.mp4
+│   │   ├── nthng.mp4
+│   │   ├── smtiaie.mp4
+│   │   ├── tricky.mp4
+│   │   └── tricky.webm
+│   ├── nfo
+│   │   └── cv.nfo
+│   └── port
+│       ├── aud
+│       │   ├── 2025.12.22.13.03.53.m4a
+│       │   ├── 2025.12.22.23.57.12.m4a
+│       │   ├── ACNE_COATEDDENIM_CUT4.m4a
+│       │   ├── ACNE_DARKSIDE_CUT5V2.m4a
+│       │   ├── ACNE_SHERLING_CUT2.m4a
+│       │   ├── ACNE_SHERLING_CUT3.m4a
+│       │   ├── ACNE_TEASER_CUT1.m4a
+│       │   ├── GABBER_CLIP.m4a
+│       │   ├── MARGIELA_V1.0.m4a
+│       │   ├── MARGIELA_V2.0.m4a
+│       │   ├── NIKE-1x.m4a
+│       │   ├── NIKE-2.m4a
+│       │   ├── NIKE-3.m4a
+│       │   ├── OP3-v1.m4a
+│       │   ├── OP3-v2dubbed.m4a
+│       │   ├── POP_PUNK_CLIP.m4a
+│       │   └── TRAP_FRAGMENT.m4a
+│       ├── font
+│       │   ├── exif.font.log
+│       │   ├── GGX88Bk-Italic.woff
+│       │   ├── GGX88Bk-Italic.woff2
+│       │   ├── GGX88Bk-Regular.woff
+│       │   ├── GGX88Bk-Regular.woff2
+│       │   ├── GGX88El-Italic.woff
+│       │   ├── GGX88El-Italic.woff2
+│       │   ├── GGX88El-Regular.woff
+│       │   ├── GGX88El-Regular.woff2
+│       │   ├── GGX88Hv-Italic.woff
+│       │   ├── GGX88Hv-Italic.woff2
+│       │   ├── GGX88Hv-Regular.woff
+│       │   ├── GGX88Hv-Regular.woff2
+│       │   ├── GGX88Lt-Italic.woff
+│       │   ├── GGX88Lt-Italic.woff2
+│       │   ├── GGX88Lt-Regular.woff
+│       │   ├── GGX88Lt-Regular.woff2
+│       │   ├── GGX88Rg-Bold.woff
+│       │   ├── GGX88Rg-Bold.woff2
+│       │   ├── GGX88Rg-BoldItalic.woff
+│       │   ├── GGX88Rg-BoldItalic.woff2
+│       │   ├── GGX88Rg-Italic.woff
+│       │   ├── GGX88Rg-Italic.woff2
+│       │   ├── GGX88Rg-Regular.woff
+│       │   ├── GGX88Rg-Regular.woff2
+│       │   ├── GGX88Ul-Italic.woff
+│       │   ├── GGX88Ul-Italic.woff2
+│       │   ├── GGX88Ul-Regular.woff
+│       │   ├── GGX88Ul-Regular.woff2
+│       │   ├── SymbolsNerdFont-Regular.woff
+│       │   ├── SymbolsNerdFont-Regular.woff2
+│       │   ├── SymbolsNerdFontMono-Regular.woff
+│       │   └── SymbolsNerdFontMono-Regular.woff2
+│       ├── gallery.js
+│       ├── img
+│       │   └── index.png
+│       ├── mov
+│       │   ├── acne1.webm
+│       │   ├── acne2.webm
+│       │   ├── acne3.webm
+│       │   ├── acne4.webm
+│       │   ├── camper1.webm
+│       │   ├── camper2.webm
+│       │   ├── camper3.webm
+│       │   ├── compreelnu1.webm
+│       │   ├── compreelnu2.webm
+│       │   ├── gstar1.webm
+│       │   ├── gstar2.webm
+│       │   ├── gstar3.webm
+│       │   ├── gstar4.webm
+│       │   ├── marg1.webm
+│       │   ├── marg2.webm
+│       │   ├── mmxgm.webm
+│       │   ├── nthng.webm
+│       │   └── tricky.webm
+│       └── nfo
+│           └── cv.nfo
+├── files.log
+├── gallery.js
+├── glsl-core.js
+├── index.html
+├── index.html.bak
+├── jquery-3.1.1.min.js
+├── lodash.js
+├── manifest.json
+├── modes
+│   ├── mode-back.js
+│   ├── mode-bedroom3.js
+│   ├── mode-blackhole.js
+│   ├── mode-cabin.js
+│   ├── mode-darvaza.js
+│   ├── mode-elevator.js
+│   ├── mode-hell.js
+│   ├── mode-left.js
+│   ├── mode-left2.js
+│   ├── mode-right.js
+│   ├── mode-right2.js
+│   ├── mode-station.js
+│   ├── mode1.js
+│   ├── mode2.js
+│   ├── mode3.js
+│   ├── mode4.js
+│   ├── mode5.js
+│   ├── mode6.js
+│   ├── mode7.js
+│   └── mode9.js
+├── player.js
+├── portfolio.html
+├── prev.png
+├── site-ui.js
+├── test copy.html
+├── test-crater.html
+├── test.html
+├── test3.html
+├── todo.js
+└── videos.js
+
+29 directories, 727 files

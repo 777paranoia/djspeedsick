@@ -1,0 +1,132 @@
+[
+  {
+    "file": "site-ui.js",
+    "source_script_index": 7,
+    "chars": 18766
+  },
+  {
+    "file": "glsl-core.js",
+    "source_script_index": 8,
+    "chars": 18886
+  },
+  {
+    "file": "modes/mode1.js",
+    "source_script_index": 9,
+    "chars": 2835
+  },
+  {
+    "file": "modes/mode2.js",
+    "source_script_index": 10,
+    "chars": 3023
+  },
+  {
+    "file": "modes/mode-blackhole.js",
+    "source_script_index": 11,
+    "chars": 2157
+  },
+  {
+    "file": "modes/mode3.js",
+    "source_script_index": 12,
+    "chars": 2544
+  },
+  {
+    "file": "modes/mode4.js",
+    "source_script_index": 13,
+    "chars": 1847
+  },
+  {
+    "file": "modes/mode5.js",
+    "source_script_index": 14,
+    "chars": 1397
+  },
+  {
+    "file": "modes/mode6.js",
+    "source_script_index": 15,
+    "chars": 1657
+  },
+  {
+    "file": "modes/mode7.js",
+    "source_script_index": 16,
+    "chars": 4779
+  },
+  {
+    "file": "modes/mode9.js",
+    "source_script_index": 17,
+    "chars": 9097
+  },
+  {
+    "file": "modes/mode-right.js",
+    "source_script_index": 18,
+    "chars": 5955
+  },
+  {
+    "file": "modes/mode-back.js",
+    "source_script_index": 19,
+    "chars": 5698
+  },
+  {
+    "file": "modes/mode-left.js",
+    "source_script_index": 20,
+    "chars": 5463
+  },
+  {
+    "file": "modes/mode-left2.js",
+    "source_script_index": 21,
+    "chars": 1405
+  },
+  {
+    "file": "modes/mode-right2.js",
+    "source_script_index": 22,
+    "chars": 2266
+  },
+  {
+    "file": "modes/mode-bedroom3.js",
+    "source_script_index": 23,
+    "chars": 2680
+  },
+  {
+    "file": "modes/mode-cabin.js",
+    "source_script_index": 24,
+    "chars": 12357
+  },
+  {
+    "file": "engine.js",
+    "source_script_index": 25,
+    "chars": 66377
+  },
+  {
+    "file": "engine2.js",
+    "source_script_index": 26,
+    "chars": 73830
+  },
+  {
+    "file": "engine3.js",
+    "source_script_index": 27,
+    "chars": 84962
+  },
+  {
+    "file": "brain-monitor.js",
+    "source_script_index": 28,
+    "chars": 24954
+  },
+  {
+    "file": "player.js",
+    "source_script_index": 29,
+    "chars": 612
+  },
+  {
+    "file": "videos.js",
+    "source_script_index": 30,
+    "chars": 461
+  },
+  {
+    "file": "gallery.js",
+    "source_script_index": 31,
+    "chars": 137
+  },
+  {
+    "file": "debug-ui.js",
+    "source_script_index": 32,
+    "chars": 10965
+  }
+]

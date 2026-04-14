@@ -1,0 +1,18 @@
+window.MAPPED_VIDEOS = [
+        "forcedenlightenment_1.mp4",
+        "grate.mp4",
+        "untitled.mp4",
+        "mattlistendarkenlightenmenttrack.mp4",
+        "lotusmotel.mp4",
+        "crywolf.mp4",
+        "chemlove.mp4",
+        "thom_1.mp4",
+        "thom_2.mp4",
+        "forcedenlightenment_2.mp4",
+        "yfpmms.mp4",
+        "smtiaie.mp4",
+        "uwmadison.mp4",
+        "emptybottle.mp4",
+        "albionhouse.mp4",
+        "z-1.mp4",
+      ];
