@@ -61,6 +61,7 @@ const IS_MOBILE =
               t("files/mov/bh2.mp4", !0),
               t("files/mov/bh2.mp4", !0),
             ]),
+              (e.fixed["files/mov/bh3.mp4"] = [t("files/mov/bh3.mp4", !0)]),
               (e.fixed["files/mov/earth.mp4"] = [
                 t("files/mov/earth.mp4", !0),
               ]));
@@ -258,6 +259,7 @@ const IS_MOBILE =
           "room_right" === e ||
           "room_back" === e ||
           "room_door" === e ||
+          "room_laptop" === e ||
           "zone2_hallway" === e ||
           "z2_composite" === e
             ? GLSL.modules[e]
@@ -291,6 +293,7 @@ const IS_MOBILE =
           "room_right",
           "room_back",
           "room_door",
+          "room_laptop",
         ];
         for (let t = 0; t < e.length; t++)
           GLSL.modules[e[t]] && buildProgram(e[t]);
@@ -430,13 +433,15 @@ const IS_MOBILE =
             99: "room_right",
             97: "room_back",
             96: "room_door",
+            95: "room_laptop",
           }[this.id];
           if (
             ("mirror" === t ||
             "room_left" === t ||
             "room_right" === t ||
             "room_back" === t ||
-            "room_door" === t
+            "room_door" === t ||
+            "room_laptop" === t
               ? (this.isOOB = !1)
               : (window.__lastOOB
                   ? (this.isOOB = !1)
@@ -546,6 +551,9 @@ const IS_MOBILE =
                 this.textures.push(this.env1),
                 (this.bcTex = loadStaticTex("files/img/rooms/z1/platform.png")),
                 this.textures.push(this.bcTex));
+            else if ("room_laptop" === t)
+              ((this.env1 = loadStaticTex("files/img/rooms/z1/laptop.png")),
+                this.textures.push(this.env1));
             else if ("room_right" === t)
               ((this.env1 = loadStaticTex(
                 "files/img/rooms/z1/right-mobile.png",
@@ -776,7 +784,7 @@ const IS_MOBILE =
             gl.activeTexture(gl.TEXTURE6),
             gl.bindTexture(gl.TEXTURE_2D, texs[ping]),
             gl.activeTexture(gl.TEXTURE7),
-            !IS_MOBILE || (98 !== this.id && 99 !== this.id && 97 !== this.id && 96 !== this.id)
+            !IS_MOBILE || (98 !== this.id && 99 !== this.id && 97 !== this.id && 96 !== this.id && 95 !== this.id)
               ? gl.bindTexture(gl.TEXTURE_2D, this.maskTex)
               : gl.bindTexture(gl.TEXTURE_2D, this.env1),
             IS_MOBILE ||
@@ -989,21 +997,349 @@ const IS_MOBILE =
         rightEngine = null,
         backEngine = null,
         doorEngine = null,
+        laptopEngine = null,
         activePOV = "center",
         backZoom = 0,
         backZoomTarget = 0,
         doorZoom = 0,
         doorZoomTarget = 0,
+        laptopZoom = 0,
+        laptopZoomTarget = 0,
         fractalSeed = 100 * Math.random(),
         blinkPeakTime = performance.now(),
         hallucinationProg = null,
         hallucinationQuadBuf = null,
         hallucinationU = null,
         _tripAccum = 0;
+      
+      
+      
+      let laptopIframe = null;
+      const LAPTOP_RECT = { u0: 0.2667, u1: 0.7322, v0: 0.3600, v1: 0.5281 };
+      function ensureLaptopIframe() {
+        if (laptopIframe) return laptopIframe;
+        const f = document.createElement('iframe');
+        f.id = 'laptopScreenIframe';
+        f.src = 'desktop.html';
+        f.style.cssText =
+          'position:fixed;border:0;background:#000;display:none;' +
+          'z-index:50;pointer-events:auto;';
+        document.body.appendChild(f);
+        laptopIframe = f;
+        return f;
+      }
+      function destroyLaptopIframe() {
+        if (laptopIframe && laptopIframe.parentNode)
+          laptopIframe.parentNode.removeChild(laptopIframe);
+        laptopIframe = null;
+      }
+      
+      
+      function _laptopTuvToCanvasPx(u, v) {
+        const W = canvas.width, H = canvas.height;
+        const sa = W / H;
+        const imgA = 941 / 1672;
+        const t = Math.max(0, Math.min(1, (sa - 0.7) / 1.3));
+        const sst = t * t * (3 - 2 * t);
+        const va = imgA + (0.68 - imgA) * sst;
+        
+        const zAmt = Math.max(0, Math.min(1, (laptopZoom - 0.82) / 0.18));
+        const k = 1 - 0.08 * zAmt * zAmt;
+        const cx = 0.5, cy = 0.43;
+        const fitU = (u - cx * (1 - k)) / k;
+        const fitV = (v - cy * (1 - k)) / k;
+        const preU = (fitU + mx * 0.035 - 0.06) / 0.88;
+        const preV = (fitV + my * 0.08  - 0.06) / 0.88;
+        let uvX, uvY;
+        if (sa > va) {
+          const s = va / sa;
+          uvX = preU;
+          uvY = (preV - 0.5) / s + 0.5;
+        } else {
+          const s = sa / va;
+          uvX = (preU - 0.5) / s + 0.5;
+          uvY = preV;
+        }
+        return { x: uvX * W, y: uvY * H };
+      }
+      function updateLaptopIframe() {
+        const visible = activePOV === 'laptop' && laptopZoom > 0.85;
+        if (!visible) {
+          if (laptopIframe) laptopIframe.style.display = 'none';
+          return;
+        }
+        ensureLaptopIframe();
+        const tl = _laptopTuvToCanvasPx(LAPTOP_RECT.u0, LAPTOP_RECT.v0);
+        const br = _laptopTuvToCanvasPx(LAPTOP_RECT.u1, LAPTOP_RECT.v1);
+        const r = canvas.getBoundingClientRect();
+        const sx = r.width / canvas.width, sy = r.height / canvas.height;
+        laptopIframe.style.display = 'block';
+        laptopIframe.style.left   = (r.left + Math.min(tl.x, br.x) * sx) + 'px';
+        laptopIframe.style.top    = (r.top  + Math.min(tl.y, br.y) * sy) + 'px';
+        laptopIframe.style.width  = (Math.abs(br.x - tl.x) * sx) + 'px';
+        laptopIframe.style.height = (Math.abs(br.y - tl.y) * sy) + 'px';
+      }
       function initHallucinationOverlay() {
         const e = compile(gl.VERTEX_SHADER, GLSL.vert);
-        var t =
-          '\n#ifdef GL_FRAGMENT_PRECISION_HIGH\n  precision highp float;\n#else\n  precision mediump float;\n#endif\nuniform vec2  u_resolution;\nuniform float u_time;\nuniform float u_trip;        // current zone trip intensity\nuniform float u_tripAccum;   // session accumulator — only grows\nuniform float u_fractalSeed;\nuniform float u_blinkAge;    // seconds since last blink peak\nuniform float u_zone;        // 1.0, 2.0, or 3.0 — controls decay rate\n\n// ── HASHES ──\nfloat hh(float x){ return fract(sin(x*127.1)*43758.5453); }\nfloat hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\nfloat noise(vec2 p){\n    vec2 i=floor(p); vec2 f=fract(p); vec2 u=f*f*(3.0-2.0*f);\n    return mix(mix(hh2(i),hh2(i+vec2(1,0)),u.x),\n               mix(hh2(i+vec2(0,1)),hh2(i+vec2(1,1)),u.x),u.y);\n}\n\n// ── BURNING SHIP FRACTAL ──\n// z_{n+1} = (|Re(z)| + i|Im(z)|)^2 + c\n// Produces inverted cityscapes / melting buildings — fits the void city aesthetic\nfloat burningShip(vec2 c){\n    vec2 z = vec2(0.0);\n    float escaped = 0.0;\n    float smooth_i = 0.0;\n    for(int n=0; n<48; n++){\n        z = vec2(abs(z.x), abs(z.y));\n        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;\n        // WebGL1-safe: no break — accumulate with step\n        float esc = step(4.0, dot(z,z));\n        smooth_i += (1.0 - esc);  // count pre-escape iterations\n    }\n    return smooth_i / 48.0;\n}\n\n// ── JULIA SET ──\nfloat julia(vec2 z, vec2 c){\n    float smooth_i = 0.0;\n    for(int n=0; n<40; n++){\n        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;\n        smooth_i += (1.0 - step(4.0, dot(z,z)));\n    }\n    return smooth_i / 40.0;\n}\n\n// ── PALETTE — sickly neon with seed-driven hue ──\nvec3 sickPal(float t, float seed){\n    // Horror palette: shifted toward reds/magentas/acid greens\n    vec3 a = vec3(0.5, 0.4, 0.45);\n    vec3 b = vec3(0.5, 0.35, 0.5);\n    vec3 c = vec3(1.0, 0.8, 1.0);\n    vec3 d = vec3(hh(seed)*0.5, hh(seed+1.0)*0.3 + 0.1, hh(seed+2.0)*0.4 + 0.3);\n    return a + b * cos(6.28318*(c*t + d));\n}\n\nvoid main(){\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;\n    vec2 screenUV = gl_FragCoord.xy / u_resolution;\n    float r = length(uv);\n    float t = u_time;\n    float trip = clamp(u_trip, 0.0, 2.0);\n    float accum = clamp(u_tripAccum, 0.0, 8.0);\n\n    // Base intensity: grows with accumulator, scaled by zone\n    // Z1/Z2: base is subtle, effects come from blink surges\n    // Z3: base is always present and thick\n    float zoneBase = (u_zone < 2.5) ? 0.04 : 0.12;\n    float baseStrength = trip * zoneBase + accum * 0.025;\n\n    // Blink surge: snaps in at blink, decay time varies by zone\n    // Z1: 1.8s — sharp flash then gone. Z2: 2.8s — lingers a beat. Z3: 6s — persistent\n    float decayTime = (u_zone < 1.5) ? 1.8 : ((u_zone < 2.5) ? 2.8 : 6.0);\n    float surge = smoothstep(decayTime, 0.0, u_blinkAge) * trip * 0.4;\n\n    // Z1/Z2: random intermittent gate — effects only fire ~40% of blinks\n    float blinkGate = 1.0;\n    if(u_zone < 2.5) {\n        blinkGate = step(0.55, hh(floor(u_fractalSeed * 7.0 + u_blinkAge)));\n    }\n    surge *= blinkGate;\n\n    float totalStrength = baseStrength + surge;\n\n    if(totalStrength < 0.008){ gl_FragColor = vec4(0.0); return; }\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 1: FILM GRAIN — always on, scales with trip\n    //  Survival horror film stock damage\n    // ════════════════════════════════════════════════════════\n    float grainSeed = floor(t * 24.0); // 24fps grain refresh\n    float grain = hh2(screenUV * u_resolution * 0.5 + grainSeed * 7.3) - 0.5;\n    // Heavier grain in dark areas (shadow noise) — peripheral weighting\n    float grainAmt = totalStrength * 0.12 * (1.0 + r * 0.6);\n    // Occasional heavy grain bursts\n    float grainBurst = step(0.92, hh(grainSeed * 3.1 + u_fractalSeed)) * trip;\n    grainAmt += grainBurst * 0.25;\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 2: VHS SCANLINE CORRUPTION\n    //  Horizontal bands that tear/shift — PT hallway vibes\n    // ════════════════════════════════════════════════════════\n    float scanY = screenUV.y * u_resolution.y;\n    float scanBand = floor(scanY / 3.0); // 3px band height\n    float scanRoll = hh(scanBand * 7.7 + floor(t * 6.0));\n    // Tear probability increases with trip\n    float tearProb = 0.985 - totalStrength * 0.06;\n    float isTear = step(tearProb, scanRoll);\n    // Tear color: dark desaturated band or bright white flash\n    float tearBright = step(0.7, hh(scanBand * 13.3 + floor(t * 12.0)));\n    vec3 tearColor = mix(vec3(0.0, 0.0, 0.02), vec3(0.9, 0.85, 0.95), tearBright);\n    float tearAlpha = isTear * totalStrength * 0.5;\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 3: FRACTAL PERIPHERAL BLEED\n    //  Burning Ship + Julia sets in the outer vision\n    //  Like seeing geometry that shouldn\'t exist\n    // ════════════════════════════════════════════════════════\n    float periph = smoothstep(0.20, 0.95, r);\n    float fracAlpha = 0.0;\n    vec3 fracCol = vec3(0.0);\n\n#ifndef MOBILE\n    if(periph * totalStrength > 0.01) {\n        // Seed picks fractal type and region\n        float typeRoll = hh(u_fractalSeed * 3.7);\n        float zoom = mix(0.6, 3.0, hh(u_fractalSeed * 1.3));\n\n        // Slow drift — fractal region crawls over time\n        vec2 drift = vec2(\n            sin(t * 0.03 + u_fractalSeed) * 0.2,\n            cos(t * 0.02 + u_fractalSeed * 1.7) * 0.2\n        );\n\n        vec2 sampleUV = uv / zoom + drift;\n        float val = 0.0;\n\n        if(typeRoll < 0.4) {\n            // Burning Ship — melting cityscape structures\n            vec2 region = vec2(-1.76, -0.028) + vec2(hh(u_fractalSeed*5.1)-0.5, hh(u_fractalSeed*7.3)-0.5) * 0.3;\n            val = burningShip(sampleUV * 0.5 + region);\n        } else if(typeRoll < 0.7) {\n            // Julia set — organic/alien tendrils\n            vec2 jc = vec2(\n                -0.8 + sin(t * 0.015 + u_fractalSeed) * 0.15,\n                 0.156 + cos(t * 0.012 + u_fractalSeed * 2.0) * 0.1\n            );\n            val = julia(sampleUV * 0.8, jc);\n        } else {\n            // Burning Ship zoomed into the "mast" — tower structures\n            vec2 region = vec2(-1.755, -0.022);\n            float deepZoom = mix(2.0, 8.0, hh(u_fractalSeed * 9.1));\n            val = burningShip(sampleUV * 0.15 / deepZoom + region);\n        }\n\n        // Animate color cycling — slow, nauseous\n        val = fract(val * 3.5 + t * 0.04 * (0.3 + hh(u_fractalSeed * 9.0)));\n        fracCol = sickPal(val, u_fractalSeed * 11.3);\n        // Kill deep interior (val near 1.0 = never escaped = boring)\n        fracCol *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);\n\n        float fracPulse = 0.6 + 0.4 * sin(t * (0.8 + hh(u_fractalSeed*4.0)) + u_fractalSeed);\n        fracAlpha = periph * totalStrength * 0.22 * fracPulse;\n    }\n#endif\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 4: HORROR VIGNETTE — dark red peripheral creep\n    //  The edges of vision darken and pulse, like blood pressure\n    // ════════════════════════════════════════════════════════\n    float vignPulse = 0.5 + 0.5 * sin(t * 0.7 + sin(t * 0.3) * 2.0);\n    float vignStrength = smoothstep(0.35, 1.1, r) * totalStrength * 0.28 * vignPulse;\n    // Asymmetric — heavier at bottom (gravity, blood pooling)\n    vignStrength *= 1.0 + max(0.0, -uv.y) * 0.8;\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 5: DATAMOSH BLOCKS — random rectangles of wrong color\n    //  Like frame buffer corruption / Enter the Void blink cuts\n    // ════════════════════════════════════════════════════════\n    float moshAlpha = 0.0;\n    vec3 moshCol = vec3(0.0);\n#ifndef MOBILE\n    float moshTrigger = step(0.96, hh(floor(t * 8.0) * 13.7 + u_fractalSeed));\n    if(moshTrigger > 0.5 && totalStrength > 0.15) {\n        float blockSize = mix(32.0, 128.0, hh(floor(t*8.0)*5.3));\n        vec2 blockID = floor(gl_FragCoord.xy / blockSize);\n        float blockRnd = hh2(blockID + floor(t * 4.0));\n        float isCorrupt = step(0.88, blockRnd);\n        vec3 corruptCol = sickPal(blockRnd * 3.0 + t * 0.1, u_fractalSeed * 7.0);\n        float invertRoll = hh(blockRnd * 17.0);\n        if(invertRoll > 0.6) corruptCol = 1.0 - corruptCol;\n        else if(invertRoll > 0.3) corruptCol = vec3(dot(corruptCol, vec3(0.299, 0.587, 0.114)));\n        moshAlpha = isCorrupt * totalStrength * 0.4;\n        moshCol = corruptCol;\n    }\n#endif\n\n    // ════════════════════════════════════════════════════════\n    //  LAYER 6: AFTERIMAGE GHOST — faint echo of fractal from\n    //  previous blink, still fading. Creates persistence of vision.\n    // ════════════════════════════════════════════════════════\n    float ghostAge = u_blinkAge + 4.0;\n    float ghostAlpha = 0.0;\n    vec3 ghostCol = vec3(0.0);\n#ifndef MOBILE\n    if(ghostAge < 10.0 && accum > 0.5) {\n        float ghostEnv = smoothstep(10.0, 4.0, ghostAge) * 0.08 * accum;\n        float ghostSeed = u_fractalSeed + 50.0;\n        vec2 ghostUV = uv / 1.5 + vec2(sin(t*0.02)*0.3, cos(t*0.015)*0.3);\n        float gVal = burningShip(ghostUV * 0.4 + vec2(-1.76, -0.03));\n        gVal = fract(gVal * 2.0 + t * 0.02);\n        ghostCol = sickPal(gVal, ghostSeed * 7.0) * smoothstep(0.0, 0.15, gVal);\n        ghostAlpha = smoothstep(0.3, 0.8, r) * ghostEnv;\n    }\n#endif\n\n    // ════════════════════════════════════════════════════════\n    //  COMPOSITE — premultiplied alpha\n    //  Grain: additive noise\n    //  Tears: replace bands\n    //  Fractals: additive glow in periphery\n    //  Vignette: darken edges\n    //  Mosh: color replacement blocks\n    //  Ghost: faint additive persistence\n    // ════════════════════════════════════════════════════════\n\n    vec3 outRGB = vec3(0.0);\n    float outA = 0.0;\n\n    // Grain — additive, very subtle\n    outRGB += vec3(grain * grainAmt);\n\n    // Fractal glow — additive peripheral\n    outRGB += fracCol * fracAlpha;\n    outA = max(outA, fracAlpha * 0.5); // slight background darken behind fractals\n\n    // Tears — opaque bands\n    outRGB = mix(outRGB, tearColor * tearAlpha, tearAlpha);\n    outA = max(outA, tearAlpha);\n\n    // Horror vignette — darkening\n    outA = max(outA, vignStrength);\n    outRGB = mix(outRGB, vec3(0.03, 0.0, 0.0), vignStrength); // dark red-black\n\n    // Mosh blocks\n    outRGB = mix(outRGB, moshCol * moshAlpha, moshAlpha);\n    outA = max(outA, moshAlpha);\n\n    // Ghost afterimage\n    outRGB += ghostCol * ghostAlpha;\n\n    // Premultiplied output\n    gl_FragColor = vec4(outRGB, outA);\n}';
+        var t = `
+
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+  precision highp float;
+#else
+  precision mediump float;
+#endif
+uniform vec2  u_resolution;
+uniform float u_time;
+uniform float u_trip;        
+uniform float u_tripAccum;   
+uniform float u_fractalSeed;
+uniform float u_blinkAge;    
+uniform float u_zone;        
+
+
+float hh(float x){ return fract(sin(x*127.1)*43758.5453); }
+float hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float noise(vec2 p){
+    vec2 i=floor(p); vec2 f=fract(p); vec2 u=f*f*(3.0-2.0*f);
+    return mix(mix(hh2(i),hh2(i+vec2(1,0)),u.x),
+               mix(hh2(i+vec2(0,1)),hh2(i+vec2(1,1)),u.x),u.y);
+}
+
+
+
+
+float burningShip(vec2 c){
+    vec2 z = vec2(0.0);
+    float escaped = 0.0;
+    float smooth_i = 0.0;
+    for(int n=0; n<48; n++){
+        z = vec2(abs(z.x), abs(z.y));
+        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        
+        float esc = step(4.0, dot(z,z));
+        smooth_i += (1.0 - esc);  
+    }
+    return smooth_i / 48.0;
+}
+
+
+float julia(vec2 z, vec2 c){
+    float smooth_i = 0.0;
+    for(int n=0; n<40; n++){
+        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        smooth_i += (1.0 - step(4.0, dot(z,z)));
+    }
+    return smooth_i / 40.0;
+}
+
+
+vec3 sickPal(float t, float seed){
+    
+    vec3 a = vec3(0.5, 0.4, 0.45);
+    vec3 b = vec3(0.5, 0.35, 0.5);
+    vec3 c = vec3(1.0, 0.8, 1.0);
+    vec3 d = vec3(hh(seed)*0.5, hh(seed+1.0)*0.3 + 0.1, hh(seed+2.0)*0.4 + 0.3);
+    return a + b * cos(6.28318*(c*t + d));
+}
+
+void main(){
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+    vec2 screenUV = gl_FragCoord.xy / u_resolution;
+    float r = length(uv);
+    float t = u_time;
+    float trip = clamp(u_trip, 0.0, 2.0);
+    float accum = clamp(u_tripAccum, 0.0, 8.0);
+
+    
+    
+    
+    float zoneBase = (u_zone < 2.5) ? 0.04 : 0.12;
+    float baseStrength = trip * zoneBase + accum * 0.025;
+
+    
+    
+    float decayTime = (u_zone < 1.5) ? 1.8 : ((u_zone < 2.5) ? 2.8 : 6.0);
+    float surge = smoothstep(decayTime, 0.0, u_blinkAge) * trip * 0.4;
+
+    
+    float blinkGate = 1.0;
+    if(u_zone < 2.5) {
+        blinkGate = step(0.55, hh(floor(u_fractalSeed * 7.0 + u_blinkAge)));
+    }
+    surge *= blinkGate;
+
+    float totalStrength = baseStrength + surge;
+
+    if(totalStrength < 0.008){ gl_FragColor = vec4(0.0); return; }
+
+    
+    
+    
+    
+    float grainSeed = floor(t * 24.0); 
+    float grain = hh2(screenUV * u_resolution * 0.5 + grainSeed * 7.3) - 0.5;
+    
+    float grainAmt = totalStrength * 0.12 * (1.0 + r * 0.6);
+    
+    float grainBurst = step(0.92, hh(grainSeed * 3.1 + u_fractalSeed)) * trip;
+    grainAmt += grainBurst * 0.25;
+
+    
+    
+    
+    
+    float scanY = screenUV.y * u_resolution.y;
+    float scanBand = floor(scanY / 3.0); 
+    float scanRoll = hh(scanBand * 7.7 + floor(t * 6.0));
+    
+    float tearProb = 0.985 - totalStrength * 0.06;
+    float isTear = step(tearProb, scanRoll);
+    
+    float tearBright = step(0.7, hh(scanBand * 13.3 + floor(t * 12.0)));
+    vec3 tearColor = mix(vec3(0.0, 0.0, 0.02), vec3(0.9, 0.85, 0.95), tearBright);
+    float tearAlpha = isTear * totalStrength * 0.5;
+
+    
+    
+    
+    
+    
+    float periph = smoothstep(0.20, 0.95, r);
+    float fracAlpha = 0.0;
+    vec3 fracCol = vec3(0.0);
+
+#ifndef MOBILE
+    if(periph * totalStrength > 0.01) {
+        
+        float typeRoll = hh(u_fractalSeed * 3.7);
+        float zoom = mix(0.6, 3.0, hh(u_fractalSeed * 1.3));
+
+        
+        vec2 drift = vec2(
+            sin(t * 0.03 + u_fractalSeed) * 0.2,
+            cos(t * 0.02 + u_fractalSeed * 1.7) * 0.2
+        );
+
+        vec2 sampleUV = uv / zoom + drift;
+        float val = 0.0;
+
+        if(typeRoll < 0.4) {
+            
+            vec2 region = vec2(-1.76, -0.028) + vec2(hh(u_fractalSeed*5.1)-0.5, hh(u_fractalSeed*7.3)-0.5) * 0.3;
+            val = burningShip(sampleUV * 0.5 + region);
+        } else if(typeRoll < 0.7) {
+            
+            vec2 jc = vec2(
+                -0.8 + sin(t * 0.015 + u_fractalSeed) * 0.15,
+                 0.156 + cos(t * 0.012 + u_fractalSeed * 2.0) * 0.1
+            );
+            val = julia(sampleUV * 0.8, jc);
+        } else {
+            
+            vec2 region = vec2(-1.755, -0.022);
+            float deepZoom = mix(2.0, 8.0, hh(u_fractalSeed * 9.1));
+            val = burningShip(sampleUV * 0.15 / deepZoom + region);
+        }
+
+        
+        val = fract(val * 3.5 + t * 0.04 * (0.3 + hh(u_fractalSeed * 9.0)));
+        fracCol = sickPal(val, u_fractalSeed * 11.3);
+        
+        fracCol *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);
+
+        float fracPulse = 0.6 + 0.4 * sin(t * (0.8 + hh(u_fractalSeed*4.0)) + u_fractalSeed);
+        fracAlpha = periph * totalStrength * 0.22 * fracPulse;
+    }
+#endif
+
+    
+    
+    
+    
+    float vignPulse = 0.5 + 0.5 * sin(t * 0.7 + sin(t * 0.3) * 2.0);
+    float vignStrength = smoothstep(0.35, 1.1, r) * totalStrength * 0.28 * vignPulse;
+    
+    vignStrength *= 1.0 + max(0.0, -uv.y) * 0.8;
+
+    
+    
+    
+    
+    float moshAlpha = 0.0;
+    vec3 moshCol = vec3(0.0);
+#ifndef MOBILE
+    float moshTrigger = step(0.96, hh(floor(t * 8.0) * 13.7 + u_fractalSeed));
+    if(moshTrigger > 0.5 && totalStrength > 0.15) {
+        float blockSize = mix(32.0, 128.0, hh(floor(t*8.0)*5.3));
+        vec2 blockID = floor(gl_FragCoord.xy / blockSize);
+        float blockRnd = hh2(blockID + floor(t * 4.0));
+        float isCorrupt = step(0.88, blockRnd);
+        vec3 corruptCol = sickPal(blockRnd * 3.0 + t * 0.1, u_fractalSeed * 7.0);
+        float invertRoll = hh(blockRnd * 17.0);
+        if(invertRoll > 0.6) corruptCol = 1.0 - corruptCol;
+        else if(invertRoll > 0.3) corruptCol = vec3(dot(corruptCol, vec3(0.299, 0.587, 0.114)));
+        moshAlpha = isCorrupt * totalStrength * 0.4;
+        moshCol = corruptCol;
+    }
+#endif
+
+    
+    
+    
+    
+    float ghostAge = u_blinkAge + 4.0;
+    float ghostAlpha = 0.0;
+    vec3 ghostCol = vec3(0.0);
+#ifndef MOBILE
+    if(ghostAge < 10.0 && accum > 0.5) {
+        float ghostEnv = smoothstep(10.0, 4.0, ghostAge) * 0.08 * accum;
+        float ghostSeed = u_fractalSeed + 50.0;
+        vec2 ghostUV = uv / 1.5 + vec2(sin(t*0.02)*0.3, cos(t*0.015)*0.3);
+        float gVal = burningShip(ghostUV * 0.4 + vec2(-1.76, -0.03));
+        gVal = fract(gVal * 2.0 + t * 0.02);
+        ghostCol = sickPal(gVal, ghostSeed * 7.0) * smoothstep(0.0, 0.15, gVal);
+        ghostAlpha = smoothstep(0.3, 0.8, r) * ghostEnv;
+    }
+#endif
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    vec3 outRGB = vec3(0.0);
+    float outA = 0.0;
+
+    
+    outRGB += vec3(grain * grainAmt);
+
+    
+    outRGB += fracCol * fracAlpha;
+    outA = max(outA, fracAlpha * 0.5); 
+
+    
+    outRGB = mix(outRGB, tearColor * tearAlpha, tearAlpha);
+    outA = max(outA, tearAlpha);
+
+    
+    outA = max(outA, vignStrength);
+    outRGB = mix(outRGB, vec3(0.03, 0.0, 0.0), vignStrength); 
+
+    
+    outRGB = mix(outRGB, moshCol * moshAlpha, moshAlpha);
+    outA = max(outA, moshAlpha);
+
+    
+    outRGB += ghostCol * ghostAlpha;
+
+    
+    gl_FragColor = vec4(outRGB, outA);
+}`;
         IS_MOBILE && (t = "#define MOBILE\n" + t);
         const i = compile(gl.FRAGMENT_SHADER, t);
         if (e && i) {
@@ -1140,13 +1476,15 @@ const IS_MOBILE =
                     ? mx >= 1.14
                       ? beginSlide("center", 1)
                       : mx <= -1.24 && beginSlide("back", -1)
-                    : "back" === activePOV
-                      ? mx >= 1.14
-                        ? beginSlide("right", 1)
-                        : mx <= -1.24 && window.__z4Route && beginSlide("door", -1)
-                      : "door" === activePOV &&
-                        mx >= 1.14 &&
-                        beginSlide("back", 1))));
+                      : "back" === activePOV
+                        ? mx >= 1.14
+                          ? beginSlide("right", 1)
+                          : mx <= -1.24 && window.__z4Route && beginSlide("door", -1)
+                      : "door" === activePOV
+                        ? mx >= 1.14 && beginSlide("back", 1)
+                        : "laptop" === activePOV &&
+                          mx <= -1.14 &&
+                          beginSlide("left", -1))));
       }
       window.isEngine1Dead = !1;
       const startDrag = (e, t, i) => {
@@ -1171,13 +1509,29 @@ const IS_MOBILE =
             (window.my = my));
         },
         endDrag = () => {
-          ((isDragging = !1),
-            (mx = 0),
-            (my = 0),
-            (window.mx = 0),
-            (window.my = 0));
-        };
-      function simStep(e) {
+  isDragging = !1;
+
+  const z4 = window.currentZone4;
+  const keepZone4Look =
+    z4 &&
+    !z4.isDead &&
+    (
+      z4.phase === "ascent" ||
+      z4.phase === "docking_shake" ||
+      z4.phase === "fog_in" ||
+      z4.phase === "fog_in_descent" ||
+      z4.phase === "descent" ||
+      z4.phase === "descent_shake"
+    );
+
+  if (!keepZone4Look) {
+    mx = 0;
+    my = 0;
+    window.mx = 0;
+    window.my = 0;
+  }
+};
+              function simStep(e) {
         if (IS_MOBILE) return;
         (gl.activeTexture(gl.TEXTURE6),
           gl.bindTexture(gl.TEXTURE_2D, texs[ping]),
@@ -1220,6 +1574,7 @@ const IS_MOBILE =
         (leftEngine || (leftEngine = new ActiveMode(98)),
           rightEngine || (rightEngine = new ActiveMode(99)),
           backEngine || (backEngine = new ActiveMode(97)),
+          laptopEngine || (laptopEngine = new ActiveMode(95)),
           window.__z4Route && !doorEngine && (doorEngine = new ActiveMode(96)));
       }
       function render(e) {
@@ -1320,6 +1675,8 @@ const IS_MOBILE =
                 rightEngine && (rightEngine.destroy(), (rightEngine = null)),
                 backEngine && (backEngine.destroy(), (backEngine = null)),
                 doorEngine && (doorEngine.destroy(), (doorEngine = null)),
+                laptopEngine && (laptopEngine.destroy(), (laptopEngine = null)),
+                destroyLaptopIframe(),
                 (activePOV = "center"),
                 (mx = 0),
                 (my = 0),
@@ -1327,6 +1684,8 @@ const IS_MOBILE =
                 (cy = 0),
                 (backZoom = 0),
                 (backZoomTarget = 0),
+                (laptopZoom = 0),
+                (laptopZoomTarget = 0),
                 "function" == typeof window.startZone2 && window.startZone2(),
                 setTimeout(() => {
                   t.style.opacity = "0";
@@ -1334,6 +1693,29 @@ const IS_MOBILE =
             }, 1e3)
           );
         }
+        (laptopZoomTarget =
+          "left" === activePOV && __e1SpaceHeld
+            ? Math.min(1, laptopZoomTarget + 0.028 * i)
+            : "laptop" === activePOV
+              ? 1
+              : 0);
+        laptopZoom +=
+          (laptopZoomTarget - laptopZoom) *
+          Math.min(1, (__e1SpaceHeld ? 0.075 : 0.18) * i);
+        leftEngine && leftEngine.setZoom(laptopZoom);
+        laptopEngine &&
+          laptopEngine.setZoom(Math.max(0, (laptopZoom - 0.82) / 0.18));
+        if ("left" === activePOV && "idle" === slideState && laptopZoom > 0.92) {
+          activePOV = "laptop";
+          laptopZoom = 1;
+          laptopZoomTarget = 1;
+          mx = 0;
+          my = 0;
+          cx = 0;
+          cy = 0;
+          povSwitchTime = e;
+        }
+        updateLaptopIframe();
         if (
           ("center" === activePOV
             ? (gl.bindFramebuffer(gl.FRAMEBUFFER, null),
@@ -1375,6 +1757,22 @@ const IS_MOBILE =
                     modeSeed,
                   ),
                 drawHallucinationOverlay(e))
+              : "laptop" === activePOV
+                ? (gl.clearColor(0, 0, 0, 1),
+                  gl.clear(gl.COLOR_BUFFER_BIT),
+                  laptopEngine &&
+                    laptopEngine.render(
+                      e,
+                      cx,
+                      cy,
+                      n,
+                      blink,
+                      flash,
+                      shake,
+                      l,
+                      modeSeed,
+                    ),
+                  drawHallucinationOverlay(e))
               : "right" === activePOV &&
                 (gl.clearColor(0, 0, 0, 1),
                 gl.clear(gl.COLOR_BUFFER_BIT),
@@ -1461,9 +1859,11 @@ const IS_MOBILE =
               rightEngine && (rightEngine.destroy(), rightEngine = null);
               backEngine && (backEngine.destroy(), backEngine = null);
               doorEngine && (doorEngine.destroy(), doorEngine = null);
+              laptopEngine && (laptopEngine.destroy(), laptopEngine = null);
               activePOV = "center";
               mx = 0; my = 0; cx = 0; cy = 0;
               doorZoom = 0; doorZoomTarget = 0;
+              laptopZoom = 0; laptopZoomTarget = 0;
               if (typeof window.startZone4 === "function") window.startZone4();
               setTimeout(function() { doorFade.style.opacity = "0"; }, 200);
             }, 1000);

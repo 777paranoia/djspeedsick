@@ -2,6 +2,154 @@
         (window.GLSL.modules = window.GLSL.modules || {}),
         (GLSL.modules.zone2_hallway =
           "\n#ifdef GL_FRAGMENT_PRECISION_HIGH\n  precision highp float;\n#else\n  precision mediump float;\n#endif\nuniform vec2 u_resolution;\nuniform float u_time;\nuniform vec2 u_mouse;\nuniform float u_camZ;\nuniform float u_blink;\nuniform float u_shake; \nuniform float u_isWalking;\nuniform float u_trip;\nuniform float u_yawOffset;\n\nuniform sampler2D u_texFront;\nuniform sampler2D u_texBack;\nuniform sampler2D u_texLeft;\nuniform sampler2D u_texRight;\nuniform sampler2D u_texTop;\nuniform sampler2D u_texBottom;\nuniform sampler2D u_texDoorLeft;\n#ifdef MOBILE\n#define u_texDoorRight u_texDoorLeft\n#else\nuniform sampler2D u_texDoorRight;\n#endif\nuniform sampler2D u_voidVid;    \n\nmat2 rot(float a) {\n    float s = sin(a), c = cos(a);\n    return mat2(c, -s, s, c);\n}\nfloat _hh(float x){ return fract(sin(x*127.1)*43758.5453); }\nfloat _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\n\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;\n    float trip = clamp(u_trip, 0.0, 2.0);\n    \n    float warpAmp = 0.004 + trip * 0.012;\n    float liquidX = sin(uv.y * 12.0 + u_time * 0.4) * warpAmp + cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;\n    float liquidY = cos(uv.x * 14.0 + u_time * 0.3) * warpAmp + sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;\n    liquidX += sin(u_time * 30.0) * 0.01 * u_shake;\n    liquidY += cos(u_time * 25.0) * 0.01 * u_shake;\n    liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;\n    liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;\n    \n    float gTick = floor(u_time * 14.0);\n    float glitchProb = 0.985 - trip * 0.04;\n    if(step(glitchProb, _hh(gTick * 133.77)) > 0.0) {\n        float bandY = floor(uv.y * mix(8.0, 25.0, _hh(gTick * 2.1)));\n        liquidX += (_hh(bandY + gTick) - 0.5) * 0.15 * trip;\n    }\n\n    vec3 box = vec3(0.5625, 1.0, 3.5); \n    \n    float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;\n    float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;\n    vec3 ro = vec3(bobX, bobY, u_camZ);\n    vec3 rd = normalize(vec3(uv.x + liquidX, uv.y + liquidY, 1.6));\n    \n    vec2 m = u_mouse * 0.35;\n    rd.yz *= rot(m.y * 0.8);\n    rd.xz *= rot(m.x + u_yawOffset);\n    \n    vec3 safeRd = max(abs(rd), vec3(0.0001)) * sign(rd);\n    vec3 tPos = (box * sign(safeRd) - ro) / safeRd;\n    float t = min(min(tPos.x, tPos.y), tPos.z);\n    vec3 pos = ro + rd * t;\n    vec3 nPos = pos / box;\n    vec3 absPos = abs(nPos);\n    \n    vec4 hallTex;\n    vec2 tileUV;\n    int wallID = -1;\n    if (absPos.x > absPos.y && absPos.x > absPos.z) {\n        if (nPos.x > 0.0) { \n            tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texRight, tileUV);\n            wallID = 1;\n        } else { \n            tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texLeft, tileUV);\n            wallID = 0;\n        }\n    } else if (absPos.y > absPos.x && absPos.y > absPos.z) {\n        wallID = 4;\n        if (nPos.y > 0.0) { \n            tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5;\n            hallTex = texture2D(u_texTop, tileUV);\n        } else { \n            tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5;\n            hallTex = texture2D(u_texBottom, tileUV);\n        }\n    } else {\n        if (nPos.z > 0.0) { \n            tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texFront, tileUV);\n            wallID = 2;\n        } else { \n            tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texBack, tileUV);\n            wallID = 3;\n        }\n    }\n    \n    vec3 finalCol = hallTex.rgb;\n    bool isCutout = hallTex.a < 0.1 || (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);\n    float outAlpha = 1.0;\n    \n    bool isVideoPortal = false;\n    if (isCutout && wallID != 4) {\n        vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n        if (wallID == 2) {\n            vec2 portalMin = vec2(0.2939, 0.2876);\n            vec2 portalMax = vec2(0.7070, 0.7119);\n            vec2 puv = clamp((tileUV - portalMin) / (portalMax - portalMin), 0.0, 1.0);\n            finalCol = texture2D(u_voidVid, puv).rgb;\n            outAlpha = 1.0;\n            isVideoPortal = true;\n        } else if (wallID == 0) {\n            finalCol = vec3(0.04, 0.03, 0.03);\n        } else if (wallID == 1) {\n            finalCol = vec3(0.03, 0.03, 0.05);\n        }\n    }\n    \n    if (wallID == 4 && isCutout) finalCol = vec3(0.0);\n    \n    if (!isVideoPortal) {\n        float fogThickness = 0.5 + trip * 0.15;\n        float fogFactor = exp(-t * fogThickness);\n        vec3 fogColor = vec3(0.02, 0.03, 0.04);\n        fogColor = mix(fogColor, vec3(0.04, 0.03, 0.01), trip * 0.3);\n        finalCol = mix(fogColor, finalCol, fogFactor);\n    }\n    \n    float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));\n    vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1); \n    finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);\n    \n    float floorGlow = smoothstep(-0.3, -0.8, nPos.y) * (0.4 + 0.6 * sin(u_time * 1.3 + pos.z * 0.4));\n    finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);\n    \n    float flicker = 1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;\n    finalCol *= flicker;\n\n    float vignette = smoothstep(1.3, 0.2, length(uv));\n    finalCol *= vignette;\n    finalCol *= 0.65;\n    \n    gl_FragColor = vec4(finalCol * (1.0 - u_blink), outAlpha);\n}\n"),
+        (GLSL.modules.zone2_hallway = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+  precision highp float;
+#else
+  precision mediump float;
+#endif
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_mouse;
+uniform float u_camZ;
+uniform float u_blink;
+uniform float u_shake;
+uniform float u_isWalking;
+uniform float u_trip;
+uniform float u_yawOffset;
+
+uniform sampler2D u_texFront;
+uniform sampler2D u_texBack;
+uniform sampler2D u_texLeft;
+uniform sampler2D u_texRight;
+uniform sampler2D u_texTop;
+uniform sampler2D u_texBottom;
+uniform sampler2D u_texDoorLeft;
+#ifdef MOBILE
+#define u_texDoorRight u_texDoorLeft
+#else
+uniform sampler2D u_texDoorRight;
+#endif
+uniform sampler2D u_voidVid;
+
+mat2 rot(float a) {
+    float s = sin(a), c = cos(a);
+    return mat2(c, -s, s, c);
+}
+float _hh(float x){ return fract(sin(x*127.1)*43758.5453); }
+float _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+    float trip = clamp(u_trip, 0.0, 2.0);
+
+    float warpAmp = 0.004 + trip * 0.012;
+    float liquidX = sin(uv.y * 12.0 + u_time * 0.4) * warpAmp + cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;
+    float liquidY = cos(uv.x * 14.0 + u_time * 0.3) * warpAmp + sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;
+    liquidX += sin(u_time * 30.0) * 0.01 * u_shake;
+    liquidY += cos(u_time * 25.0) * 0.01 * u_shake;
+    liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;
+    liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;
+
+    float gTick = floor(u_time * 14.0);
+    float glitchProb = 0.985 - trip * 0.04;
+    if (step(glitchProb, _hh(gTick * 133.77)) > 0.0) {
+        float bandY = floor(uv.y * mix(8.0, 25.0, _hh(gTick * 2.1)));
+        liquidX += (_hh(bandY + gTick) - 0.5) * 0.15 * trip;
+    }
+
+    vec3 box = vec3(0.5625, 1.0, 3.5);
+
+    float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;
+    float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;
+    vec3 ro = vec3(bobX, bobY, u_camZ);
+    vec3 rd = normalize(vec3(uv.x + liquidX, uv.y + liquidY, 1.6));
+
+    vec2 m = u_mouse * 0.35;
+    rd.yz *= rot(m.y * 0.8);
+    rd.xz *= rot(m.x + u_yawOffset);
+
+    vec3 safeRd = max(abs(rd), vec3(0.0001)) * sign(rd);
+    vec3 tPos = (box * sign(safeRd) - ro) / safeRd;
+    float t = min(min(tPos.x, tPos.y), tPos.z);
+    vec3 pos = ro + rd * t;
+    vec3 nPos = pos / box;
+    vec3 absPos = abs(nPos);
+
+    vec4 hallTex;
+    vec2 tileUV;
+    int wallID = -1;
+    if (absPos.x > absPos.y && absPos.x > absPos.z) {
+        if (nPos.x > 0.0) {
+            tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5;
+            hallTex = texture2D(u_texRight, tileUV);
+            wallID = 1;
+        } else {
+            tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5;
+            hallTex = texture2D(u_texLeft, tileUV);
+            wallID = 0;
+        }
+    } else if (absPos.y > absPos.x && absPos.y > absPos.z) {
+        wallID = 4;
+        if (nPos.y > 0.0) {
+            tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5;
+            hallTex = texture2D(u_texTop, tileUV);
+        } else {
+            tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5;
+            hallTex = texture2D(u_texBottom, tileUV);
+        }
+    } else {
+        if (nPos.z > 0.0) {
+            tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;
+            hallTex = texture2D(u_texFront, tileUV);
+            wallID = 2;
+        } else {
+            tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;
+            hallTex = texture2D(u_texBack, tileUV);
+            wallID = 3;
+        }
+    }
+
+    vec3 finalCol = hallTex.rgb;
+    bool isCutout = hallTex.a < 0.1 || (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);
+    float outAlpha = 1.0;
+
+    if (isCutout && wallID != 4) {
+        if (wallID == 2) {
+            outAlpha = 0.0;
+            finalCol = vec3(0.0);
+        } else if (wallID == 0) {
+            finalCol = vec3(0.04, 0.03, 0.03);
+        } else if (wallID == 1) {
+            finalCol = vec3(0.03, 0.03, 0.05);
+        }
+    }
+
+    if (wallID == 4 && isCutout) finalCol = vec3(0.0);
+
+    float fogThickness = 0.5 + trip * 0.15;
+    float fogFactor = exp(-t * fogThickness);
+    vec3 fogColor = vec3(0.02, 0.03, 0.04);
+    fogColor = mix(fogColor, vec3(0.04, 0.03, 0.01), trip * 0.3);
+    finalCol = mix(fogColor, finalCol, fogFactor);
+
+    float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));
+    vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1);
+    finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);
+
+    float floorGlow = smoothstep(-0.3, -0.8, nPos.y) * (0.4 + 0.6 * sin(u_time * 1.3 + pos.z * 0.4));
+    finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);
+
+    float flicker = 1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;
+    finalCol *= flicker;
+
+    float vignette = smoothstep(1.3, 0.2, length(uv));
+    finalCol *= vignette;
+    finalCol *= 0.65;
+
+    gl_FragColor = vec4(finalCol * (1.0 - u_blink), outAlpha);
+}
+`),
         GLSL.modules.z2_seq_hole ||
           (GLSL.modules.z2_seq_hole =
             "\n    precision mediump float;\n    uniform vec2 u_resolution;\n    uniform sampler2D u_tex;\n    void main() {\n        vec2 uv = gl_FragCoord.xy / u_resolution;\n        gl_FragColor = texture2D(u_tex, uv);\n    }\n    "),
@@ -246,6 +394,20 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE),
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE),
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR),
+            (this.voidVid =
+              (window.__claimPoolVid &&
+                window.__claimPoolVid("files/mov/bh3.mp4")) ||
+              document.createElement("video")),
+            (this.voidVid.muted = !0),
+            (this.voidVid.playsInline = !0),
+            (this.voidVid.loop = !0),
+            this.voidVid.src ||
+              ((this.voidVid.preload = "auto"),
+              (this.voidVid.autoplay = !0),
+              this.voidVid.setAttribute("playsinline", ""),
+              this.voidVid.setAttribute("webkit-playsinline", ""),
+              (this.voidVid.src = "files/mov/bh3.mp4"),
+              window.__registerVideo && window.__registerVideo(this.voidVid)),
             (this.darvazaCanvas = null),
             (this.darvazaGL = null),
             (this.darvazaProg = null),
@@ -1119,100 +1281,14 @@
               (window.__audioWetGain.gain.value = 0.7 * (1 - 0.9 * i)),
               window.__audioDryGain &&
                 (window.__audioDryGain.gain.value = 0.3 + 0.7 * i));
-            (function(self, now) {
-              if (!self.darvazaGL) {
-                self.darvazaCanvas = document.createElement("canvas");
-                self.darvazaCanvas.width = 512;
-                self.darvazaCanvas.height = 512;
-                self.darvazaGL = self.darvazaCanvas.getContext("webgl",{antialias:false,depth:false,stencil:false,alpha:false});
-                if (!self.darvazaGL) return;
-                const dgl = self.darvazaGL;
-                const vs = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }";
-                const fs = [
-                  "precision highp float;",
-                  "uniform vec2 u_resolution; uniform float u_time; uniform float u_trip;",
-                  "float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
-                  "float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}",
-                  "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<6;i++){v+=a*n(p);p*=2.1;a*=0.5;}return v;}",
-                  "void main(){",
-                  "  vec2 uv=gl_FragCoord.xy/u_resolution;",
-                  "  float t=u_time;",
-                  "  float seq=clamp(u_trip,0.0,3.0);",
-                  "  vec3 skyTop=vec3(0.12,0.07,0.05); vec3 skyHoriz=vec3(0.95,0.55,0.12);",
-                  "  vec3 sky=mix(skyHoriz,skyTop,smoothstep(0.25,0.85,uv.y));",
-                  "  sky+=fbm(uv*3.0+vec2(t*0.015,0.0))*0.06*vec3(1.0,0.5,0.2);",
-                  "  float smoke1=fbm(vec2(uv.x*1.8+0.3,uv.y*2.5-t*0.25))*smoothstep(0.62,0.28,uv.y)*smoothstep(0.20,0.52,uv.y);",
-                  "  float smoke2=fbm(vec2(uv.x*2.1-0.5,uv.y*2.2-t*0.20)+5.3)*smoothstep(0.62,0.22,uv.y)*smoothstep(0.18,0.50,uv.y);",
-                  "  float smoke=max(smoke1,smoke2)*0.5;",
-                  "  sky=mix(sky,vec3(0.05,0.03,0.02),smoke);",
-                  "  sky+=vec3(1.0,0.45,0.08)*exp(-abs(uv.y-0.62)*10.0)*0.9;",
-                  "  float hillY=0.62+sin(uv.x*2.9+1.1)*0.018+sin(uv.x*5.3)*0.010+sin(uv.x*11.7)*0.005;",
-                  "  float hill=smoothstep(0.006,0.0,uv.y-hillY);",
-                  "  float groundMask=smoothstep(0.62,0.68,uv.y);",
-                  "  float depth=clamp((uv.y-0.62)/0.38,0.0,1.0);",
-                  "  float gn=fbm(vec2(uv.x*3.5,uv.y*7.0+t*0.008));",
-                  "  vec3 groundBase=mix(vec3(0.38,0.14,0.03),vec3(0.65,0.28,0.06),gn);",
-                  "  groundBase*=mix(0.4,1.0,depth);",
-                  "  vec2 fUV=vec2(uv.x*2.2,depth*3.0);",
-                  "  float f1=fbm(fUV+vec2(t*0.18,-t*0.12));",
-                  "  float f2=fbm(fUV*1.6+vec2(-t*0.14,t*0.20)+4.3);",
-                  "  float f3=fbm(fUV*0.8+vec2(t*0.07,t*0.05)+8.1);",
-                  "  float fire=pow(max(max(f1,f2)*f3-0.08,0.0)*2.8,0.85);",
-                  "  fire*=groundMask*mix(0.2,1.0,depth*depth);",
-                  "  vec3 fireCol=vec3(1.0,0.30,0.01);",
-                  "  fireCol=mix(fireCol,vec3(1.0,0.78,0.15),smoothstep(0.2,0.6,fire));",
-                  "  fireCol=mix(fireCol,vec3(1.0,1.0,0.88),smoothstep(0.6,1.0,fire));",
-                  "  float glow=fbm(fUV*0.5+vec2(t*0.04,0.0))*groundMask*mix(0.0,1.0,depth);",
-                  "  groundBase+=vec3(1.0,0.40,0.03)*glow*1.8;",
-                  "  vec3 col=sky;",
-                  "  col=mix(col,vec3(0.05,0.03,0.02),hill);",
-                  "  col=mix(col,groundBase,groundMask);",
-                  "  col+=fireCol*fire*5.0;",
-                  // Edge flames driven by seq (u_trip)
-                  "  if(seq>0.1){",
-                  "    float ed=seq*0.35;",
-                  "    float eleft=fbm(vec2(uv.x*3.0+t*0.4,uv.y*4.0-t*1.2))*smoothstep(ed,0.0,uv.x);",
-                  "    float eright=fbm(vec2((1.0-uv.x)*3.0-t*0.4,uv.y*4.0-t*1.1)+3.1)*smoothstep(ed,0.0,1.0-uv.x);",
-                  "    float etop=fbm(vec2(uv.x*4.0+t*0.3,(1.0-uv.y)*3.0-t*1.3)+6.2)*smoothstep(ed,0.0,1.0-uv.y);",
-                  "    float ebottom=fbm(vec2(uv.x*4.0-t*0.35,uv.y*3.0-t*1.4)+9.3)*smoothstep(ed,0.0,uv.y);",
-                  "    float edge=max(max(eleft,eright),max(etop,ebottom));",
-                  "    edge=pow(max(edge-0.1,0.0)*1.5,0.8)*seq;",
-                  "    vec3 edgeCol=mix(vec3(1.0,0.20,0.0),vec3(1.0,0.80,0.1),edge);",
-                  "    col+=edgeCol*edge*3.5;",
-                  "    col=mix(col,col*vec3(1.4,0.6,0.2),clamp(seq*0.15,0.0,0.5));",
-                  "  }",
-                  "  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);",
-                  "}"
-                ].join("\n");
-                function cs2(dgl,tp,src){const s=dgl.createShader(tp);dgl.shaderSource(s,src);dgl.compileShader(s);if(!dgl.getShaderParameter(s,dgl.COMPILE_STATUS))console.error('[fire]',dgl.getShaderInfoLog(s));return s;}
-                const prog=dgl.createProgram();
-                dgl.attachShader(prog,cs2(dgl,dgl.VERTEX_SHADER,vs));
-                dgl.attachShader(prog,cs2(dgl,dgl.FRAGMENT_SHADER,fs));
-                dgl.linkProgram(prog);
-                const buf=dgl.createBuffer();
-                dgl.bindBuffer(dgl.ARRAY_BUFFER,buf);
-                dgl.bufferData(dgl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),dgl.STATIC_DRAW);
-                self.darvazaProg={prog,buf,uRes:dgl.getUniformLocation(prog,'u_resolution'),uTime:dgl.getUniformLocation(prog,'u_time'),uTrip:dgl.getUniformLocation(prog,'u_trip')};
-              }
-              const dgl=self.darvazaGL, dp=self.darvazaProg;
-              if(!dgl||!dp)return;
-              dgl.viewport(0,0,512,512);
-              dgl.useProgram(dp.prog);
-              dgl.uniform2f(dp.uRes,512,512);
-              dgl.uniform1f(dp.uTime,now*0.001);
-              dgl.uniform1f(dp.uTrip,self.seqIntensity||0.0);
-              dgl.bindBuffer(dgl.ARRAY_BUFFER,dp.buf);
-              const loc=dgl.getAttribLocation(dp.prog,'p');
-              dgl.enableVertexAttribArray(loc);
-              dgl.vertexAttribPointer(loc,2,dgl.FLOAT,false,0,0);
-              dgl.drawArrays(dgl.TRIANGLES,0,3);
-              dgl.flush();
+            (function(self) {
+              if (!self.voidVid || self.voidVid.readyState < 2) return;
               gl.activeTexture(gl.TEXTURE6);
-              gl.bindTexture(gl.TEXTURE_2D,self.texVoidVid);
-              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
-              gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,self.darvazaCanvas);
-              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
-            })(this, e);
+              gl.bindTexture(gl.TEXTURE_2D, self.texVoidVid);
+              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, self.voidVid);
+              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+            })(this);
             const o = "initial" !== this.seqState,
               n = m
                 ? this.rightHolePostFBO && this.rightHolePostFBO.tex
@@ -1240,6 +1316,8 @@
               gl.bindTexture(gl.TEXTURE_2D, this.texTop),
               gl.activeTexture(gl.TEXTURE5),
               gl.bindTexture(gl.TEXTURE_2D, this.texBottom),
+              gl.activeTexture(gl.TEXTURE6),
+              gl.bindTexture(gl.TEXTURE_2D, this.texVoidVid),
               gl.activeTexture(gl.TEXTURE7),
               gl.bindTexture(
                 gl.TEXTURE_2D,
@@ -1338,6 +1416,14 @@
             this.blankMask && gl.deleteTexture(this.blankMask),
             this.noWindowTex && gl.deleteTexture(this.noWindowTex))
           ) {}
+          if (this.voidVid) {
+            try {
+              this.voidVid.pause();
+              this.voidVid.removeAttribute("src");
+              this.voidVid.load();
+            } catch (e) {}
+            this.voidVid = null;
+          }
           if (this.darvazaGL) {
             try { this.darvazaGL.getExtension("WEBGL_lose_context") && this.darvazaGL.getExtension("WEBGL_lose_context").loseContext(); } catch(e) {}
             this.darvazaCanvas = null;

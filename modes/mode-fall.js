@@ -9,7 +9,7 @@ window.makeUI = function () {
           (n.style.cssText =
             "\n    position:fixed; top:10px; right:10px; z-index:2147483647;\n    background:rgba(0,0,0,.85); color:#0f0; font:12px monospace;\n    padding:8px; border:1px solid #0f0;\n  "));
         ((n.innerHTML =
-          '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="97">97: Back</option>\n        <option value="96">96: Door</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div style="margin-top:6px;border-top:1px solid #0f0;padding-top:4px;">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div style="margin-top:6px;border-top:1px solid #0f0;padding-top:4px;">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button>\n      <button id="z4lap3">Z4 Lap3</button>\n      <button id="z4lap7">Z4 Lap7</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n  '),
+          '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="97">97: Back</option>\n        <option value="96">96: Door</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div style="margin-top:6px;border-top:1px solid #0f0;padding-top:4px;">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div style="margin-top:6px;border-top:1px solid #0f0;padding-top:4px;">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button>\n      <button id="z4lap7">Z4 Lap3</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n  '),
           document.body.appendChild(n),
           n
             .querySelectorAll("button")
@@ -285,144 +285,63 @@ window.makeUI = function () {
             c(96);
           }),
           (n.querySelector("#z4elev").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "ascent";
-                  e.ascentStart = performance.now();
-                  e.progress = 0;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) { e.phase = "ascent"; e.ascentStart = performance.now(); e.progress = 0; e._setFog(0, 0); }
           }),
           (n.querySelector("#z4bay").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "bay";
-                  e.phaseStart = performance.now();
-                  e.progress = 1;
-                  e.phaseFogArmed = true;
-                  e.walkoff = 0;
-                  e.hallwayT = 0;
-                  e.shakeIntensity = 0;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) { e.phase = "bay"; e.phaseStart = performance.now(); e.progress = 1; e.phaseFogArmed = true; e.walkoff = 0; e.hallwayT = 0; e.shakeIntensity = 0; e._setFog(0, 0); }
           }),
           (n.querySelector("#z4hall").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "hallway";
-                  e.phaseStart = performance.now();
-                  e.progress = 1;
-                  e.phaseFogArmed = true;
-                  e.walkoff = 1;
-                  e.hallwayT = 0;
-                  e.shakeIntensity = 0;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) { e.phase = "hallway"; e.phaseStart = performance.now(); e.progress = 1; e.phaseFogArmed = true; e.walkoff = 1; e.hallwayT = 0; e.shakeIntensity = 0; e._setFog(0, 0); }
           }),
           (n.querySelector("#z4ring").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "ring";
-                  e.phaseStart = performance.now();
-                  e.progress = 1;
-                  e.phaseFogArmed = true;
-                  e.walkoff = 1;
-                  e.hallwayT = 1;
-                  e.shakeIntensity = 0;
-                  e.ringDirection = 1;
-                  e.turnAnimating = false;
-                  e._setFog(0, 0);
-                }
-              }));
-          }),
-          (n.querySelector("#z4lap3").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "ring";
-                  e.phaseStart = performance.now();
-                  e.progress = 1;
-                  e.phaseFogArmed = true;
-                  e.walkoff = 1;
-                  e.hallwayT = 1;
-                  e.shakeIntensity = 0;
-                  e.ringDirection = 1;
-                  e.turnAnimating = false;
-                  e.lapCount = 2;
-                  e.lapCrossings = 4;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) { e.phase = "ring"; e.phaseStart = performance.now(); e.progress = 1; e.phaseFogArmed = true; e.walkoff = 1; e.hallwayT = 1; e.shakeIntensity = 0; e.ringDirection = 1; e.turnAnimating = false; e._setFog(0, 0); }
           }),
           (n.querySelector("#z4lap7").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "ring";
-                  e.phaseStart = performance.now();
-                  e.progress = 1;
-                  e.phaseFogArmed = true;
-                  e.walkoff = 1;
-                  e.hallwayT = 1;
-                  e.shakeIntensity = 0;
-                  e.ringDirection = 1;
-                  e.turnAnimating = false;
-                  e.lapCount = 6;
-                  e.lapCrossings = 12;
-                  e.blackholeVisible = true;
-                  e.blackholeIntensity = 0.5;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            // Drops at start of 3rd lap (lapCount=2, 4 threshold crossings).
+            // Window portal rolls activate immediately; next threshold
+            // crossing ticks lapCount to 3 and triggers the reverse seq.
+            if (e) { e.phase = "ring"; e.phaseStart = performance.now(); e.progress = 1; e.phaseFogArmed = true; e.walkoff = 1; e.hallwayT = 1; e.shakeIntensity = 0; e.ringDirection = 1; e.turnAnimating = false; e.lapCount = 2; e.lapCrossings = 4; e._setFog(0, 0); }
           }),
           (n.querySelector("#z4desc").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "descent";
-                  e.phaseStart = performance.now();
-                  e.descentStart = performance.now();
-                  e.descentProgress = 1;
-                  e.progress = 1;
-                  e.shakeIntensity = 0;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) {
+              e.phase = "descent";
+              e.phaseStart = performance.now();
+              e.descentStart = performance.now();
+              e.descentProgress = 1;
+              e.progress = 1;
+              e.shakeIntensity = 0;
+              e._setFog(0, 0);
+            }
           }),
           (n.querySelector("#z4fall").onclick = () => {
-            (r(),
-              window.startZone4 && window.startZone4(),
-              d(50, () => {
-                const e = window.currentZone4;
-                if (e) {
-                  e.phase = "fall";
-                  e.phaseStart = performance.now();
-                  e.fallStart = performance.now();
-                  e.fallProgress = 0;
-                  e.shakeIntensity = 0;
-                  e._setFog(0, 0);
-                }
-              }));
+            r();
+            window.startZone4 && window.startZone4();
+            var e = window.currentZone4;
+            if (e) {
+              e.phase = "fall";
+              e.phaseStart = performance.now();
+              e.fallStart = performance.now();
+              e.fallProgress = 0;
+              e.shakeIntensity = 0;
+              e._setFog(0, 0);
+            }
           }));
       };

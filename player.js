@@ -1,5 +1,4 @@
 window.audioTracks = [
-        "files/aud/003.mp3",
         "files/aud/011.mp3",
         "files/aud/014.mp3",
         "files/aud/015.mp3",

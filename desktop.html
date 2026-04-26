@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>desktop</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: "Courier New", monospace;
+    background: #3a3d4a;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+  body {
+    background-image: url('files/img/rooms/z1/laptop/wallpaper.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .desktop {
+    position: absolute;
+    inset: 0;
+    padding: 2vh 1.5vw;
+  }
+  .icon-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+    width: max-content;
+  }
+  .icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90px;
+    padding: 4px 4px 6px;
+    cursor: pointer;
+    border: 1px dashed transparent;
+    border-radius: 2px;
+  }
+  .icon img {
+    width: 64px;
+    height: 64px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+  }
+  .icon span {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+    letter-spacing: 0.5px;
+    text-align: center;
+    pointer-events: none;
+  }
+  .icon.selected {
+    background: rgba(60, 100, 200, 0.35);
+    border-color: rgba(180, 200, 255, 0.6);
+  }
+  .icon:hover:not(.selected) {
+    background: rgba(255, 255, 255, 0.06);
+  }
+</style>
+</head>
+<body>
+<div class="desktop" id="desktop">
+  <div class="icon-grid">
+    <div class="icon" data-href="index.html" data-name="web">
+      <img src="files/img/rooms/z1/laptop/icon1.png" alt="">
+      <span>WEB</span>
+    </div>
+    <div class="icon" data-href="terminal.html" data-name="terminal">
+      <img src="files/img/rooms/z1/laptop/icon2.png" alt="">
+      <span>TERMINAL</span>
+    </div>
+    <div class="icon" data-href="portfolio.html" data-name="portfolio">
+      <img src="files/img/rooms/z1/laptop/icon3.png" alt="">
+      <span>PORTFOLIO</span>
+    </div>
+    <div class="icon icon-disabled" data-name="solutions">
+      <img src="files/img/rooms/z1/laptop/icon4.png" alt="">
+      <span>solutions.zip</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const icons = document.querySelectorAll('.icon');
+  console.log('[desktop] icons found:', icons.length);
+
+  
+  icons.forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      console.log('[desktop] click', icon.dataset.name, 'href:', icon.dataset.href);
+      if (icon.classList.contains('icon-disabled')) return;
+      const href = icon.dataset.href;
+      icon.classList.add('selected');
+      if (href && href !== '#') {
+        
+        setTimeout(() => {
+          console.log('[desktop] navigating to', href);
+          location.href = href;
+        }, 80);
+      }
+    });
+  });
+
+  
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  
+  document.addEventListener('dragstart', e => e.preventDefault());
+})();
+</script>
+</body>
+</html>

@@ -198,6 +198,7 @@ precision mediump float;
 
 uniform sampler2D u_tex;
 uniform vec3 u_lightDir;
+uniform vec3 u_eye;
 uniform float u_texMix;
 uniform vec3 u_flatCol;
 
@@ -207,11 +208,26 @@ varying vec3 v_wpos;
 
 void main(){
   vec3 n=normalize(v_nor);
-  float diff=max(dot(n,normalize(u_lightDir)),0.0);
-  float amb=0.42;
+  vec3 lDir=normalize(u_lightDir);
+  vec3 vDir=normalize(u_eye - v_wpos);
+  float diff=max(dot(n,lDir),0.0);
+  float hemi=smoothstep(-1.1, 1.2, v_wpos.y);
+  float floorGlow=smoothstep(0.18, 0.0, abs(v_wpos.y + 1.02));
+  float rim=pow(1.0 - max(dot(n, vDir), 0.0), 2.2);
   vec3 base=mix(u_flatCol, texture2D(u_tex,v_uv).rgb, u_texMix);
-  float spec=pow(max(dot(reflect(-normalize(u_lightDir),n),normalize(-v_wpos)),0.0),10.0)*0.12;
-  vec3 col=base*(amb+diff*0.68)+spec;
+  vec3 amb=vec3(0.18, 0.19, 0.22);
+  amb += vec3(0.05, 0.08, 0.12) * hemi;
+  amb += vec3(0.10, 0.04, 0.02) * floorGlow;
+  float spec=pow(max(dot(reflect(-lDir,n),vDir),0.0),16.0)*0.10;
+  vec3 col=base*(amb + diff*vec3(0.52, 0.56, 0.62));
+  col += vec3(0.08, 0.12, 0.18) * rim * 0.28;
+  col += vec3(0.65, 0.78, 1.0) * spec;
+  float dist=length(u_eye - v_wpos);
+  float fog=1.0-exp(-dist*0.045);
+  vec3 fogCol=vec3(0.02, 0.025, 0.035);
+  fogCol += vec3(0.02, 0.03, 0.05) * hemi;
+  fogCol += vec3(0.03, 0.015, 0.008) * floorGlow;
+  col=mix(col, fogCol, fog * 0.32);
   gl_FragColor=vec4(col,1.0);
 }
 `;
