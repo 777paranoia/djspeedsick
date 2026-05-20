@@ -610,11 +610,24 @@ const IS_MOBILE =
                         "files/img/rooms/z1/ocean.png",
                       ))
                     : "deadcity" === t
-                      ? ((this.env1 = this.loadVideo("files/mov/bh2.mp4")),
-                        (this.env2 = loadStaticTex(
-                          "files/img/rooms/z1/deadcity.png",
-                        )),
-                        this.textures.push(this.env2))
+                      ? ((this.env1 = loadStaticTex("files/img/void/deadcity.png")),
+                        (this.bTexs = [
+                          loadStaticTex("files/img/void/ruins01.png"),
+                          loadStaticTex("files/img/void/ruins02.png"),
+                          loadStaticTex("files/img/void/ruins03.png"),
+                          loadStaticTex("files/img/void/ruins04.png"),
+                          loadStaticTex("files/img/void/ruins05.png"),
+                          loadStaticTex("files/img/void/ruins06.png"),
+                        ]),
+                        this.textures.push(
+                          this.env1,
+                          this.bTexs[0],
+                          this.bTexs[1],
+                          this.bTexs[2],
+                          this.bTexs[3],
+                          this.bTexs[4],
+                          this.bTexs[5],
+                        ))
                       : "bh" === t
                         ? (this.env1 = this.loadVideo("files/mov/bh2.mp4"))
                         : "earth" === t &&
@@ -752,6 +765,8 @@ const IS_MOBILE =
           if (!this.prog) return;
           this.startTime < 0 && (this.startTime = e);
           let s = 0.001 * (e - this.startTime);
+          const __deadcityMode2 = this.id === 7;
+          const __deadcityBuildings = __deadcityMode2 ? this.bTexs : null;
           gl.useProgram(this.prog);
           const c = gl.getAttribLocation(this.prog, "p");
           (gl.enableVertexAttribArray(c),
@@ -770,17 +785,17 @@ const IS_MOBILE =
                 this.videoObj,
               )),
             gl.activeTexture(gl.TEXTURE0),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b1),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[0]) || staticAssets.b1),
             gl.activeTexture(gl.TEXTURE1),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b2),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[1]) || staticAssets.b2),
             gl.activeTexture(gl.TEXTURE2),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b3),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[2]) || staticAssets.b3),
             gl.activeTexture(gl.TEXTURE3),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b4),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[3]) || staticAssets.b4),
             gl.activeTexture(gl.TEXTURE4),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b5),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[4]) || staticAssets.b5),
             gl.activeTexture(gl.TEXTURE5),
-            gl.bindTexture(gl.TEXTURE_2D, staticAssets.b6),
+            gl.bindTexture(gl.TEXTURE_2D, (__deadcityBuildings && __deadcityBuildings[5]) || staticAssets.b6),
             gl.activeTexture(gl.TEXTURE6),
             gl.bindTexture(gl.TEXTURE_2D, texs[ping]),
             gl.activeTexture(gl.TEXTURE7),
@@ -943,7 +958,7 @@ const IS_MOBILE =
             gl.uniform2f(this.U.res, canvas.width, canvas.height),
             gl.uniform1f(this.U.time, 0.001 * e),
             gl.uniform2f(this.U.mouse, t, i),
-            gl.uniform1i(this.U.mode, this.id),
+            gl.uniform1i(this.U.mode, __deadcityMode2 ? 2 : this.id),
             gl.uniform1f(this.U.blink, l),
             gl.uniform1f(this.U.flash, o),
             gl.uniform1f(this.U.shake, r),
@@ -1022,8 +1037,8 @@ const IS_MOBILE =
         f.id = 'laptopScreenIframe';
         f.src = 'desktop.html';
         f.style.cssText =
-          'position:fixed;border:0;background:#000;display:none;' +
-          'z-index:50;pointer-events:auto;';
+          'position:fixed;border:0;background:#000;display:none;opacity:0;' +
+          'z-index:50;pointer-events:none;transition:opacity 160ms ease-out;';
         document.body.appendChild(f);
         laptopIframe = f;
         return f;
@@ -1063,17 +1078,27 @@ const IS_MOBILE =
         return { x: uvX * W, y: uvY * H };
       }
       function updateLaptopIframe() {
-        const visible = activePOV === 'laptop' && laptopZoom > 0.85;
+        const visible = activePOV === 'laptop' && laptopZoom > 0.985;
         if (!visible) {
-          if (laptopIframe) laptopIframe.style.display = 'none';
+          if (laptopIframe) {
+            laptopIframe.style.opacity = '0';
+            laptopIframe.style.pointerEvents = 'none';
+            laptopIframe.style.display = 'none';
+          }
           return;
         }
         ensureLaptopIframe();
+        laptopIframe.style.pointerEvents = 'auto';
         const tl = _laptopTuvToCanvasPx(LAPTOP_RECT.u0, LAPTOP_RECT.v0);
         const br = _laptopTuvToCanvasPx(LAPTOP_RECT.u1, LAPTOP_RECT.v1);
         const r = canvas.getBoundingClientRect();
         const sx = r.width / canvas.width, sy = r.height / canvas.height;
         laptopIframe.style.display = 'block';
+        requestAnimationFrame(() => {
+          if (laptopIframe && activePOV === 'laptop' && laptopZoom > 0.985) {
+            laptopIframe.style.opacity = '1';
+          }
+        });
         laptopIframe.style.left   = (r.left + Math.min(tl.x, br.x) * sx) + 'px';
         laptopIframe.style.top    = (r.top  + Math.min(tl.y, br.y) * sy) + 'px';
         laptopIframe.style.width  = (Math.abs(br.x - tl.x) * sx) + 'px';

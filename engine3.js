@@ -6,6 +6,33 @@
           "\n#ifdef GL_FRAGMENT_PRECISION_HIGH\n  precision highp float;\n#else\n  precision mediump float;\n#endif\n\nuniform vec2  u_resolution;\nuniform vec2  u_mouse;\nuniform float u_time;\nuniform float u_blink;\nuniform float u_wake;\nuniform float u_camZ;\nuniform float u_camX;\nuniform float u_yawOffset;\nuniform float u_doorOpen;\nuniform float u_doorSwitched;\nuniform float u_isWalking;\nuniform float u_shake;\nuniform float u_flash;\nuniform float u_zoom;\nuniform float u_suctionFade;\nuniform float u_trip;\nuniform float u_modeSeed;\nuniform float u_modeTime;\nuniform float u_isOOB;\nuniform float u_fractalActive;\nuniform float u_fractalSeed;\nuniform float u_blinkAge;\nuniform float u_altRoute;\n\nfloat _mHash(float x){ return fract(sin(x*127.1)*43758.5453); }\n#ifdef MOBILE\nfloat _burningShip(vec2 c){ return 0.5; }\nfloat _julia(vec2 z, vec2 c){ return 0.5; }\n#else\n// Burning Ship — melting building structures, WebGL1-safe (no break)\nfloat _burningShip(vec2 c){\n    vec2 z=vec2(0.0); float si=0.0;\n    #ifdef MOBILE\n    for(int n=0; n<16; n++){\n    #else\n    for(int n=0; n<48; n++){\n    #endif\n        z = vec2(abs(z.x), abs(z.y));\n        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;\n        float esc = step(4.0, dot(z,z));\n        si += (1.0 - esc);\n    }\n    #ifdef MOBILE\n    return si / 16.0;\n    #else\n    return si / 48.0;\n    #endif\n}\n// Julia set — organic alien tendrils\nfloat _julia(vec2 z, vec2 c){\n    float si=0.0;\n    #ifdef MOBILE\n    for(int n=0; n<16; n++){\n    #else\n    for(int n=0; n<36; n++){\n    #endif\n        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;\n        si += (1.0 - step(4.0, dot(z,z)));\n    }\n    #ifdef MOBILE\n    return si / 16.0;\n    #else\n    return si / 36.0;\n    #endif\n}\n#endif\nvec3 _mPal(float t, float seed){\n    // Horror palette — sickly neon\n    vec3 a=vec3(0.5,0.4,0.45);\n    vec3 b=vec3(0.5,0.35,0.5);\n    vec3 c_=vec3(1.0,0.8,1.0);\n    vec3 d=vec3(_mHash(seed)*0.5,_mHash(seed+1.0)*0.3+0.1,_mHash(seed+2.0)*0.4+0.3);\n    return a+b*cos(6.28318*(c_*t+d));\n}\n\nuniform sampler2D u_texLeft;\nuniform sampler2D u_texRight;\nuniform sampler2D u_texTop;\nuniform sampler2D u_texBottom;\nuniform sampler2D u_voidTex;\nuniform sampler2D u_doorClosedTex;\nuniform sampler2D u_doorOpenTex;\nuniform sampler2D u_cockpitTex;\n\n#ifdef MOBILE\nconst int MAX_STEPS = 60;\n#else\nconst int MAX_STEPS = 100;\n#endif\nconst float MAX_DIST  = 25.0;\nconst float SURF_DIST = 0.008;\nconst float FUSE_R      = 1.72;\nconst float FLOOR_Y     = -0.82;\nconst float AISLE_W     = 0.32;\nconst float SEAT_PITCH  = 0.79;\n\nconst float ROW_START   = 5.0;\nconst float EXIT_ROW_Z  = 12.0;\nconst float COCKPIT_Z   = 21.0;\n\nmat2 rot(float a){ float c=cos(a),s=sin(a); return mat2(c, -s, s, c); }\nfloat hash2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\nfloat hash1(float x){ return fract(sin(x*127.1)*43758.5453); }\n\nfloat noise2(vec2 p){\n    vec2 i=floor(p); vec2 f=fract(p); vec2 u=f*f*(3.0-2.0*f);\n    return mix(mix(hash2(i),hash2(i+vec2(1,0)),u.x),mix(hash2(i+vec2(0,1)),hash2(i+vec2(1,1)),u.x),u.y);\n}\nfloat fbm(vec2 p){\n    float v=0.0; float a=0.5;\n    mat2 r=mat2(cos(0.5),sin(0.5),-sin(0.5),cos(0.5));\n    for(int i=0;i<4;i++){ v+=a*noise2(p); p=r*p*2.0+vec2(100.0); a*=0.5; }\n    return v;\n}\nfloat sdBox(vec3 p, vec3 b){ vec3 q = abs(p)-b; return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0); }\nfloat sdRBox(vec3 p, vec3 b, float r){ return sdBox(p,b-r)-r; }\n\nfloat sdSeat(vec3 p){\n    float fy = FLOOR_Y;\n    float cushion = sdBox(p-vec3(0, fy+0.24, 0),        vec3(0.20, 0.045, 0.20));\n    float back    = sdBox(p-vec3(0, fy+0.54,-0.20),      vec3(0.20, 0.24,  0.025));\n    float head    = sdRBox(p-vec3(0, fy+0.86,-0.20),     vec3(0.12, 0.07,  0.03), 0.01);\n    float armL    = sdBox(p-vec3(-0.22, fy+0.32, -0.04), vec3(0.02, 0.055, 0.17));\n    float armR    = sdBox(p-vec3( 0.22, fy+0.32, -0.04), vec3(0.02, 0.055, 0.17));\n    float legs    = sdBox(p-vec3(0, fy+0.11, 0.08),      vec3(0.16, 0.11,  0.025));\n    return min(min(min(cushion,back),min(head,legs)),min(armL,armR));\n}\n\nfloat seatRows(vec3 p){\n    if(p.z < ROW_START - 0.5 || p.z > COCKPIT_Z - 1.0) return 8.0;\n    if(abs(p.z - EXIT_ROW_Z) < 1.5) return 8.0; \n    float cellZ = mod(p.z - ROW_START, SEAT_PITCH) - SEAT_PITCH*0.5;\n    vec3 lp = vec3(p.x, p.y, cellZ);\n    float d = sdSeat(lp - vec3(-AISLE_W-0.25, 0, 0));\n    d = min(d, sdSeat(lp - vec3(-AISLE_W-0.69, 0, 0)));\n    d = min(d, sdSeat(lp - vec3( AISLE_W+0.25, 0, 0)));\n    d = min(d, sdSeat(lp - vec3( AISLE_W+0.69, 0, 0)));\n    return d;\n}\n\nfloat overheadBins(vec3 p){\n    if(abs(p.z - EXIT_ROW_Z) < 1.4) return 8.0;\n    float binL = sdBox(p-vec3(-1.08, 0.72, 12.0), vec3(0.32, 0.14, 10.0));\n    float binR = sdBox(p-vec3( 1.08, 0.72, 12.0), vec3(0.32, 0.14, 10.0));\n    return min(binL, binR);\n}\n\nfloat cockpitWall(vec3 p){\n    float wall = sdBox(p - vec3(0.0, FLOOR_Y + 1.5, COCKPIT_Z), vec3(FUSE_R, 1.5, 0.05));\n    wall = max(wall, length(p.xy)-FUSE_R);\n    wall = max(wall, -(p.y-FLOOR_Y));\n    float doorHole = sdBox(p-vec3(0.0, FLOOR_Y+0.95, COCKPIT_Z), vec3(0.4, 0.95, 0.1));\n    wall = max(wall, -doorHole); \n    return wall;\n}\n\nfloat cockpitDoor(vec3 p) {\n    return sdBox(p-vec3(0.0, FLOOR_Y+0.95, COCKPIT_Z - 0.01), vec3(0.4, 0.95, 0.02));\n}\n\nfloat exitDoor(vec3 p) {\n    return 8.0;\n}\n\nbool inExitHole(vec3 p){\n    return false;\n}\n\nbool isWindowHit(vec3 p){\n    float distToShell = abs(length(p.xy) - FUSE_R);\n    if(distToShell > 0.08) return false;\n    if(p.z < ROW_START || p.z > COCKPIT_Z) return false;\n    float localZ = mod(p.z - ROW_START, SEAT_PITCH);\n    float winCenter = SEAT_PITCH * 0.5;\n    float winH = abs(p.y - 0.18);\n    return abs(localZ - winCenter) < 0.07 && winH < 0.11;\n}\n\nfloat sdFractalStern(vec3 p) {\n    // Fractal floats at the back end of the cabin (stern) — visible after 180 turn\n    vec3 z = p - vec3(0.0, FLOOR_Y + 1.1, ROW_START + 0.5);\n    z.xy *= rot(u_time * 0.13);\n    z.yz *= rot(u_time * 0.17);\n    float scale = 1.0;\n    for(int i = 0; i < 7; i++){\n        z = abs(z);\n        if(z.x < z.y) z.xy = z.yx;\n        if(z.x < z.z) z.xz = z.zx;\n        if(z.y < z.z) z.yz = z.zy;\n        z = z * 2.0 - vec3(0.7);\n        scale *= 2.0;\n    }\n    return (length(z) - 0.15) / scale;\n}\n\nvec2 scene(vec3 p){\n    float toWall  = FUSE_R - length(p.xy);\n    float toFloor = p.y - FLOOR_Y;\n    float toBack  = p.z - 3.49; \n    \n    float d  = min(min(toWall, toFloor), toBack);\n    float id = (d == toFloor) ? 2.0 : 1.0;\n\n    float s = seatRows(p);\n    if(s<d){ d=s; id=3.0; }\n    float b = overheadBins(p);\n    if(b<d){ d=b; id=4.0; }\n    float c = cockpitWall(p);\n    if(c<d){ d=c; id=5.0; }\n    float cd = cockpitDoor(p);\n    if(cd<d){ d=cd; id=10.0; }\n    float ed = exitDoor(p);\n    if(ed<d){ d=ed; id=9.0; }\n    float frac = sdFractalStern(p);\n    if(u_fractalActive > 0.5 && frac < d){ d = frac; id = 11.0; }\n    \n    return vec2(d, id);\n}\n\nvec3 calcNormal(vec3 p){\n    vec2 e = vec2(0.005, 0.0);\n    float d = scene(p).x;\n    return normalize(vec3(scene(p+e.xyy).x-d, scene(p+e.yxy).x-d, scene(p+e.yyx).x-d));\n}\n\nvec3 emergencyStrip(vec3 p){\n    float stripEdge = abs(abs(p.x)-AISLE_W);\n    float onStrip = smoothstep(0.06, 0.0, stripEdge) * smoothstep(FLOOR_Y+0.06, FLOOR_Y+0.005, p.y);\n    float pulse = 0.55 + 0.45*sin(u_time*1.3 + p.z*0.4);\n    return vec3(0.95, 0.12, 0.04) * onStrip * pulse * 4.0;\n}\n\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;\n    uv *= u_zoom; \n\n    float t_warp = u_time * 0.15;\n    vec2 q = vec2(fbm(uv * 2.0 + vec2(0.0, t_warp)), fbm(uv * 2.0 + vec2(t_warp, 0.0)));\n    vec2 warpR = vec2(\n        fbm(uv * 2.0 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t_warp),\n        fbm(uv * 2.0 + 2.0 * q + vec2(8.3, 2.8) + 0.12 * t_warp)\n    );\n    float liqAmp = mix(0.015, 0.10, u_isOOB) * u_trip;\n    uv += (warpR - 0.5) * liqAmp;\n\n    // Surge / snap — driven by modeSeed, randomizes on each blink\n    float mt = u_modeTime * u_isOOB;\n    float w1 = sin(mt * 0.4 + u_modeSeed);\n    float w2 = sin(mt * 0.9 + u_modeSeed * 2.0);\n    float w3 = sin(mt * 1.5 + u_modeSeed * 3.0);\n    float surge = smoothstep(0.8, 1.0, (w1 + w2 + w3) / 3.0);\n    float snap  = pow(surge, 2.0) * 8.0 * u_isOOB;\n    uv *= 1.0 + mt * 0.003 + snap * 0.015;\n\n    // Glitch scanline — random horizontal offset burst\n    float gTick = floor(u_time * 16.0);\n    if(step(0.979, hash1(gTick * 133.77 + u_modeSeed)) > 0.0)\n        uv.x += (hash1(floor(uv.y * mix(10.0, 30.0, hash1(gTick * 2.1))) + gTick) - 0.5)\n                 * 0.18 * clamp(u_trip, 0.0, 1.5);\n\n    // Shake\n    float latShake = u_shake * 5.0;\n    uv.x += sin(u_time * 40.0) * 0.012 * latShake;\n    uv.y += cos(u_time * 25.0) * 0.012 * latShake;\n\n    float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;\n    float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;\n    \n    vec3 ro = vec3(bobX + u_camX, bobY + snap * 0.08, u_camZ); \n    vec3 rd = normalize(vec3(uv.x, uv.y, 1.6));\n    \n    float yaw   = u_yawOffset - (u_mouse.x * 0.42);\n    float pitch = u_mouse.y * 0.26;\n    rd.yz *= rot(pitch);\n    rd.xz *= rot(yaw);   \n\n    if (u_doorSwitched > 0.5) {\n        rd.x += sin(u_time*2.3)*0.015 * latShake; \n        rd = normalize(rd);\n    }\n\n    vec3 finalCol = vec3(0.0);\n    float t_march = 0.0;\n    bool doRaymarch = false;\n    float t_box = 0.0;\n\n    if (u_camZ < 3.49) {\n        vec3 box = vec3(0.5625, 1.0, 3.5); \n        vec3 tPos = (box * sign(rd) - ro) / rd;\n        t_box = min(min(tPos.x, tPos.y), tPos.z);\n        vec3 boxHit = ro + rd * t_box;\n        vec3 nPos = boxHit / box;\n        vec3 absPos = abs(nPos);\n        \n        int wallID = -1; \n        vec2 tileUV;\n        \n        if (absPos.x > absPos.y && absPos.x > absPos.z) {\n            if (nPos.x > 0.0) { tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5; finalCol = texture2D(u_texRight, tileUV).rgb; wallID = 1; } \n            else              { tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5; finalCol = texture2D(u_texLeft, tileUV).rgb; wallID = 0; }\n        } else if (absPos.y > absPos.x && absPos.y > absPos.z) {\n            if (nPos.y > 0.0) { tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5; finalCol = texture2D(u_texTop, tileUV).rgb; wallID = 4; } \n            else              { tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5; finalCol = texture2D(u_texBottom, tileUV).rgb; wallID = 4; }\n        } else {\n            if (nPos.z > 0.0) { wallID = 2; } \n            else              { wallID = 3; finalCol = vec3(0.0); } \n        }\n\n        if (wallID == 2) {\n            if (u_altRoute > 0.5) {\n                vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                vec3 bhCol = texture2D(u_voidTex, clamp(vuv, 0.0, 1.0)).rgb;\n                float fogFactor = exp(-t_box * 0.16);\n                finalCol = mix(vec3(0.012, 0.009, 0.020), bhCol, fogFactor);\n            } else {\n                doRaymarch = true;\n                t_march = t_box;\n            }\n        } else if (wallID != 3) {\n            vec4 tcol = (wallID==1) ? texture2D(u_texRight, tileUV) : ((wallID==0) ? texture2D(u_texLeft, tileUV) : vec4(1.0));\n            if (tcol.a < 0.1 || (tcol.g > 0.4 && tcol.r < 0.25 && tcol.b < 0.25)) {\n                // Doorway — show dark interior room glimpse, not empty void\n                float depthFog = exp(-t_box * 0.4);\n                vec3 roomCol = (wallID == 0)\n                    ? vec3(0.06, 0.04, 0.04)   // left door: dark bathroom warm\n                    : vec3(0.04, 0.04, 0.07);  // right door: dark bedroom cool\n                // Subtle voidTex bleed so it's not completely dead\n                vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                vec3 voidHint = texture2D(u_voidTex, vuv).rgb * 0.15;\n                finalCol = mix(roomCol + voidHint, vec3(0.03, 0.01, 0.01), 1.0 - depthFog);\n            } else {\n                finalCol = tcol.rgb;\n                float fogFactor = exp(-t_box * 0.5);\n                finalCol = mix(vec3(0.03, 0.01, 0.01), finalCol, fogFactor);\n                float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));\n                finalCol = mix(finalCol, vec3(lum * 0.85, lum * 0.7, lum * 0.7), 0.4);\n            }\n        }\n    } else {\n        doRaymarch = true;\n        t_march = 0.0;\n    }\n\n    if (doRaymarch) {\n        vec3 cp_ro = ro + rd * t_march; \n\n        float t = 0.0; float mid = 0.0; bool hit = false;\n        for(int i=0; i<MAX_STEPS; i++){\n            vec3 p = cp_ro + rd*t;\n            vec2 res = scene(p);\n            if(res.x < SURF_DIST){ mid = res.y; hit = true; break; }\n            if(t > MAX_DIST) break;\n            t += res.x * 0.7;\n        }\n\n        vec3 col = vec3(0.01, 0.012, 0.025);\n        vec3 fogCol = vec3(0.008, 0.008, 0.012);\n\n        if(!hit) {\n            vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n            col = mix(texture2D(u_voidTex, vuv).rgb * 0.3, fogCol, 0.85);\n        } else {\n            vec3 p = cp_ro + rd*t;\n            float totalDist = t_march + t;\n            float fogAmt = clamp((totalDist - 6.0) / 12.0, 0.0, 1.0);\n            fogAmt = fogAmt * fogAmt;\n            \n            if(mid > 4.5 && mid < 5.5) { \n                vec3 n = calcNormal(p);\n                col = vec3(0.1, 0.12, 0.15) * (max(dot(n, vec3(0,0,-1)), 0.0) * 0.4 + 0.15);\n                col = mix(col, fogCol, fogAmt);\n\n            } else if(mid > 9.5 && mid < 10.5) { \n                vec2 cpUV = vec2((p.x + 0.4) / 0.80, 1.0 - ((p.y - FLOOR_Y) / 1.9));\n                vec4 cpTex = texture2D(u_cockpitTex, clamp(cpUV, 0.0, 1.0));\n                \n                if (cpTex.a < 0.2) {\n                    vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                    col = texture2D(u_voidTex, vuv).rgb * 1.2;\n                } else {\n                    vec3 n = calcNormal(p);\n                    col = cpTex.rgb * (max(dot(n, vec3(0,0,-1)), 0.0) * 0.6 + 0.4);\n                    col = mix(col, fogCol, fogAmt);\n                }\n\n            } else if(mid > 10.5 && mid < 11.5) {\n                // Stern fractal — visible after 180 turn at cockpit\n                // Pulsing, breathing geometry that shouldn't exist\n                vec3 n = calcNormal(p);\n                float pulse = 0.5 + 0.5 * sin(u_time * 2.5 + length(p) * 3.0);\n                float pulse2 = 0.5 + 0.5 * sin(u_time * 1.1 + p.y * 5.0);\n                // Deep red → magenta → void black cycling\n                vec3 fracCol = mix(vec3(0.6, 0.02, 0.08), vec3(0.8, 0.05, 0.5), pulse);\n                fracCol = mix(fracCol, vec3(0.02, 0.0, 0.05), pulse2 * 0.4);\n                // Lighting: overhead + emergency strip glow\n                float diff = max(dot(n, normalize(vec3(0.0, 1.0, 1.0))), 0.0) * 0.8 + 0.2;\n                // Inner glow — brighter at the core\n                float coreDist = length(p - vec3(0.0, FLOOR_Y + 1.1, ROW_START + 0.5));\n                float coreGlow = exp(-coreDist * 2.0) * 1.5;\n                col = fracCol * diff + vec3(0.9, 0.1, 0.3) * coreGlow;\n                // Fractal ignores fog — it glows through the darkness\n\n            } else if(mid < 1.5 && isWindowHit(p)) {\n                vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                col = texture2D(u_voidTex, vuv).rgb * mix(1.0, 1.5, fogAmt);\n\n            } else {\n                vec3 n = calcNormal(p);\n                vec3 matCol;\n                if(mid < 1.5)      matCol = vec3(0.45, 0.47, 0.50);\n                else if(mid < 2.5) matCol = vec3(0.14, 0.14, 0.16) + hash2(floor(p.xz*18.0))*0.04;\n                else if(mid < 3.5) matCol = vec3(0.15, 0.17, 0.32);\n                else               matCol = vec3(0.48, 0.48, 0.52);\n\n                float flicker = 0.7 + 0.3 * sin(u_time*3.9) * sin(u_time*5.7+1.4);\n                vec3 ambient = vec3(0.22, 0.24, 0.28) * flicker;\n                vec3 cockpitLit = vec3(0.15, 0.22, 0.28) * max(dot(n, vec3(0,0,-1)), 0.0) * smoothstep(COCKPIT_Z, COCKPIT_Z-10.0, p.z) * 2.5;\n\n                col = matCol * (ambient + emergencyStrip(p) + cockpitLit);\n                col = mix(col, fogCol, fogAmt);\n\n                // ── EXIT DOOR TEXTURE — mapped onto the port wall ──\n                // Door area: port side wall, near EXIT_ROW_Z\n                if(mid < 1.5 && p.x < -0.5) {\n                    float doorH = 1.8;\n                    float doorW = 1.0;\n                    float doorBottom = FLOOR_Y + 0.08;\n                    float doorLeft = EXIT_ROW_Z - doorW * 0.5;\n                    \n                    // UV mapping: Z maps to U, Y maps to V\n                    float du = (p.z - doorLeft) / doorW;\n                    float dv = 1.0 - (p.y - doorBottom) / doorH;\n                    \n                    if(du > 0.0 && du < 1.0 && dv > 0.0 && dv < 1.0) {\n                        vec2 doorUV = vec2(du, dv);\n                        vec4 dTex = (u_doorSwitched > 0.5)\n                            ? texture2D(u_doorOpenTex, doorUV)\n                            : texture2D(u_doorClosedTex, doorUV);\n                        \n                        if(u_doorSwitched > 0.5 && dTex.a < 0.3) {\n                            // Transparent part of door-open.png — show the void\n                            vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                            col = texture2D(u_voidTex, vuv).rgb * 1.2;\n                        } else {\n                            // Door texture visible\n                            col = dTex.rgb * 0.8;\n                        }\n                    }\n                }\n            }\n        }\n        \n        col += vec3(1.0, 0.9, 0.9) * u_flash; \n        finalCol = col;\n    } \n    \n    finalCol *= smoothstep(1.3, 0.2, length(uv)) * 0.65;\n\n    // ═══ CABIN HALLUCINATION — Burning Ship/Julia bleeding into reality ═══\n    // Active after cockpit. Builds from peripheral halos to full-screen horror.\n    if (u_fractalActive > 0.5) {\n        vec2 suv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;\n        float r = length(suv);\n        float periph = smoothstep(0.18, 0.85, r);\n\n        // Blink surge + persistent base (never fully gone)\n        float env = smoothstep(6.0, 0.0, u_blinkAge) * 0.35 + 0.15;\n        float strength = periph * env * u_trip;\n\n        if (strength > 0.005) {\n            float typeRoll = _mHash(u_fractalSeed * 3.7);\n            float zoom = mix(0.8, 3.5, _mHash(u_fractalSeed * 1.3));\n            vec2 drift = vec2(sin(u_time*0.03+u_fractalSeed)*0.2, cos(u_time*0.02+u_fractalSeed*1.7)*0.2);\n            vec2 sUV = suv / zoom + drift;\n            float val = 0.0;\n\n            if(typeRoll < 0.45) {\n                // Burning Ship — melting buildings\n                vec2 region = vec2(-1.76, -0.028) + vec2(_mHash(u_fractalSeed*5.1)-0.5, _mHash(u_fractalSeed*7.3)-0.5)*0.3;\n                val = _burningShip(sUV * 0.5 + region);\n            } else if(typeRoll < 0.75) {\n                // Julia set — organic tendrils\n                vec2 jc = vec2(-0.8+sin(u_time*0.015+u_fractalSeed)*0.15, 0.156+cos(u_time*0.012)*0.1);\n                val = _julia(sUV * 0.8, jc);\n            } else {\n                // Deep Burning Ship zoom — antenna/mast structures\n                val = _burningShip(sUV * 0.08 + vec2(-1.755, -0.022));\n            }\n\n            val = fract(val * 3.5 + u_time * 0.04);\n            vec3 fracHalo = _mPal(val, u_fractalSeed * 11.3);\n            fracHalo *= smoothstep(0.0, 0.12, val) * smoothstep(1.0, 0.7, val);\n            float pulse = 0.55 + 0.45 * sin(u_time * (0.9 + _mHash(u_fractalSeed*4.0)) + u_fractalSeed);\n            finalCol += fracHalo * strength * pulse;\n\n            // Second layer: faint ghost from different region — creates depth\n            float ghost = _burningShip(suv * 0.3 + vec2(-1.77, -0.01) + drift * 0.5);\n            ghost = fract(ghost * 2.0 + u_time * 0.025);\n            vec3 ghostCol = _mPal(ghost, u_fractalSeed * 7.0 + 50.0) * smoothstep(0.0, 0.15, ghost);\n            finalCol += ghostCol * periph * env * 0.06 * u_trip;\n        }\n    }\n\n    gl_FragColor = vec4(finalCol * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);\n}\n"),
         (GLSL.modules.z3_fall =
           "\n#ifdef GL_FRAGMENT_PRECISION_HIGH\n  precision highp float;\n#else\n  precision mediump float;\n#endif\n\nuniform vec2  u_resolution;\nuniform vec2  u_mouse;\nuniform float u_time;\nuniform float u_fallProgress;\nuniform float u_blink;\n\n#ifdef MOBILE\nconst int MAX_STEPS = 50;\n#else\nconst int MAX_STEPS = 90;\n#endif\nconst float MAX_DIST = 80.0;\nconst float SURF_DIST = 0.015;\n\nfloat hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\nmat2 rot(float a){ float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }\nfloat sdBox(vec3 p, vec3 b){ vec3 q=abs(p)-b; return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0); }\n\nvec2 map(vec3 p) {\n    vec2 cell = floor(p.xz * 0.4);\n    vec2 local = fract(p.xz * 0.4) - 0.5;\n    \n    bool isTarget = (cell.x == 0.0 && cell.y == 0.0);\n    float h = isTarget ? 3.0 : hash(cell) * 6.0 + 1.0;\n    \n    float dFloor = p.y;\n    \n    vec3 q = vec3(local.x * 2.5, p.y - h*0.5, local.y * 2.5);\n    float dBldg = sdBox(q, vec3(0.8, h*0.5, 0.8)); \n    dBldg /= 2.5; \n    \n    float d = min(dFloor, dBldg);\n    float id = (d == dFloor) ? 1.0 : (isTarget ? 3.0 : 2.0);\n    return vec2(d, id);\n}\n\nvec3 calcNormal(vec3 p) {\n    vec2 e = vec2(0.01, 0.0);\n    float d = map(p).x;\n    return normalize(vec3(map(p+e.xyy).x-d, map(p+e.yxy).x-d, map(p+e.yyx).x-d));\n}\n\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;\n    \n    float startY = 60.0;\n    float endY = 3.5;\n    float ease = 1.0 - pow(1.0 - u_fallProgress, 2.0);\n    float camY = mix(startY, endY, ease);\n    \n    vec3 ro = vec3(0.0, camY, 0.0);\n    \n    ro.x += sin(u_fallProgress * 6.0) * 3.0 * (1.0 - u_fallProgress);\n    ro.z += cos(u_fallProgress * 5.0) * 3.0 * (1.0 - u_fallProgress);\n    \n    vec3 fwd = normalize(vec3(0.0, -1.0, 0.0));\n    vec3 right = normalize(vec3(1.0, 0.0, 0.0));\n    vec3 up = cross(right, fwd);\n    \n    float spin = u_fallProgress * 3.1415 * 0.5;\n    right.xz *= rot(spin);\n    up.xz *= rot(spin);\n    \n    vec3 rd = normalize(fwd + uv.x * right + uv.y * up);\n    \n    rd.xy *= rot(u_mouse.y * 0.2);\n    rd.xz *= rot(u_mouse.x * 0.2);\n\n    float t = 0.0;\n    float id = 0.0;\n    for(int i=0; i<MAX_STEPS; i++) {\n        vec3 p = ro + rd * t;\n        vec2 res = map(p);\n        if(res.x < SURF_DIST) { id = res.y; break; }\n        if(t > MAX_DIST) break;\n        t += res.x * 0.7; \n    }\n\n    vec3 col = vec3(0.01, 0.01, 0.02); \n    \n    if(t < MAX_DIST) {\n        vec3 p = ro + rd * t;\n        vec3 n = calcNormal(p);\n        \n        if(id == 1.0) { \n            col = vec3(0.04, 0.03, 0.02);\n            float gridX = smoothstep(0.9, 1.0, sin(p.x * 3.1415 * 0.4));\n            float gridZ = smoothstep(0.9, 1.0, sin(p.z * 3.1415 * 0.4));\n            col += vec3(1.0, 0.6, 0.2) * (gridX + gridZ) * 0.7; \n            \n            float cars = step(0.95, fract(p.x * 2.0 + u_time * 2.0)) * gridZ;\n            cars += step(0.95, fract(p.z * 2.0 - u_time * 2.5)) * gridX;\n            col += vec3(1.0, 0.2, 0.1) * cars;\n            \n        } else if(id == 2.0) { \n            col = vec3(0.02, 0.02, 0.03);\n            if (abs(n.y) < 0.1) { \n                vec2 winUV = vec2(dot(p, vec3(1,0,0)) + dot(p, vec3(0,0,1)), p.y);\n                float win = step(0.7, fract(winUV.x * 3.0)) * step(0.7, fract(winUV.y * 3.0));\n                float r = hash(floor(winUV * 3.0) + floor(p.xz));\n                if(r > 0.8) col += vec3(0.8, 0.8, 0.6) * win; \n                if(r > 0.95) col += vec3(0.4, 0.7, 1.0) * win; \n            } else { \n                col = vec3(0.01, 0.01, 0.015);\n                float ac = step(0.9, fract(p.x*2.0)*fract(p.z*2.0));\n                col += vec3(0.1) * ac;\n            }\n        } else if(id == 3.0) { \n            col = vec3(0.03);\n            if (abs(n.y) > 0.9) { \n                float dCenter = length(p.xz);\n                float ring = smoothstep(0.08, 0.0, abs(dCenter - 0.8));\n                \n                float pulse = 0.5 + 0.5 * sin(u_time * 4.0);\n                col += vec3(1.0, 0.1, 0.1) * ring * pulse * 2.0; \n                \n                float H = smoothstep(0.05, 0.0, abs(p.x)) * step(abs(p.z), 0.4) + \n                          smoothstep(0.05, 0.0, abs(p.x - 0.4)) * step(abs(p.z), 0.4) + \n                          smoothstep(0.05, 0.0, abs(p.x + 0.4)) * step(abs(p.z), 0.4) +\n                          smoothstep(0.05, 0.0, abs(p.z)) * step(abs(p.x), 0.4); \n                col += vec3(0.8) * H;\n            } else {\n                vec2 winUV = vec2(dot(p, vec3(1,0,0)) + dot(p, vec3(0,0,1)), p.y);\n                float win = step(0.7, fract(winUV.x * 3.0)) * step(0.7, fract(winUV.y * 3.0));\n                if(hash(floor(winUV * 3.0) + floor(p.xz)) > 0.5) col += vec3(0.9, 0.2, 0.2) * win;\n            }\n        }\n        \n        col = mix(col, vec3(0.01, 0.015, 0.02), 1.0 - exp(-t * 0.02));\n    }\n    \n    col += vec3(1.0, 0.5, 0.2) * 0.08 * (1.0 - exp(-t * 0.005));\n    \n    float flash = smoothstep(0.15, 0.0, u_fallProgress) + smoothstep(0.64, 0.666, u_fallProgress);\n    col = mix(col, vec3(1.0), clamp(flash, 0.0, 1.0));\n    \n    gl_FragColor = vec4(col * (1.0 - u_blink), 1.0);\n}\n"));
+      if (
+        GLSL.modules.z3_merged &&
+        GLSL.modules.z3_merged.indexOf("cabinWindowUV") === -1
+      ) {
+        const mainNeedle =
+          "\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;";
+        GLSL.modules.z3_merged = GLSL.modules.z3_merged
+          .replace(
+            mainNeedle,
+            "\nvec2 cabinWindowUV(vec3 p, vec3 rd){\n    float side = mix(-1.0, 1.0, step(0.0, p.x));\n    vec2 uv = vec2(p.z * 0.055 + side * 0.18, 0.52 + p.y * 0.38 + side * 0.04);\n    uv.x += 0.012 * sin(u_time * 0.08);\n    return fract(uv);\n}\n" + mainNeedle
+          )
+          .replace(
+            "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                col = texture2D(u_voidTex, vuv).rgb * mix(1.0, 1.5, fogAmt);",
+            "vec2 vuv = cabinWindowUV(p, rd);\n                col = texture2D(u_voidTex, vuv).rgb * mix(1.0, 1.5, fogAmt);"
+          )
+          .replace(
+            // Cockpit door transparency: map the world-space hit position on the
+            // windshield panel to a fixed UV in the earth texture.  Every window
+            // pane shows the same portion of the exterior (no per-pane variation)
+            // and the view does NOT shift when the player moves their head because
+            // the UV depends only on p.x / p.y, not on the ray direction rd.
+            // p.x: -FUSE_R..+FUSE_R  →  0..1 (left-to-right across the windshield)
+            // p.y: FLOOR_Y..FLOOR_Y+1.9  →  0..1 (bottom-to-top)
+            "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                    col = texture2D(u_voidTex, vuv).rgb * 1.2;",
+            "vec2 vuv = vec2(clamp((p.x + FUSE_R) / (FUSE_R * 2.0), 0.0, 1.0), clamp((p.y - FLOOR_Y) / 1.9, 0.0, 1.0));\n                    col = texture2D(u_voidTex, vuv).rgb * 1.2;"
+          );
+      }
       let z3SpaceHeld = !1,
         z3TouchHeld = !1;
       function checkZ3Touch(t) {
@@ -45,8 +72,9 @@
         }));
       class Zone3Engine {
         constructor(t) {
-          ((this.route = "z3b" === t ? "z3b" : "z3"),
+          ((this.route = "z3b" === t ? "z3b" : "z4b" === t ? "z4b" : "z3"),
             (this.isAltRoute = "z3b" === this.route),
+            (this.isZ4BRoute = "z4b" === this.route),
             (this.bathroomProg = this._buildProg("z3_bathroom")),
             (this.bedroomProg = this._buildProg("z3_bedroom")),
             (this.centerProg = this._buildProg("z3_merged")),
@@ -89,9 +117,9 @@
             (this.voidMode =
               this.isAltRoute || "undefined" == typeof ActiveMode
                 ? null
-                : new ActiveMode(2)),
+                : new ActiveMode(this.isZ4BRoute ? 5 : 2)),
             this.voidMode && (this.voidMode.maskTex = this._makeBlankTex()),
-            (this.activePOV = this.isAltRoute ? "right" : "left"),
+            (this.activePOV = this.isZ4BRoute ? "center" : this.isAltRoute ? "right" : "left"),
             (this.centerPhase = "hallway"),
             (this.voidStart = 0),
             (this.bhCamPos = { x: 0, y: 1.68, z: 70 }),
@@ -150,6 +178,22 @@
             (this.bhEscapeStart = 0),
             this._resetBlackholeStart(),
             this._initAudio());
+          if (this.isZ4BRoute) {
+            this.centerPhase = "cabin";
+            this.cabinState = "z4b_entry";
+            this.camZ = this.EXIT_ROW_Z;
+            this.camX = -1.12;
+            this.yawOffset = -0.5 * Math.PI;
+            this.yawTarget = 0;
+            this.zoom = 1.04;
+            this.zoomTarget = 1;
+            this.doorOpen = 1;
+            this.doorSwitched = 1;
+            this.z3RedDone = true;
+            this.z4bEntryStart = performance.now();
+            this.z4bCrashStart = 0;
+            this.z4bIslandStarted = false;
+          }
         }
         _initAudio() {
           const t = window.__audioCtx;
@@ -631,6 +675,7 @@
                 : "");
         }
         checkPOVThreshold(t, e) {
+          if (this.isZ4BRoute) return;
           "idle" !== this.slideState ||
             t - this.povSwitchTime < 600 ||
             ("hallway" !== this.centerPhase
@@ -832,6 +877,25 @@
                 (this.z3IsOOB = 1));
           else if ("cabin" === this.centerPhase) {
             switch (this.cabinState) {
+              case "z4b_entry":
+                {
+                  const entryT0 = Math.min(1, (t - (this.z4bEntryStart || t)) / 900);
+                  const entryT = entryT0 * entryT0 * (3 - 2 * entryT0);
+                  this.camX = -1.12 * (1 - entryT);
+                  this.camZ = this.EXIT_ROW_Z + 0.18 * entryT;
+                  this.yawOffset = -0.5 * Math.PI * (1 - entryT);
+                  this.yawTarget = 0;
+                  this.zoomTarget = 1;
+                  if (entryT0 >= 1) {
+                    this.cabinState = "forward";
+                    this.camX = 0;
+                    this.yawOffset = 0;
+                    this.yawTarget = 0;
+                    this.cx = 0;
+                    this.cy = 0;
+                  }
+                }
+                break;
               case "walking_forward":
               case "forward":
                 (i &&
@@ -846,6 +910,25 @@
                 break;
               case "cockpit_turbulence":
                 let o = t - this.turbulenceStart;
+                if (this.isZ4BRoute) {
+                  const crashT = Math.min(1, o / 5200);
+                  this.suctionShake = 0.035 + 0.17 * crashT;
+                  this.flashVal = o > 500 && Math.random() > 0.74 - crashT * 0.38 ? 0.9 : 0;
+                  this.z3IsOOB = 1;
+                  this.z3Trip = Math.min(2.1, this.z3Trip + 0.003 * e);
+                  this.zoomTarget = 1.04 + 0.10 * crashT;
+                  this.yawTarget = 0;
+                  this.yawOffset += (this.yawTarget - this.yawOffset) * Math.min(1, 0.04 * e);
+                  if (o > 5200) {
+                    this.cabinState = "z4b_crash";
+                    this.z4bCrashStart = t;
+                    this.flashVal = 1;
+                    this.suctionShake = 0.24;
+                    this.cx = 0;
+                    this.cy = 0;
+                  }
+                  break;
+                }
                 ((this.suctionShake = Math.min(0.04, o / 3e4)),
                   (this.flashVal = o > 500 && Math.random() > 0.7 ? 0.8 : 0),
                   o > 3e3 &&
@@ -857,6 +940,22 @@
                     (this.cy = 0),
                     (this.fractalActive = 1),
                     (this.doorSwitched = 1)));
+                break;
+              case "z4b_crash":
+                {
+                  const crashAge = t - (this.z4bCrashStart || t);
+                  const crashT = Math.min(1, crashAge / 2200);
+                  this.suctionShake = 0.22 + 0.07 * Math.sin(crashAge * 0.035);
+                  this.flashVal =
+                    crashAge < 320
+                      ? 1
+                      : Math.max(0, 0.85 * (1 - crashT)) * (Math.random() > 0.55 ? 1 : 0);
+                  this.zoomTarget = 1.16;
+                  this.yawTarget = 0;
+                  this.z3IsOOB = 1;
+                  this.z3Trip = Math.min(2.6, this.z3Trip + 0.004 * e);
+                  if (crashAge > 2200) this._wakeOnIsland();
+                }
                 break;
               case "backward":
                 (i && (this.camZ = Math.max(this.EXIT_ROW_Z, this.camZ - n)),
@@ -965,6 +1064,8 @@
           var l = 0;
           ("cockpit_turbulence" === this.cabinState
             ? (l = 1.5)
+            : "z4b_crash" === this.cabinState
+              ? (l = 3.5)
             : "backward" === this.cabinState
               ? (l = 0.8)
               : "suction" === this.cabinState && (l = 2.5),
@@ -1321,6 +1422,31 @@
               0.001 * (t - this.z3BlinkPeakTime),
               3,
             );
+        }
+        _wakeOnIsland() {
+          if (this.z4bIslandStarted) return;
+          this.z4bIslandStarted = true;
+          let fade = document.getElementById("z4b-crash-fade");
+          if (!fade) {
+            fade = document.createElement("div");
+            fade.id = "z4b-crash-fade";
+            fade.style.cssText =
+              "position:fixed;inset:0;background:#000;opacity:1;pointer-events:none;z-index:999999;transition:opacity 1500ms ease;";
+            document.body.appendChild(fade);
+          }
+          setTimeout(() => {
+            this.destroy();
+            window.currentZone3 = null;
+            if (typeof window.startZ4BIsland === "function") {
+              window.startZ4BIsland();
+            }
+            requestAnimationFrame(() => {
+              fade.style.opacity = "0";
+              setTimeout(() => {
+                if (fade && fade.parentNode) fade.parentNode.removeChild(fade);
+              }, 1700);
+            });
+          }, 180);
         }
         destroy() {
           ((this.isDead = !0),

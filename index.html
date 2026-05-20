@@ -327,7 +327,7 @@
 <img id="enter-button" onmousedown="enterSite()" ontouchend="enterSite()" src="files/img/splash/enter-button.gif"/>
 <div id="enter-label">CLICK TO ENTER</div>
 </div>
-<img id="secret-button" onclick="toggleConky()" src="files/img/buttin.png"/><canvas id="c"></canvas>
+<img id="secret-button" onclick="__cycleConkyDebug()" src="files/img/buttin.png"/><canvas id="c"></canvas>
 <div id="conky-sidebar">
 <div class="conky-line" id="host-val">SCANNING...</div>
 <div class="conky-line" id="system-ip">SCANNING...</div>
@@ -341,8 +341,27 @@
 <div class="separator">-----------------------</div>
 <div class="conky-line">UPCOMING SHOWS</div>
 <div class="separator">-----------------------</div>
-      (n/a)<br/><br/>BOOKING EUROPE<br/>SUMMER 2026 LATE JUNE - EARLY/MID
-      JULY
+      <br/>
+      05/29/2026
+      <br/>
+      LOS ANGELES, CA @ NOTHING USUAL
+      <br/>
+      2347 E OLYMPIC BLVD
+      <br/>
+      <br/>
+      with
+      <br/>
+      PRESSER
+      <br/>
+      TRUE COMMANDONO
+      <br/>
+      xTIEDxTOxAxTREEx
+      <br/>
+      CREMATION9
+      <br/>
+      <br/>
+      TICKETS: WERENICEKIDS.BIGCARTEL.COM
+      <br/>
       <div style="height: 0.6em"></div>
 <div style="height: 0.6em"></div>
 <div class="separator">-----------------------</div>
@@ -459,10 +478,10 @@
 </div>
 </div>
 <audio id="audioPlayer"></audio>
-<script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
-<script src="lodash.js"></script>
-<script src="butterchurn.js"></script>
-<script src="butterchurnPresets.min.js"></script><script src="site-ui.js"></script><script src="glsl-core.js"></script><script src="modes/mode1.js"></script><script src="modes/mode2.js"></script><script src="modes/mode-blackhole.js"></script><script src="modes/mode3.js"></script><script src="modes/mode4.js"></script><script src="modes/mode5.js"></script><script src="modes/mode6.js"></script><script src="modes/mode7.js"></script><script src="modes/mode9.js"></script><script src="modes/mode-right.js"></script><script src="modes/mode-back.js"></script><script src="modes/mode-left.js"></script><script src="modes/mode-left2.js"></script><script src="modes/mode-right2.js"></script><script src="modes/mode-bedroom3.js"></script><script src="modes/mode-cabin.js"></script><script src="modes/mode-door.js"></script><script src="modes/mode-elevator.js"></script><script src="modes/mode-station.js"></script><script src="modes/mode-laptop.js"></script><script src="engine.js"></script><script src="engine2.js"></script><script src="engine3.js"></script><script src="engine4.js"></script><script src="brain-monitor.js"></script><script src="player.js"></script><script src="videos.js"></script><script src="gallery.js"></script><script src="debug-ui.js"></script>
+<script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js?v=20260514-013804"></script>
+<script src="lodash.js?v=20260514-013804"></script>
+<script src="butterchurn.js?v=20260514-013804"></script>
+<script src="butterchurnPresets.min.js?v=20260514-013804"></script><script src="site-ui.js?v=20260514-013804"></script><script src="glsl-core.js?v=20260514-013804"></script><script src="modes/mode1.js?v=20260514-013804"></script><script src="modes/mode2.js?v=20260514-013804"></script><script src="modes/mode-bh.js?v=20260514-013804"></script><script src="modes/mode3.js?v=20260514-013804"></script><script src="modes/mode4.js?v=20260514-013804"></script><script src="modes/mode5.js?v=20260514-013804"></script><script src="modes/mode6.js?v=20260514-013804"></script><script src="modes/mode7.js?v=20260514-013804"></script><script src="modes/mode9.js?v=20260514-013804"></script><script src="modes/mode-right.js?v=20260514-013804"></script><script src="modes/mode-back.js?v=20260514-013804"></script><script src="modes/mode-left.js?v=20260514-013804"></script><script src="modes/mode-left2.js?v=20260514-013804"></script><script src="modes/mode-right2.js?v=20260514-013804"></script><script src="modes/mode-bedroom3.js?v=20260514-013804"></script><script src="modes/mode-cabin.js?v=20260514-013804"></script><script src="modes/mode-door.js?v=20260514-013804"></script><script src="modes/mode-elevator.js?v=20260514-013804"></script><script src="modes/mode-station.js?v=20260514-013804"></script><script src="modes/mode-laptop.js?v=20260514-013804"></script><script src="modes/mode-island.js?v=20260514-013804"></script><script src="engine.js?v=20260514-013804"></script><script src="engine2.js?v=20260514-013804"></script><script src="engine3.js?v=20260514-013804"></script><script src="engine4.js?v=20260514-013804"></script><script src="brain-monitor.js?v=20260514-013804"></script><script src="player.js?v=20260514-013804"></script><script src="videos.js?v=20260514-013804"></script><script src="gallery.js?v=20260514-013804"></script><script src="debug-ui.js?v=20260514-013804"></script>
 <style>
   #__laptopClose {
     position: fixed;
@@ -497,6 +516,37 @@
       btn.style.display = 'block';
       btn.addEventListener('click', () => { location.href = 'desktop.html'; });
     }
+  })();
+</script>
+<script>
+  
+  
+  
+  
+  (() => {
+    let state = 0;  
+    const conky = () => document.getElementById('conky-sidebar');
+    const debug = () => document.getElementById('debug-menu-box');
+    const setVis = (el, on) => { if (el) el.style.display = on ? 'block' : 'none'; };
+
+    window.__cycleConkyDebug = function () {
+      
+      if (typeof __debugAllowed === 'undefined' || !__debugAllowed) {
+        if (typeof toggleConky === 'function') toggleConky();
+        return;
+      }
+      
+      
+      state = (state + 1) % 4;
+      const showConky = (state === 0 || state === 3);
+      const showDebug = (state === 1 || state === 3);
+      
+      if (showDebug && !debug() && typeof window.makeUI === 'function') {
+        window.makeUI();
+      }
+      setVis(conky(), showConky);
+      setVis(debug(), showDebug);
+    };
   })();
 </script>
  </body>

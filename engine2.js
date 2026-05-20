@@ -875,6 +875,17 @@ void main() {
           const c = document.getElementById("c"),
             u = c ? c.width : window.innerWidth,
             f = c ? c.height : window.innerHeight;
+          if (this.modeBH && this.rightHoleFBO) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHoleFBO.fbo);
+            gl.viewport(0, 0, u, f);
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            window.__tripAmount = this.z2Trip;
+            this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, u, f);
+          }
+
           if (
             (this.checkPOVThreshold(e, t),
             this.tickSlide(e),
@@ -1281,14 +1292,14 @@ void main() {
               (window.__audioWetGain.gain.value = 0.7 * (1 - 0.9 * i)),
               window.__audioDryGain &&
                 (window.__audioDryGain.gain.value = 0.3 + 0.7 * i));
-            (function(self) {
-              if (!self.voidVid || self.voidVid.readyState < 2) return;
-              gl.activeTexture(gl.TEXTURE6);
-              gl.bindTexture(gl.TEXTURE_2D, self.texVoidVid);
-              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, self.voidVid);
-              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-            })(this);
+            
+            gl.activeTexture(gl.TEXTURE6);
+            if (this.modeBH && this.rightHoleFBO) {
+              gl.bindTexture(gl.TEXTURE_2D, this.rightHoleFBO.tex);
+            } else {
+              gl.bindTexture(gl.TEXTURE_2D, this.texVoidVid);
+            }
+
             const o = "initial" !== this.seqState,
               n = m
                 ? this.rightHolePostFBO && this.rightHolePostFBO.tex

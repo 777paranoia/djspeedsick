@@ -352,31 +352,48 @@ vec3 earthColor(vec3 ro, vec3 rd){
   np.xz = rot(0.82)*np.xz;
   np.xy = rot(-0.24)*np.xy;
 
-  float macroA = fbm3(np*1.7+vec3(4.0,-3.0,1.5));
-  float macroB = fbm3(np*3.2+vec3(-2.4,1.2,0.8));
+  float macroA = fbm3(np*1.10+vec3(4.0,-3.0,1.5));
+  float macroB = fbm3(np*2.25+vec3(-2.4,1.2,0.8));
   float macroC = fbm3(np*6.5+vec3(1.1,-0.7,3.6));
-  float landField = macroA*0.58+macroB*0.29+macroC*0.13;
-  float continent = smoothstep(0.46,0.60,landField);
-  float coast = clamp((landField-0.44)/0.16,0.0,1.0);
+  float continentalWarp =
+    sin(np.x*5.0 + np.z*2.2 - np.y*1.4) * 0.16 +
+    cos(np.z*6.3 - np.x*1.8 + np.y*2.7) * 0.11;
+  float landField = macroA*0.50+macroB*0.34+macroC*0.16 + continentalWarp;
+  float continent = smoothstep(0.43,0.55,landField);
+
+  // Add light land hints so the high-altitude horizon does not read as a plain blue shell.
+  float plateA = fbm3(np*0.72+vec3(-1.5,2.0,4.5));
+  float plateB = sin(np.x*7.2 + np.y*2.0 - np.z*3.4)*0.5+0.5;
+  float plateC = cos(np.z*8.0 - np.y*4.8 + np.x*1.5)*0.5+0.5;
+  float visibleContinents = smoothstep(0.48,0.60,plateA*0.58+plateB*0.26+plateC*0.16);
+  continent = max(continent, visibleContinents*0.46);
+  float capBreakup = fbm3(vec3(np.x*8.0,np.y*2.0,np.z*8.0)+vec3(6.0,-1.0,2.0));
+  float capBands = sin(np.x*18.0 + np.z*11.0 - np.y*5.0)*0.5+0.5;
+  float horizonLand = smoothstep(0.76,0.92,np.y) * smoothstep(0.42,0.62,capBreakup*0.55+capBands*0.45);
+  continent = max(continent, horizonLand*0.28);
+  float coast = smoothstep(0.35,0.56,landField);
   float mountain = 1.0-abs(fbm3(np*18.0+vec3(2.0,4.0,-1.0))*2.0-1.0);
   mountain = pow(clamp(mountain,0.0,1.0),2.4)*continent;
   float desert = fbm3(np*9.0+vec3(-1.5,2.0,0.5))*continent;
   float forest = fbm3(np*11.0+vec3(3.0,-1.0,2.5))*continent;
   float waterTint = fbm3(np*12.0+vec3(-3.0,0.5,2.0));
 
-  vec3 deepWater = mix(vec3(0.004,0.02,0.05),vec3(0.01,0.05,0.12),waterTint);
-  vec3 shallowWater = mix(vec3(0.02,0.10,0.18),vec3(0.03,0.16,0.24),waterTint);
+  vec3 deepWater = mix(vec3(0.002,0.014,0.040),vec3(0.006,0.045,0.115),waterTint);
+  vec3 shallowWater = mix(vec3(0.018,0.105,0.145),vec3(0.040,0.170,0.190),waterTint);
   vec3 waterCol = mix(deepWater,shallowWater,1.0-coast);
 
-  vec3 greenLand = mix(vec3(0.06,0.11,0.04),vec3(0.16,0.20,0.10),forest);
-  vec3 dryLand = mix(vec3(0.18,0.16,0.08),vec3(0.30,0.24,0.13),desert);
-  vec3 landCol = mix(greenLand,dryLand,desert*0.75);
-  landCol = mix(landCol,vec3(0.35,0.34,0.32),mountain*0.85);
+  vec3 greenLand = mix(vec3(0.045,0.13,0.045),vec3(0.18,0.25,0.10),forest);
+  vec3 dryLand = mix(vec3(0.21,0.17,0.075),vec3(0.36,0.26,0.11),desert);
+  vec3 landCol = mix(greenLand,dryLand,smoothstep(0.38,0.88,desert));
+  landCol = mix(landCol,vec3(0.40,0.38,0.31),mountain*0.72);
 
   vec3 earthCol = mix(waterCol,landCol,continent);
+  float coastLine = continent*(1.0-smoothstep(0.01,0.08,abs(landField-0.48)));
+  earthCol += vec3(0.10,0.08,0.035)*coastLine;
+  earthCol = mix(earthCol,vec3(0.48,0.60,0.40),smoothstep(0.36,0.50,landField)*(1.0-continent)*0.08);
 
   float lat = abs(np.y);
-  float ice = smoothstep(0.72,0.93,lat)*(0.45+0.55*fbm3(np*13.0+vec3(1.0,-2.0,3.0)));
+  float ice = smoothstep(0.94,0.995,lat)*(0.45+0.55*fbm3(np*13.0+vec3(1.0,-2.0,3.0)));
   earthCol = mix(earthCol,vec3(0.88,0.91,0.93),clamp(ice,0.0,1.0)*0.85);
 
   vec3 sunDir = normalize(vec3(0.8,0.3,-0.5));
@@ -387,16 +404,17 @@ vec3 earthColor(vec3 ro, vec3 rd){
   float cityGlow = smoothstep(0.76,0.89,fbm3(np*45.0+vec3(2.0,-1.0,4.0)))*continent;
   earthCol += vec3(1.0,0.72,0.34)*cityGlow*night*1.35;
 
-  float cloudBase = fbm3(np*7.0+vec3(u_time*0.008,0.0,0.0));
-  float cloudDetail = fbm3(np*16.0+vec3(0.0,u_time*0.006,0.0));
-  float clouds = smoothstep(0.54,0.70,cloudBase*0.72+cloudDetail*0.28);
-  earthCol = mix(earthCol,vec3(0.86,0.89,0.91),clouds*0.72);
+  float cloudBase = fbm3(np*6.4+vec3(u_time*0.008,0.0,0.0));
+  float cloudDetail = fbm3(np*18.0+vec3(0.0,u_time*0.006,0.0));
+  float cloudBands = 1.0 - smoothstep(0.02,0.18,abs(sin(np.y*12.0 + fbm3(np*3.0)*3.0)));
+  float clouds = smoothstep(0.50,0.68,cloudBase*0.58+cloudDetail*0.25+cloudBands*0.17);
+  earthCol = mix(earthCol,vec3(0.86,0.90,0.92),clouds*0.46);
 
-  earthCol *= 0.06+diff*1.18;
+  earthCol *= 0.20+diff*0.98;
 
   float viewDot = max(dot(en,normalize(ro-ep)),0.0);
   float rim = pow(1.0-viewDot,5.5);
-  earthCol += vec3(0.12,0.30,0.82)*rim*(0.55+0.25*diff)*1.1;
+  earthCol += vec3(0.10,0.24,0.62)*rim*(0.38+0.18*diff);
 
   return earthCol;
 }
