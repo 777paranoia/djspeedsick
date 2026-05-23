@@ -3442,20 +3442,6 @@ vec3 islandGroundColor(vec3 p){
   col += vec3(0.95, 0.035, 0.12) * escapePath * (0.18 + 0.12 * sin(u_time * 5.0));
   col += vec3(0.0);
 
-  vec2 moaiPathMark = islandPathPoint(3.72);
-  vec2 moaiPathTan = normalize(islandPathPoint(3.755) - islandPathPoint(3.685));
-  vec2 moaiPathSide = vec2(-moaiPathTan.y, moaiPathTan.x);
-  vec2 moaiPathRel = xz - moaiPathMark;
-  float moaiPathAlong = dot(moaiPathRel, moaiPathTan);
-  float moaiPathAcross = dot(moaiPathRel, moaiPathSide);
-  float moaiPathRing = 1.0 - smoothstep(0.045, 0.115, abs(length(moaiPathRel) - 0.72));
-  float moaiPathLineA = (1.0 - smoothstep(0.035, 0.105, abs(moaiPathAlong))) * smoothstep(0.86, 0.16, abs(moaiPathAcross));
-  float moaiPathLineB = (1.0 - smoothstep(0.035, 0.105, abs(moaiPathAcross))) * smoothstep(0.86, 0.16, abs(moaiPathAlong));
-  float moaiPathDot = 1.0 - smoothstep(0.10, 0.28, length(moaiPathRel));
-  float moaiPathMarker = clamp(max(max(moaiPathRing, moaiPathDot), max(moaiPathLineA, moaiPathLineB)), 0.0, 1.0);
-  col = mix(col, vec3(1.00, 0.02, 0.00), moaiPathMarker * 0.92);
-  col += vec3(1.00, 0.22, 0.04) * moaiPathMarker * (0.18 + 0.10 * sin(u_time * 7.0));
-
   return col * (0.82 + 0.18 * islandNoise(xz * 0.58));
 }
 
@@ -3697,3 +3683,114 @@ vec3 ro = vec3(cam2.x, mix(0.085, z4bStandY, z4bWakeT), cam2.y);
 }
 `;
 
+
+
+(function () {
+  function installLogoTextureHook() {
+      window.__z4bInstallIslandLogoTextureHook = function () {
+        return true;
+      };
+      return true;
+    }
+  function startWake(now) {
+      if (this.z4bIslandStarted) return;
+      this.z4bIslandStarted = true;
+      function cleanupWakeBits() {
+        const old = document.getElementById("z4b-island-wake-overlay");
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+        const canvases = Array.prototype.slice.call(document.querySelectorAll("canvas"));
+        const c = document.getElementById("c");
+        if (c && canvases.indexOf(c) < 0) canvases.unshift(c);
+        canvases.forEach(function (el) {
+          if (el.dataset && el.dataset.z4bWakeTransforming) delete el.dataset.z4bWakeTransforming;
+          el.style.transition = "";
+          el.style.transformOrigin = "";
+          el.style.transform = "";
+          el.style.filter = "";
+          el.style.willChange = "";
+        });
+      }
+      function restoreIslandShaderIfNeeded() {
+        try {
+          if (
+            window.GLSL &&
+            window.GLSL.modules &&
+            window.__z4bIslandOriginalShader &&
+            typeof window.__z4bIslandOriginalShader === "string"
+          ) {
+            window.GLSL.modules.z4b_island = window.__z4bIslandOriginalShader;
+            window.GLSL.modules.island = window.GLSL.modules.z4b_island;
+            window.GLSL.modules.island = window.GLSL.modules.z4b_island;
+          }
+          if (typeof PROGRAM_CACHE !== "undefined") {
+            if (PROGRAM_CACHE.z4b_island) {
+              try { gl.deleteProgram(PROGRAM_CACHE.z4b_island); } catch (e) {}
+              delete PROGRAM_CACHE.z4b_island;
+            }
+            if (PROGRAM_CACHE.island) {
+              try { gl.deleteProgram(PROGRAM_CACHE.island); } catch (e) {}
+              delete PROGRAM_CACHE.island;
+            }
+          }
+        } catch (e) {}
+      }
+      function makeBlackOverlay() {
+        let ov = document.getElementById("z4b-island-wake-overlay");
+        if (!ov) {
+          ov = document.createElement("div");
+          ov.id = "z4b-island-wake-overlay";
+          document.body.appendChild(ov);
+        }
+        ov.style.cssText =
+          "position:fixed;inset:0;background:#000;opacity:1;" +
+          "z-index:2147483647;pointer-events:none;transition:none;";
+        return ov;
+      }
+      cleanupWakeBits();
+      this._installZ4BIslandLogoTextureHook();
+      makeBlackOverlay();
+      window.__z4bIslandActive = true;
+      window.__z4bIslandWakeStart = 0;
+      window.__z4bIslandWakeDuration = 0;
+      window.__z4bIslandLookX = 0.0;
+      window.__z4bIslandLookY = 0.0;
+      try {
+        this._setFog && this._setFog(0, 0);
+      } catch (e) {}
+      this.destroy();
+      setTimeout(function () {
+        cleanupWakeBits();
+        if (window.__z4bInstallIslandLogoTextureHook) window.__z4bInstallIslandLogoTextureHook();
+        const ov = makeBlackOverlay();
+        if (typeof window.startZ4BIsland === "function") {
+          window.startZ4BIsland();
+          if (window.__z4bInstallIslandLogoTextureHook) window.__z4bInstallIslandLogoTextureHook();
+        } else {
+          console.error("[Zone4] startZ4BIsland is missing");
+          return;
+        }
+        const fadeStart = performance.now();
+        const hold = 650;
+        const fadeDur = 2600;
+        function ease(t) {
+          t = Math.max(0, Math.min(1, t));
+          return t * t * (3 - 2 * t);
+        }
+        function frame() {
+          const age = performance.now() - fadeStart;
+          const fadeT = ease((age - hold) / fadeDur);
+          ov.style.opacity = String(1.0 - fadeT);
+          if (fadeT < 1.0) {
+            requestAnimationFrame(frame);
+          } else if (ov && ov.parentNode) {
+            ov.parentNode.removeChild(ov);
+          }
+        }
+        requestAnimationFrame(frame);
+      }, 120);
+  }
+  window.Zone4IslandBridge = {
+    installLogoTextureHook: function (engine) { return installLogoTextureHook.call(engine); },
+    startWake: function (engine, now) { return startWake.call(engine, now); }
+  };
+})();

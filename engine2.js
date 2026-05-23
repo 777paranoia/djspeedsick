@@ -1,13 +1,12 @@
 ((window.GLSL = window.GLSL || {}),
         (window.GLSL.modules = window.GLSL.modules || {}),
-        (GLSL.modules.zone2_hallway =
-          "\n#ifdef GL_FRAGMENT_PRECISION_HIGH\n  precision highp float;\n#else\n  precision mediump float;\n#endif\nuniform vec2 u_resolution;\nuniform float u_time;\nuniform vec2 u_mouse;\nuniform float u_camZ;\nuniform float u_blink;\nuniform float u_shake; \nuniform float u_isWalking;\nuniform float u_trip;\nuniform float u_yawOffset;\n\nuniform sampler2D u_texFront;\nuniform sampler2D u_texBack;\nuniform sampler2D u_texLeft;\nuniform sampler2D u_texRight;\nuniform sampler2D u_texTop;\nuniform sampler2D u_texBottom;\nuniform sampler2D u_texDoorLeft;\n#ifdef MOBILE\n#define u_texDoorRight u_texDoorLeft\n#else\nuniform sampler2D u_texDoorRight;\n#endif\nuniform sampler2D u_voidVid;    \n\nmat2 rot(float a) {\n    float s = sin(a), c = cos(a);\n    return mat2(c, -s, s, c);\n}\nfloat _hh(float x){ return fract(sin(x*127.1)*43758.5453); }\nfloat _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }\n\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;\n    float trip = clamp(u_trip, 0.0, 2.0);\n    \n    float warpAmp = 0.004 + trip * 0.012;\n    float liquidX = sin(uv.y * 12.0 + u_time * 0.4) * warpAmp + cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;\n    float liquidY = cos(uv.x * 14.0 + u_time * 0.3) * warpAmp + sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;\n    liquidX += sin(u_time * 30.0) * 0.01 * u_shake;\n    liquidY += cos(u_time * 25.0) * 0.01 * u_shake;\n    liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;\n    liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;\n    \n    float gTick = floor(u_time * 14.0);\n    float glitchProb = 0.985 - trip * 0.04;\n    if(step(glitchProb, _hh(gTick * 133.77)) > 0.0) {\n        float bandY = floor(uv.y * mix(8.0, 25.0, _hh(gTick * 2.1)));\n        liquidX += (_hh(bandY + gTick) - 0.5) * 0.15 * trip;\n    }\n\n    vec3 box = vec3(0.5625, 1.0, 3.5); \n    \n    float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;\n    float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;\n    vec3 ro = vec3(bobX, bobY, u_camZ);\n    vec3 rd = normalize(vec3(uv.x + liquidX, uv.y + liquidY, 1.6));\n    \n    vec2 m = u_mouse * 0.35;\n    rd.yz *= rot(m.y * 0.8);\n    rd.xz *= rot(m.x + u_yawOffset);\n    \n    vec3 safeRd = max(abs(rd), vec3(0.0001)) * sign(rd);\n    vec3 tPos = (box * sign(safeRd) - ro) / safeRd;\n    float t = min(min(tPos.x, tPos.y), tPos.z);\n    vec3 pos = ro + rd * t;\n    vec3 nPos = pos / box;\n    vec3 absPos = abs(nPos);\n    \n    vec4 hallTex;\n    vec2 tileUV;\n    int wallID = -1;\n    if (absPos.x > absPos.y && absPos.x > absPos.z) {\n        if (nPos.x > 0.0) { \n            tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texRight, tileUV);\n            wallID = 1;\n        } else { \n            tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texLeft, tileUV);\n            wallID = 0;\n        }\n    } else if (absPos.y > absPos.x && absPos.y > absPos.z) {\n        wallID = 4;\n        if (nPos.y > 0.0) { \n            tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5;\n            hallTex = texture2D(u_texTop, tileUV);\n        } else { \n            tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5;\n            hallTex = texture2D(u_texBottom, tileUV);\n        }\n    } else {\n        if (nPos.z > 0.0) { \n            tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texFront, tileUV);\n            wallID = 2;\n        } else { \n            tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;\n            hallTex = texture2D(u_texBack, tileUV);\n            wallID = 3;\n        }\n    }\n    \n    vec3 finalCol = hallTex.rgb;\n    bool isCutout = hallTex.a < 0.1 || (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);\n    float outAlpha = 1.0;\n    \n    bool isVideoPortal = false;\n    if (isCutout && wallID != 4) {\n        vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n        if (wallID == 2) {\n            vec2 portalMin = vec2(0.2939, 0.2876);\n            vec2 portalMax = vec2(0.7070, 0.7119);\n            vec2 puv = clamp((tileUV - portalMin) / (portalMax - portalMin), 0.0, 1.0);\n            finalCol = texture2D(u_voidVid, puv).rgb;\n            outAlpha = 1.0;\n            isVideoPortal = true;\n        } else if (wallID == 0) {\n            finalCol = vec3(0.04, 0.03, 0.03);\n        } else if (wallID == 1) {\n            finalCol = vec3(0.03, 0.03, 0.05);\n        }\n    }\n    \n    if (wallID == 4 && isCutout) finalCol = vec3(0.0);\n    \n    if (!isVideoPortal) {\n        float fogThickness = 0.5 + trip * 0.15;\n        float fogFactor = exp(-t * fogThickness);\n        vec3 fogColor = vec3(0.02, 0.03, 0.04);\n        fogColor = mix(fogColor, vec3(0.04, 0.03, 0.01), trip * 0.3);\n        finalCol = mix(fogColor, finalCol, fogFactor);\n    }\n    \n    float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));\n    vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1); \n    finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);\n    \n    float floorGlow = smoothstep(-0.3, -0.8, nPos.y) * (0.4 + 0.6 * sin(u_time * 1.3 + pos.z * 0.4));\n    finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);\n    \n    float flicker = 1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;\n    finalCol *= flicker;\n\n    float vignette = smoothstep(1.3, 0.2, length(uv));\n    finalCol *= vignette;\n    finalCol *= 0.65;\n    \n    gl_FragColor = vec4(finalCol * (1.0 - u_blink), outAlpha);\n}\n"),
         (GLSL.modules.zone2_hallway = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
-  precision highp float;
+precision highp float;
 #else
-  precision mediump float;
+precision mediump float;
 #endif
+
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec2 u_mouse;
@@ -25,129 +24,214 @@ uniform sampler2D u_texRight;
 uniform sampler2D u_texTop;
 uniform sampler2D u_texBottom;
 uniform sampler2D u_texDoorLeft;
+
 #ifdef MOBILE
 #define u_texDoorRight u_texDoorLeft
 #else
 uniform sampler2D u_texDoorRight;
 #endif
+
 uniform sampler2D u_voidVid;
 
 mat2 rot(float a) {
-    float s = sin(a), c = cos(a);
-    return mat2(c, -s, s, c);
+  float s = sin(a), c = cos(a);
+  return mat2(c, -s, s, c);
 }
-float _hh(float x){ return fract(sin(x*127.1)*43758.5453); }
-float _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+
+float _hh(float x) {
+  return fract(sin(x * 127.1) * 43758.5453);
+}
+
+vec3 safeRay(vec3 rd) {
+  vec3 r = rd;
+  if (abs(r.x) < 0.0001) r.x = r.x < 0.0 ? -0.0001 : 0.0001;
+  if (abs(r.y) < 0.0001) r.y = r.y < 0.0 ? -0.0001 : 0.0001;
+  if (abs(r.z) < 0.0001) r.z = r.z < 0.0 ? -0.0001 : 0.0001;
+  return r;
+}
+
+void traceHall(
+  vec3 ro,
+  vec3 rd,
+  out vec4 hallTex,
+  out vec2 tileUV,
+  out float wallID,
+  out float hitT,
+  out vec3 nPos
+) {
+  vec3 box = vec3(0.5625, 1.0, 3.5);
+  vec3 srd = safeRay(rd);
+  vec3 tPos = (box * sign(srd) - ro) / srd;
+
+  hitT = min(min(tPos.x, tPos.y), tPos.z);
+
+  vec3 pos = ro + rd * hitT;
+  nPos = pos / box;
+
+  vec3 absPos = abs(nPos);
+  wallID = -1.0;
+  tileUV = vec2(0.0);
+  hallTex = vec4(0.0, 0.0, 0.0, 1.0);
+
+  if (absPos.x > absPos.y && absPos.x > absPos.z) {
+    if (nPos.x > 0.0) {
+      tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5;
+      hallTex = texture2D(u_texRight, tileUV);
+      wallID = 1.0;
+    } else {
+      tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5;
+      hallTex = texture2D(u_texLeft, tileUV);
+      wallID = 0.0;
+    }
+  } else if (absPos.y > absPos.x && absPos.y > absPos.z) {
+    wallID = 4.0;
+
+    if (nPos.y > 0.0) {
+      tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5;
+      hallTex = texture2D(u_texTop, tileUV);
+    } else {
+      tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5;
+      hallTex = texture2D(u_texBottom, tileUV);
+    }
+  } else {
+    if (nPos.z > 0.0) {
+      tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;
+      hallTex = texture2D(u_texFront, tileUV);
+      wallID = 2.0;
+    } else {
+      tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;
+      hallTex = texture2D(u_texBack, tileUV);
+      wallID = 3.0;
+    }
+  }
+}
+
+vec2 farPortalUV(vec2 uv, vec2 mouse, float yawOffset, float camZ) {
+  vec3 box = vec3(0.5625, 1.0, 3.5);
+
+  float z2PortalFarZ = 12.5;
+  vec2 z2PortalBackPlaneSize = vec2(5.20, 3.05);
+
+  vec3 ro = vec3(0.0, 0.0, camZ);
+  vec3 rd = normalize(vec3(uv.x, uv.y, 1.6));
+
+  rd.yz *= rot(mouse.y * 0.8);
+  rd.xz *= rot(mouse.x + yawOffset);
+  rd = safeRay(rd);
+
+  float t = (z2PortalFarZ - ro.z) / rd.z;
+  vec3 p = ro + rd * t;
+
+  vec2 outUV = vec2(
+    p.x / (box.x * z2PortalBackPlaneSize.x),
+   -p.y / (box.y * z2PortalBackPlaneSize.y)
+  ) * 0.5 + 0.5;
+
+  return outUV;
+}
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
-    float trip = clamp(u_trip, 0.0, 2.0);
+  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+  float trip = clamp(u_trip, 0.0, 2.0);
 
-    float warpAmp = 0.004 + trip * 0.012;
-    float liquidX = sin(uv.y * 12.0 + u_time * 0.4) * warpAmp + cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;
-    float liquidY = cos(uv.x * 14.0 + u_time * 0.3) * warpAmp + sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;
-    liquidX += sin(u_time * 30.0) * 0.01 * u_shake;
-    liquidY += cos(u_time * 25.0) * 0.01 * u_shake;
-    liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;
-    liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;
+  float warpAmp = 0.004 + trip * 0.012;
 
-    float gTick = floor(u_time * 14.0);
-    float glitchProb = 0.985 - trip * 0.04;
-    if (step(glitchProb, _hh(gTick * 133.77)) > 0.0) {
-        float bandY = floor(uv.y * mix(8.0, 25.0, _hh(gTick * 2.1)));
-        liquidX += (_hh(bandY + gTick) - 0.5) * 0.15 * trip;
+  float liquidX =
+    sin(uv.y * 12.0 + u_time * 0.4) * warpAmp +
+    cos(uv.x * 10.0 - u_time * 0.3) * warpAmp * 0.75;
+
+  float liquidY =
+    cos(uv.x * 14.0 + u_time * 0.3) * warpAmp +
+    sin(uv.y * 11.0 - u_time * 0.4) * warpAmp * 0.75;
+
+  liquidX += sin(u_time * 30.0) * 0.01 * u_shake;
+  liquidY += cos(u_time * 25.0) * 0.01 * u_shake;
+  liquidX += sin(uv.y * 3.0 + u_time * 0.15) * trip * 0.008;
+  liquidY += cos(uv.x * 4.0 - u_time * 0.12) * trip * 0.006;
+
+  float gTick = floor(u_time * 14.0);
+  float glitchProb = 0.985 - trip * 0.04;
+
+  if (step(glitchProb, _hh(gTick * 133.77)) > 0.0) {
+    float bandY = floor(uv.y * mix(8.0, 25.0, _hh(gTick * 2.1)));
+    liquidX += (_hh(bandY + gTick) - 0.5) * 0.15 * trip;
+  }
+
+  float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;
+  float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;
+  vec3 ro = vec3(bobX, bobY, u_camZ);
+
+  vec3 rd = normalize(vec3(uv.x + liquidX, uv.y + liquidY, 1.6));
+
+  vec2 m = u_mouse * 0.35;
+  rd.yz *= rot(m.y * 0.8);
+  rd.xz *= rot(m.x + u_yawOffset);
+
+  vec4 hallTex;
+  vec2 tileUV;
+  float wallID;
+  float t;
+  vec3 nPos;
+
+  traceHall(ro, rd, hallTex, tileUV, wallID, t, nPos);
+
+  if (wallID == 2.0 && hallTex.a < 0.999) {
+    vec2 portalUV = clamp(farPortalUV(uv, m, u_yawOffset, u_camZ), 0.0, 1.0);
+    portalUV.y = 1.0 - portalUV.y;
+
+    vec3 portalCol = texture2D(u_voidVid, portalUV).rgb;
+
+    float maskA = smoothstep(0.46, 0.66, hallTex.a);
+    vec3 col = mix(portalCol, hallTex.rgb, maskA);
+
+    gl_FragColor = vec4(col, 1.0);
+    return;
+  }
+
+  vec3 finalCol = hallTex.rgb;
+
+  bool isCutout =
+    hallTex.a < 0.1 ||
+    (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);
+
+  if (isCutout && wallID != 4.0) {
+    if (wallID == 0.0) {
+      finalCol = vec3(0.04, 0.03, 0.03);
+    } else if (wallID == 1.0) {
+      finalCol = vec3(0.03, 0.03, 0.05);
     }
+  }
 
-    vec3 box = vec3(0.5625, 1.0, 3.5);
+  if (wallID == 4.0 && isCutout) {
+    finalCol = vec3(0.0);
+  }
 
-    float bobX = sin(u_time * 2.5) * 0.006 * u_isWalking;
-    float bobY = cos(u_time * 5.0) * 0.008 * u_isWalking;
-    vec3 ro = vec3(bobX, bobY, u_camZ);
-    vec3 rd = normalize(vec3(uv.x + liquidX, uv.y + liquidY, 1.6));
+  float fogThickness = 0.5 + trip * 0.15;
+  float fogFactor = exp(-t * fogThickness);
+  vec3 fogColor = vec3(0.02, 0.03, 0.04);
+  fogColor = mix(fogColor, vec3(0.04, 0.03, 0.01), trip * 0.3);
+  finalCol = mix(fogColor, finalCol, fogFactor);
 
-    vec2 m = u_mouse * 0.35;
-    rd.yz *= rot(m.y * 0.8);
-    rd.xz *= rot(m.x + u_yawOffset);
+  float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));
+  vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1);
+  finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);
 
-    vec3 safeRd = max(abs(rd), vec3(0.0001)) * sign(rd);
-    vec3 tPos = (box * sign(safeRd) - ro) / safeRd;
-    float t = min(min(tPos.x, tPos.y), tPos.z);
-    vec3 pos = ro + rd * t;
-    vec3 nPos = pos / box;
-    vec3 absPos = abs(nPos);
+  float floorGlow =
+    smoothstep(-0.3, -0.8, nPos.y) *
+    (0.4 + 0.6 * sin(u_time * 1.3 + nPos.z * 0.4));
 
-    vec4 hallTex;
-    vec2 tileUV;
-    int wallID = -1;
-    if (absPos.x > absPos.y && absPos.x > absPos.z) {
-        if (nPos.x > 0.0) {
-            tileUV = vec2(-nPos.z, -nPos.y) * 0.5 + 0.5;
-            hallTex = texture2D(u_texRight, tileUV);
-            wallID = 1;
-        } else {
-            tileUV = vec2(nPos.z, -nPos.y) * 0.5 + 0.5;
-            hallTex = texture2D(u_texLeft, tileUV);
-            wallID = 0;
-        }
-    } else if (absPos.y > absPos.x && absPos.y > absPos.z) {
-        wallID = 4;
-        if (nPos.y > 0.0) {
-            tileUV = vec2(nPos.x, -nPos.z) * 0.5 + 0.5;
-            hallTex = texture2D(u_texTop, tileUV);
-        } else {
-            tileUV = vec2(nPos.x, nPos.z) * 0.5 + 0.5;
-            hallTex = texture2D(u_texBottom, tileUV);
-        }
-    } else {
-        if (nPos.z > 0.0) {
-            tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;
-            hallTex = texture2D(u_texFront, tileUV);
-            wallID = 2;
-        } else {
-            tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;
-            hallTex = texture2D(u_texBack, tileUV);
-            wallID = 3;
-        }
-    }
+  finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);
 
-    vec3 finalCol = hallTex.rgb;
-    bool isCutout = hallTex.a < 0.1 || (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);
-    float outAlpha = 1.0;
+  float flicker =
+    1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;
 
-    if (isCutout && wallID != 4) {
-        if (wallID == 2) {
-            outAlpha = 0.0;
-            finalCol = vec3(0.0);
-        } else if (wallID == 0) {
-            finalCol = vec3(0.04, 0.03, 0.03);
-        } else if (wallID == 1) {
-            finalCol = vec3(0.03, 0.03, 0.05);
-        }
-    }
+  finalCol *= flicker;
 
-    if (wallID == 4 && isCutout) finalCol = vec3(0.0);
+  float vignette = smoothstep(1.3, 0.2, length(uv));
+  finalCol *= vignette;
+  finalCol *= 0.65;
 
-    float fogThickness = 0.5 + trip * 0.15;
-    float fogFactor = exp(-t * fogThickness);
-    vec3 fogColor = vec3(0.02, 0.03, 0.04);
-    fogColor = mix(fogColor, vec3(0.04, 0.03, 0.01), trip * 0.3);
-    finalCol = mix(fogColor, finalCol, fogFactor);
-
-    float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));
-    vec3 eerieTint = vec3(lum * 0.75, lum * 0.9, lum * 1.1);
-    finalCol = mix(finalCol, eerieTint, 0.4 + trip * 0.15);
-
-    float floorGlow = smoothstep(-0.3, -0.8, nPos.y) * (0.4 + 0.6 * sin(u_time * 1.3 + pos.z * 0.4));
-    finalCol += vec3(0.08, 0.01, 0.005) * floorGlow * (0.3 + trip * 0.4);
-
-    float flicker = 1.0 - step(0.97, _hh(floor(u_time * 12.0) * 7.3)) * 0.3 * trip;
-    finalCol *= flicker;
-
-    float vignette = smoothstep(1.3, 0.2, length(uv));
-    finalCol *= vignette;
-    finalCol *= 0.65;
-
-    gl_FragColor = vec4(finalCol * (1.0 - u_blink), outAlpha);
+  gl_FragColor = vec4(finalCol * (1.0 - u_blink), 1.0);
 }
 `),
         GLSL.modules.z2_seq_hole ||
@@ -338,6 +422,8 @@ void main() {
         }));
       class Zone2Engine {
         constructor() {
+          const z2LeftTextures =
+            (GLSL.modules && GLSL.modules.z2_room_left_textures) || {};
           ((this.prog = buildProgram("zone2_hallway")),
             gl.useProgram(this.prog),
             (this.U = {
@@ -364,7 +450,7 @@ void main() {
             ),
             gl.uniform1i(gl.getUniformLocation(this.prog, "u_voidVid"), 6),
             (this.texFront = loadStaticTex(
-              "files/img/rooms/z2/hallway/FORWARD.png",
+              "files/img/rooms/z2/hallway/FORWARD-MASK.png",
             )),
             (this.texFrontAlt = loadStaticTex(
               "files/img/rooms/z2/hallway/FORWARD-alt.png",
@@ -419,7 +505,7 @@ void main() {
             (this.leftRoom = GLSL.modules.z2_room_left
               ? new Zone2RoomMode(
                   "z2_room_left",
-                  "files/img/rooms/z2/bathroom.png",
+                  z2LeftTextures.normal || "files/img/rooms/z2/bathroom.png",
                 )
               : null),
             (this.rightRoom = GLSL.modules.z2_room_right
@@ -485,6 +571,7 @@ void main() {
             (this.mirrorFBO = this.makeFBO()),
             (this.rightHoleFBO = this.makeFBO()),
             (this.rightHolePostFBO = this.makeFBO()),
+            (this.forwardPortalFBO = this.makeFBO()),
             (this.blankMask = gl.createTexture()),
             gl.bindTexture(gl.TEXTURE_2D, this.blankMask),
             gl.texImage2D(
@@ -552,6 +639,19 @@ void main() {
                 this.windowModes[this.currentWindowModeIndex],
               )),
               (this.windowActiveMode.maskTex = this.noWindowTex)),
+            (this.forwardPortalModeFiles = ["modes/mode-bh.js", "modes/mode4.js", "modes/mode5.js", "modes/mode6.js", "modes/mode7.js"]),
+            (this.forwardPortalModeKeys = ["bh", "ocean", "earth", "deadcity", "goreville"]),
+            (this.forwardPortalModes = [3, 5, 6, 7, 8]),
+            (this.currentForwardPortalModeIndex = Math.floor(
+              Math.random() * this.forwardPortalModes.length,
+            )),
+            (this.forwardPortalActiveMode = null),
+            (this.forwardPortalCleanFX = true),
+            "undefined" != typeof ActiveMode &&
+              ((this.forwardPortalActiveMode = new ActiveMode(
+                this.forwardPortalModes[this.currentForwardPortalModeIndex],
+              )),
+              (this.forwardPortalActiveMode.maskTex = this.noWindowTex)),
             (this.lastBlinkTime = performance.now()),
             (this.nextBlinkInterval = 4e3 + 8e3 * Math.random()),
             (this.blinking = !1),
@@ -905,14 +1005,22 @@ void main() {
                   this.modeSwapped ||
                     ((this.modeSwapped = !0),
                     this.windowActiveMode && this.windowActiveMode.destroy(),
+                    this.forwardPortalActiveMode && this.forwardPortalActiveMode.destroy(),
                     (this.currentWindowModeIndex =
                       (this.currentWindowModeIndex + 1) %
                       this.windowModes.length),
+                    (this.currentForwardPortalModeIndex =
+                      (this.currentForwardPortalModeIndex + 1) %
+                      this.forwardPortalModes.length),
                     "undefined" != typeof ActiveMode &&
                       ((this.windowActiveMode = new ActiveMode(
                         this.windowModes[this.currentWindowModeIndex],
                       )),
-                      (this.windowActiveMode.maskTex = this.noWindowTex)),
+                      (this.windowActiveMode.maskTex = this.noWindowTex),
+                      (this.forwardPortalActiveMode = new ActiveMode(
+                        this.forwardPortalModes[this.currentForwardPortalModeIndex],
+                      )),
+                      (this.forwardPortalActiveMode.maskTex = this.noWindowTex)),
                     (this.z2ModeSeed = 100 * Math.random()),
                     (this.z2Trip = 0.2 + 1.5 * Math.random()),
                     (this.z2FractalSeed = 100 * Math.random()),
@@ -964,6 +1072,10 @@ void main() {
               (gl.deleteTexture(this.rightHolePostFBO.tex),
               gl.deleteFramebuffer(this.rightHolePostFBO.fbo),
               (this.rightHolePostFBO = this.makeFBO())),
+            this.forwardPortalFBO &&
+              (gl.deleteTexture(this.forwardPortalFBO.tex),
+              gl.deleteFramebuffer(this.forwardPortalFBO.fbo),
+              (this.forwardPortalFBO = this.makeFBO())),
             (this.lastCvsW = u),
             (this.lastCvsH = f)),
             this.quadBuffer ||
@@ -1194,7 +1306,7 @@ void main() {
               "function" == typeof drawHallucinationOverlay &&
                 drawHallucinationOverlay(
                   e,
-                  this.z2Trip,
+                  this.forwardPortalCleanFX ? 0.0 : this.z2Trip,
                   this.z2FractalSeed,
                   0.001 * (e - this.z2BlinkPeakTime),
                   2,
@@ -1293,6 +1405,62 @@ void main() {
               window.__audioDryGain &&
                 (window.__audioDryGain.gain.value = 0.3 + 0.7 * i));
             
+            let forwardPortalTex = this.texVoidVid;
+            if (this.forwardPortalActiveMode && this.forwardPortalFBO) {
+              gl.bindFramebuffer(gl.FRAMEBUFFER, this.forwardPortalFBO.fbo);
+              gl.viewport(0, 0, u, f);
+              gl.disable(gl.BLEND);
+              gl.disable(gl.DEPTH_TEST);
+              gl.clearColor(0, 0, 0, 1);
+              gl.clear(gl.COLOR_BUFFER_BIT);
+
+              this.forwardPortalActiveMode.maskTex = this.noWindowTex;
+
+              const z2ForwardPortalPrevTripAmount =
+                typeof window.__tripAmount === "number" ? window.__tripAmount : 0.0;
+              let z2ForwardPortalPrevTripIntensity = null;
+
+              try {
+                if (typeof tripIntensity !== "undefined") {
+                  z2ForwardPortalPrevTripIntensity = tripIntensity;
+                  tripIntensity = 0.0;
+                }
+              } catch (err) {}
+
+              window.__tripAmount = 0.0;
+
+              try {
+                this.forwardPortalActiveMode.render(
+                  e,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  this.z2ModeSeed,
+                );
+              } catch (err) {
+                console.error("[Zone2] FORWARD-MASK portal render failed:", err);
+              }
+
+              window.__tripAmount = z2ForwardPortalPrevTripAmount;
+
+              try {
+                if (
+                  z2ForwardPortalPrevTripIntensity !== null &&
+                  typeof tripIntensity !== "undefined"
+                ) {
+                  tripIntensity = z2ForwardPortalPrevTripIntensity;
+                }
+              } catch (err) {}
+
+              gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+              gl.viewport(0, 0, u, f);
+              forwardPortalTex = this.forwardPortalFBO.tex;
+            }
+
             gl.activeTexture(gl.TEXTURE6);
             if (this.modeBH && this.rightHoleFBO) {
               gl.bindTexture(gl.TEXTURE_2D, this.rightHoleFBO.tex);
@@ -1328,7 +1496,7 @@ void main() {
               gl.activeTexture(gl.TEXTURE5),
               gl.bindTexture(gl.TEXTURE_2D, this.texBottom),
               gl.activeTexture(gl.TEXTURE6),
-              gl.bindTexture(gl.TEXTURE_2D, this.texVoidVid),
+              gl.bindTexture(gl.TEXTURE_2D, forwardPortalTex || this.texVoidVid),
               gl.activeTexture(gl.TEXTURE7),
               gl.bindTexture(
                 gl.TEXTURE_2D,
@@ -1399,6 +1567,14 @@ void main() {
             }
           }
         }
+        setLeftRoomTexture(e) {
+          const t = {
+            normal: this.texBathroomNormal,
+            blood: this.texBathroomBlood,
+            hole: this.texBathroomHole
+          }[e];
+          return !!(this.leftRoom && t && ((this.leftRoom.tex = t), true));
+        }
         destroy() {
           this.isDead = !0;
           const e = document.getElementById("c");
@@ -1407,6 +1583,7 @@ void main() {
             this.leftRoom && this.leftRoom.destroy(),
             this.rightRoom && this.rightRoom.destroy(),
             this.windowActiveMode && this.windowActiveMode.destroy(),
+            this.forwardPortalActiveMode && this.forwardPortalActiveMode.destroy(),
             this.mode9 && this.mode9.destroy(),
             this.windowFBO &&
               (gl.deleteTexture(this.windowFBO.tex),
@@ -1423,6 +1600,9 @@ void main() {
             this.rightHolePostFBO &&
               (gl.deleteTexture(this.rightHolePostFBO.tex),
               gl.deleteFramebuffer(this.rightHolePostFBO.fbo)),
+            this.forwardPortalFBO &&
+              (gl.deleteTexture(this.forwardPortalFBO.tex),
+              gl.deleteFramebuffer(this.forwardPortalFBO.fbo)),
             this.quadBuffer && gl.deleteBuffer(this.quadBuffer),
             this.blankMask && gl.deleteTexture(this.blankMask),
             this.noWindowTex && gl.deleteTexture(this.noWindowTex))
@@ -1453,9 +1633,56 @@ void main() {
             gl.deleteProgram(this.solidProg));
         }
       }
-      window.startZone2 = function () {
+      window.startZone2 = function (opts) {
         ((window.currentZone2 = new Zone2Engine()),
           window.__unlockAllVideos && window.__unlockAllVideos());
+        if (opts && opts.fromZ4AltAnnexDoor && window.currentZone2) {
+          var z2 = window.currentZone2;
+          z2.activePOV = "center";
+          z2.pendingPOV = null;
+          z2.slideState = "idle";
+          z2.slideOffset = 0;
+          z2.slideDir = 0;
+          z2.povSwitchTime = performance.now();
+          z2.facing = "S";
+          z2.hallwayYaw = Math.PI;
+          z2.hallwayYawTarget = z2.hallwayYaw;
+          z2.intersectionReached = true;
+          z2.camZ = typeof z2.INTERSECTION_Z === "number" ? z2.INTERSECTION_Z - 0.75 : 1.65;
+          z2.seqState = "initial";
+          z2.zone3Route = "z3";
+          z2.z4RouteActive = false;
+          z2.z4RouteStep = 0;
+          z2.z4LeftBlinkCount = 0;
+          z2.z4TransitionStarted = false;
+          z2.z4RouteTriggered = false;
+          z2.route3Active = false;
+          z2.route3Step = 0;
+          z2.readyForZone3 = false;
+          z2.z3TransitionStarted = false;
+          z2.z2ExitStarted = false;
+          z2.z2ExitTime = 0;
+          z2.__fromAltAnnexDoor = true;
+          z2.__z4RouteDisabledUntil = performance.now() + 12000;
+          window.mx = 0;
+          window.my = 0;
+          window.z2SpaceHeld = false;
+          window.z2TouchHeld = false;
+        } else if (opts && opts.fromZ4BathroomReturn && window.currentZone2) {
+          var z2 = window.currentZone2;
+          z2.activePOV = "left";
+          z2.facing = "W";
+          z2.hallwayYaw = z2._yawForFacing ? z2._yawForFacing("W") : Math.PI / 2;
+          z2.hallwayYawTarget = z2.hallwayYaw;
+          z2.intersectionReached = true;
+          z2.camZ = z2.INTERSECTION_Z;
+          z2.seqState = "z4_ready";
+          z2.zone3Route = "z4";
+          z2.z4RouteActive = false;
+          z2.z4RouteStep = 4;
+          z2.z4LeftBlinkCount = 2;
+          z2.setLeftRoomTexture && z2.setLeftRoomTexture("normal");
+        }
         let e = document.getElementById("zone-fade-overlay");
         (e ||
           ((e = document.createElement("div")),
@@ -1466,8 +1693,8 @@ void main() {
           (e.style.opacity = "1"),
           setTimeout(() => {
             e.style.opacity = "0";
-          }, 50),
-          setTimeout(() => {
+          }, opts && (opts.fromZ4BathroomReturn || opts.fromZ4AltAnnexDoor) ? 120 : 50),
+          !(opts && (opts.fromZ4BathroomReturn || opts.fromZ4AltAnnexDoor)) && setTimeout(() => {
             "function" == typeof window.showTransientCenterOverlay &&
               window.showTransientCenterOverlay(
                 "files/img/rooms/ctrls.png",
@@ -1487,21 +1714,40 @@ void main() {
                   ? 20
                   : 30);
               let t = 0;
+              let __maxVA = 16;
+              try { __maxVA = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) || 16; } catch (ee) { __maxVA = 16; }
               ((window.__zone2Governor = function (i) {
-                (requestAnimationFrame(window.__zone2Governor),
-                  i - t < e ||
-                    ((t = i),
-                    window.currentZone2 &&
-                      !window.currentZone2.isDead &&
-                      window.currentZone2.render(
-                        i,
-                        window.mx || 0,
-                        window.my || 0,
-                        0,
-                        0,
-                        0,
-                        0,
-                      )));
+                requestAnimationFrame(window.__zone2Governor);
+                if (i - t < e) return;
+                t = i;
+                if (window.currentZone2 && !window.currentZone2.isDead) {
+                  // Clear any vertex-attrib arrays left enabled by a prior
+                  // engine (e.g. Zone4's mesh renderer) sharing this GL
+                  // context. A leftover enabled attribute pointing at a
+                  // deleted buffer makes every Zone2 drawArrays fail
+                  // ("no buffer is bound to enabled attribute") -> black screen.
+                  for (let __ai = 0; __ai < __maxVA; __ai++) gl.disableVertexAttribArray(__ai);
+                  if (!window.__z2GovLogged) {
+                    window.__z2GovLogged = true;
+                    console.log("[Zone2] governor rendering; vertex-attrib reset active, maxVA=", __maxVA);
+                  }
+                  try {
+                    window.currentZone2.render(
+                      i,
+                      window.mx || 0,
+                      window.my || 0,
+                      0,
+                      0,
+                      0,
+                      0,
+                    );
+                  } catch (err) {
+                    if (!window.__zone2RenderErrLogged) {
+                      window.__zone2RenderErrLogged = true;
+                      console.error("[Zone2] governor render threw:", err);
+                    }
+                  }
+                }
               }),
                 requestAnimationFrame(window.__zone2Governor));
             }

@@ -4,9 +4,16 @@
 <meta charset="UTF-8">
 <title>desktop</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%; height: 100%;
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     font-family: "Courier New", monospace;
     background: #3a3d4a;
@@ -14,23 +21,27 @@
     -webkit-user-select: none;
     cursor: default;
   }
+
   body {
     background-image: url('files/img/rooms/z1/laptop/wallpaper.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
   }
+
   .desktop {
     position: absolute;
     inset: 0;
     padding: 2vh 1.5vw;
   }
+
   .icon-grid {
     display: flex;
     flex-direction: column;
     gap: 1.2vh;
     width: max-content;
   }
+
   .icon {
     display: flex;
     flex-direction: column;
@@ -41,6 +52,7 @@
     border: 1px dashed transparent;
     border-radius: 2px;
   }
+
   .icon img {
     width: 64px;
     height: 64px;
@@ -48,24 +60,119 @@
     image-rendering: crisp-edges;
     pointer-events: none;
   }
+
   .icon span {
     margin-top: 4px;
     font-size: 11px;
     color: #fff;
-    text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+    text-shadow:
+      1px 1px 0 #000,
+      -1px 1px 0 #000,
+      1px -1px 0 #000,
+      -1px -1px 0 #000;
     letter-spacing: 0.5px;
     text-align: center;
     pointer-events: none;
   }
+
   .icon.selected {
     background: rgba(60, 100, 200, 0.35);
     border-color: rgba(180, 200, 255, 0.6);
   }
+
   .icon:hover:not(.selected) {
     background: rgba(255, 255, 255, 0.06);
   }
+
+  .icon-disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  .window {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(88vw, 680px);
+    height: min(82vh, 470px);
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    background: #101010;
+    border: 2px solid #c0c0c0;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.55);
+    z-index: 20;
+  }
+
+  .window.open {
+    display: flex;
+  }
+
+  .window-titlebar {
+    height: 28px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #08086a, #2020a8);
+    color: #fff;
+    padding: 0 6px 0 10px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .window-title {
+    pointer-events: none;
+  }
+
+  .window-close {
+    width: 22px;
+    height: 22px;
+    border: 2px outset #e0e0e0;
+    background: #c0c0c0;
+    color: #000;
+    font-family: "Courier New", monospace;
+    font-weight: bold;
+    line-height: 16px;
+    cursor: pointer;
+  }
+
+  .window-close:active {
+    border-style: inset;
+  }
+
+  .doom-frame-wrap {
+    position: relative;
+    flex: 1;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .doom-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+  }
+
+  .doom-help {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 3;
+    padding: 5px 7px;
+    background: rgba(0, 0, 0, 0.68);
+    color: #ddd;
+    font-size: 11px;
+    line-height: 1.35;
+    pointer-events: none;
+    text-shadow: 1px 1px 0 #000;
+  }
 </style>
 </head>
+
 <body>
 <div class="desktop" id="desktop">
   <div class="icon-grid">
@@ -73,14 +180,22 @@
       <img src="files/img/rooms/z1/laptop/icon1.png" alt="">
       <span>WEB</span>
     </div>
+
     <div class="icon" data-href="terminal.html" data-name="terminal">
       <img src="files/img/rooms/z1/laptop/icon2.png" alt="">
       <span>TERMINAL</span>
     </div>
+
     <div class="icon" data-href="portfolio.html" data-name="portfolio">
       <img src="files/img/rooms/z1/laptop/icon3.png" alt="">
       <span>PORTFOLIO</span>
     </div>
+
+    <div class="icon" data-app="doom" data-name="doom">
+      <img src="files/img/rooms/z1/laptop/doom.png" alt="">
+      <span>DOOM</span>
+    </div>
+
     <div class="icon icon-disabled" data-name="solutions">
       <img src="files/img/rooms/z1/laptop/icon4.png" alt="">
       <span>solutions.zip</span>
@@ -88,33 +203,100 @@
   </div>
 </div>
 
+<div class="window" id="doomWindow" aria-hidden="true">
+  <div class="window-titlebar">
+    <div class="window-title">xdoom</div>
+    <button class="window-close" id="doomClose" type="button">×</button>
+  </div>
+
+  <div class="doom-frame-wrap">
+    <iframe
+      id="doomFrame"
+      class="doom-frame"
+      title="Doom"
+      src="about:blank"
+      allow="fullscreen; autoplay; gamepad"
+    ></iframe>
+
+    <div class="doom-help">
+      click doom first · enter=start · arrows=move · ctrl=shoot · space=open
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   const icons = document.querySelectorAll('.icon');
-  console.log('[desktop] icons found:', icons.length);
+  const doomWindow = document.getElementById('doomWindow');
+  const doomFrame = document.getElementById('doomFrame');
+  const doomClose = document.getElementById('doomClose');
+  const doomURL = 'doom.html';
 
-  
+  function clearSelection() {
+    icons.forEach(icon => icon.classList.remove('selected'));
+  }
+
+  function openDoom() {
+    doomWindow.classList.add('open');
+    doomWindow.setAttribute('aria-hidden', 'false');
+
+    if (doomFrame.getAttribute('src') === 'about:blank') {
+      doomFrame.setAttribute('src', doomURL);
+    }
+
+    setTimeout(() => {
+      doomFrame.focus();
+
+      try {
+        doomFrame.contentWindow.focus();
+      } catch (err) {}
+    }, 250);
+  }
+
+  function closeDoom() {
+    doomWindow.classList.remove('open');
+    doomWindow.setAttribute('aria-hidden', 'true');
+  }
+
   icons.forEach(icon => {
-    icon.addEventListener('click', (e) => {
+    icon.addEventListener('click', e => {
       e.stopPropagation();
-      console.log('[desktop] click', icon.dataset.name, 'href:', icon.dataset.href);
+
       if (icon.classList.contains('icon-disabled')) return;
-      const href = icon.dataset.href;
+
+      clearSelection();
       icon.classList.add('selected');
+
+      if (icon.dataset.app === 'doom') {
+        openDoom();
+        return;
+      }
+
+      const href = icon.dataset.href;
+
       if (href && href !== '#') {
-        
         setTimeout(() => {
-          console.log('[desktop] navigating to', href);
           location.href = href;
         }, 80);
       }
     });
   });
 
-  
-  document.addEventListener('contextmenu', e => e.preventDefault());
+  doomClose.addEventListener('click', e => {
+    e.stopPropagation();
+    closeDoom();
+  });
 
-  
+  doomWindow.addEventListener('mousedown', () => {
+    doomFrame.focus();
+
+    try {
+      doomFrame.contentWindow.focus();
+    } catch (err) {}
+  });
+
+  document.addEventListener('click', clearSelection);
+  document.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('dragstart', e => e.preventDefault());
 })();
 </script>
