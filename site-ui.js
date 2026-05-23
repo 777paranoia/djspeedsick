@@ -257,7 +257,8 @@ const IPINFO_TOKEN = "4b45867ce7c229",
       var __dHeld = !1,
         __debugAllowed = !1;
       ((window.showTransientCenterOverlay = function (e, t, n) {
-        ((t = t || 1800), (n = n || 1350));
+        var i = String(e || "").indexOf("ctrls.png") >= 0;
+        ((t = t || (i ? 4200 : 1800)), (n = n || (i ? 1800 : 1350)));
         let o = document.getElementById("__center_control_hint");
         (o ||
           ((o = document.createElement("img")),
@@ -267,26 +268,40 @@ const IPINFO_TOKEN = "4b45867ce7c229",
             "left:50%",
             "top:50%",
             "transform:translate(-50%,-50%)",
-            "max-width:min(72vw,1180px)",
-            "max-height:min(34vh,420px)",
             "width:auto",
             "height:auto",
+            "max-width:98vw",
+            "max-height:90vh",
+            "object-fit:contain",
             "opacity:0",
             "display:none",
             "pointer-events:none",
             "z-index:100000",
-            "transition:opacity 220ms ease",
+            "transition:opacity 440ms ease",
             "filter:drop-shadow(0 0 18px rgba(0,0,0,0.32))",
           ].join(";")),
           document.body.appendChild(o)),
           clearTimeout(window.__centerControlHintHold),
           clearTimeout(window.__centerControlHintHide),
+          (o.onload = function () {
+            var w = o.naturalWidth || 1;
+            var h = o.naturalHeight || 1;
+            var maxW = Math.min(window.innerWidth * (i ? 0.985 : 0.96), i ? 1800 : 1660);
+            var maxH = Math.min(window.innerHeight * (i ? 0.9 : 0.78), i ? 1080 : 900);
+            var s = Math.min(maxW / w, maxH / h);
+
+            o.style.width = Math.floor(w * s) + "px";
+            o.style.height = Math.floor(h * s) + "px";
+            o.style.maxWidth = "98vw";
+            o.style.maxHeight = "90vh";
+          }),
           (o.src = e),
+          o.complete && o.onload(),
           (o.style.display = "block"),
           (o.style.opacity = "0"),
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
-              o.style.opacity = "0.18";
+              o.style.opacity = i ? "0.24" : "0.18";
             });
           }),
           (window.__centerControlHintHold = setTimeout(function () {
@@ -295,8 +310,7 @@ const IPINFO_TOKEN = "4b45867ce7c229",
                 o.style.display = "none";
               }, n + 40)));
           }, t)));
-      }),
-        window.addEventListener("keydown", (e) => {
+      }),  window.addEventListener("keydown", (e) => {
           ("d" !== e.key && "D" !== e.key) || (__dHeld = !0);
         }),
         window.addEventListener("keyup", (e) => {
@@ -317,8 +331,8 @@ const IPINFO_TOKEN = "4b45867ce7c229",
             "function" == typeof window.showTransientCenterOverlay &&
               window.showTransientCenterOverlay(
                 "files/img/splash/ctrls.png",
+                4200,
                 1800,
-                1350,
               );
           }, 120));
         try {

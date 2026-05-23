@@ -1826,13 +1826,7 @@ void main(){
         ) {
           var backZoom01 = Math.max(0, Math.min(1, backZoom));
           var backEase = backZoom01 * backZoom01 * (3 - 2 * backZoom01);
-          var backEntering = backZoom01 > 0.01;
-          var backCamX = backEntering ? -backEase * 1.05 : cx;
-          var backCamY = backEntering ? 0 : cy;
-          var backAudio = backEntering ? 0 : n;
-          var backBlink = backEntering ? 0 : blink;
-          var backFlash = backEntering ? 0 : flash;
-          var backShake = 0;
+          var backCamX = backZoom01 > 0.01 ? -backEase * 1.05 : cx;
 
           if (
             (gl.clearColor(0, 0, 0, 1),
@@ -1842,22 +1836,22 @@ void main(){
               mirrorFBO &&
               (gl.bindFramebuffer(gl.FRAMEBUFFER, mirrorFBO.fbo),
               gl.viewport(0, 0, canvas.width, canvas.height),
-              currentEngine.render(e, 0, 0, n, 0, 0, 0, l, modeSeed),
+              currentEngine.render(e, 0, 0, 0, 0, 0, 0, l, modeSeed),
               gl.bindFramebuffer(gl.FRAMEBUFFER, null),
               gl.viewport(0, 0, canvas.width, canvas.height)),
             backEngine &&
-              (backEngine.render(
+              (backEngine.setZoom(backZoom),
+              backEngine.render(
                 e,
                 backCamX,
-                backCamY,
-                backAudio,
-                backBlink,
-                backFlash,
-                backShake,
+                0,
+                0,
+                0,
+                0,
+                0,
                 l,
                 modeSeed,
               ),
-              backEngine.setZoom(backZoom),
               window.bcCanvas))
           ) {
             const e = gl.getUniformLocation(backEngine.prog, "u_bcResolution");
@@ -1865,9 +1859,7 @@ void main(){
               (gl.useProgram(backEngine.prog),
               gl.uniform2f(e, window.bcCanvas.width, window.bcCanvas.height));
           }
-          if (!backEntering) drawHallucinationOverlay(e);
-        }
-        if ("door" === activePOV) {
+        }        if ("door" === activePOV) {
           gl.clearColor(0, 0, 0, 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
           if (doorEngine) {

@@ -878,7 +878,7 @@
           "z-index:2147483647",
           "pointer-events:none",
           "opacity:0",
-          "transition:opacity 360ms ease",
+          "transition:opacity 140ms ease",
           "background:rgba(0,0,0,0.96)",
           "will-change:opacity"
         ].join(";");
@@ -891,13 +891,19 @@
         setTimeout(function () {
           const kill = document.getElementById("z4-alt-annex-zone2-cover");
           if (kill && kill.parentNode) kill.parentNode.removeChild(kill);
-        }, 440);
+        }, 190);
       }
       return ov;
     }
     _scrubZone2FromAltAnnex() {
       const z2 = window.currentZone2;
       if (!z2) return false;
+      if (typeof z2._enterAltAnnexBathroomTurnLanding === "function") {
+        z2._enterAltAnnexBathroomTurnLanding();
+        window.__z4Route = false;
+        window.__z4RouteActive = false;
+        return true;
+      }
       z2.activePOV = "center";
       z2.pendingPOV = null;
       z2.slideState = "idle";
@@ -965,17 +971,17 @@
         return false;
       }
       try {
-        window.startZone2({ fromZ4AltAnnexDoor: true });
+        window.startZone2({ fromZ4AltAnnexDoor: true, altBathroomTurn: true });
       } catch (e) {
         console.error("[Zone4] Alt-Annex Zone2 start failed:", e);
         this._altAnnexZone2Cover(false);
         return false;
       }
-      try { this._scrubZone2FromAltAnnex(); } catch (e) { console.error("[Zone4] Alt-Annex scrub failed:", e); }
-      setTimeout(this._scrubZone2FromAltAnnex.bind(this), 30);
-      setTimeout(this._scrubZone2FromAltAnnex.bind(this), 90);
-      setTimeout(this._scrubZone2FromAltAnnex.bind(this), 180);
-      setTimeout(this._scrubZone2FromAltAnnex.bind(this), 420);
+      // The bathroom-turn landing (z2._enterAltAnnexBathroomTurnLanding) sets
+      // up all the Zone2 state we want here: left POV facing the bathroom,
+      // the BATHROOM-CLUB-TURN plate, and locked movement until two blinks.
+      // The old center-facing scrub would immediately overwrite that landing,
+      // so it is intentionally NOT run on this path.
       setTimeout(() => {
         try {
           if (window.currentZone4 === this) window.currentZone4 = null;
@@ -987,7 +993,7 @@
       setTimeout(() => {
         window.__z4AltAnnexZone2ReturnActive = false;
         this._altAnnexZone2Cover(false);
-      }, 360);
+      }, 105);
       return true;
     }
     _beginAltAnnexZone2Return(now) {
@@ -1002,8 +1008,9 @@
       this.annexTurnInputLatch = 0;
       window.__z4AnnexTurnRequested = 0;
       window.__z4AltAnnexZone2ReturnActive = true;
-      this._altAnnexZone2Cover(true);
-      setTimeout(this._returnAltAnnexToZone2.bind(this), 430);
+      // No black cover: the Zone2 landing swings the club-turn bathroom plate
+      // into place to mask the engine swap, so we hand off quickly with no fade.
+      setTimeout(this._returnAltAnnexToZone2.bind(this), 30);
       return true;
     }
     _beginZ3BBlackHoleFromAltAnnex(now) {

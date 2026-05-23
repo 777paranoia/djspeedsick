@@ -6,19 +6,36 @@ float dcBoxSDF(vec3 p, vec3 b) {
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-vec2 dcCenterTowers(vec3 p){
+vec2 dcCenterTowers(vec3 p) {
   vec2 r = vec2(1e5, 0.0);
 
-  vec3 hFront = vec3(1.18, 15.8, 1.02);
-  vec3 hBack  = vec3(1.18, 15.8, 1.02);
+  vec3 h1Front = vec3(0.48, 15.8, 0.78);
+  vec3 h2Front = vec3(0.48, 15.4, 0.78);
 
-  float dFrontA = dcBoxSDF(p - vec3(0.0, -2.1, -15.6), hFront);
-  float dFrontB = dcBoxSDF(p - vec3(0.0, -2.1,  15.6), hFront);
-  float dBackA  = dcBoxSDF(p - vec3(0.0, -2.1, -22.4), hBack);
-  float dBackB  = dcBoxSDF(p - vec3(0.0, -2.1,  22.4), hBack);
+  vec3 h1Back = vec3(1.18, 15.8, 1.02);
+  vec3 h2Back = vec3(1.18, 15.4, 1.02);
 
-  float d = min(min(dFrontA, dFrontB), min(dBackA, dBackB));
-  if(d < r.x) r = vec2(d, -5.0);
+  float d1FrontA = dcBoxSDF(p - vec3(-1.12, -2.1, -10.8), h1Front);
+  float d1FrontB = dcBoxSDF(p - vec3(-1.12, -2.1, 10.8), h1Front);
+  float d1BackA = dcBoxSDF(p - vec3(-1.12, -2.1, -17.6), h1Back);
+  float d1BackB = dcBoxSDF(p - vec3(-1.12, -2.1, 17.6), h1Back);
+
+  float d1 = min(min(d1FrontA, d1FrontB), min(d1BackA, d1BackB));
+
+  if (d1 < r.x) {
+    r = vec2(d1, -5.0);
+  }
+
+  float d2FrontA = dcBoxSDF(p - vec3(1.12, -1.9, -12.2), h2Front);
+  float d2FrontB = dcBoxSDF(p - vec3(1.12, -1.9, 12.2), h2Front);
+  float d2BackA = dcBoxSDF(p - vec3(1.12, -1.9, -19.0), h2Back);
+  float d2BackB = dcBoxSDF(p - vec3(1.12, -1.9, 19.0), h2Back);
+
+  float d2 = min(min(d2FrontA, d2FrontB), min(d2BackA, d2BackB));
+
+  if (d2 < r.x) {
+    r = vec2(d2, -6.0);
+  }
 
   return r;
 }
@@ -103,7 +120,21 @@ void main() {
       float centerHit = clamp(c5Hit + c6Hit, 0.0, 1.0);
 
       float frontFace = step(abs(n.x), abs(n.z));
-      float centerBackRow = smoothstep(19.0, 21.5, abs(p.z)); vec2 c5FrontUV = vec2((p.x + 1.18) / 2.36, 1.0 - (p.y + 17.9) / 31.8); vec2 c6FrontUV = c5FrontUV; vec2 cSideUV = vec2(
+      float centerBackRow = smoothstep(15.0, 17.0, abs(p.z));
+
+      vec2 c5FrontUV = vec2(
+        (p.x + mix(1.60, 2.30, centerBackRow)) /
+          mix(0.96, 2.36, centerBackRow),
+        1.0 - (p.y + 17.9) / 31.8
+      );
+
+      vec2 c6FrontUV = vec2(
+        (p.x - mix(0.64, -0.06, centerBackRow)) /
+          mix(0.96, 2.36, centerBackRow),
+        1.0 - (p.y + 17.3) / 31.0
+      );
+
+      vec2 cSideUV = vec2(
         fract(p.z * 0.09),
         clamp(1.0 - (p.y + 17.6) / 31.4, 0.0, 1.0)
       );

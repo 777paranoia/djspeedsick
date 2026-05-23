@@ -543,6 +543,9 @@ void main() {
             (this.texBathroomHole = loadStaticTex(
               "files/img/rooms/z2/bathroom-hole.png",
             )),
+            (this.texBathroomClubTurn = loadStaticTex(
+              "files/img/rooms/z2/BATHROOM-CLUB-TURN.png",
+            )),
             (this.holeProg = gl.createProgram()),
             gl.attachShader(
               this.holeProg,
@@ -668,6 +671,10 @@ void main() {
             (this.z4RouteStep = 0),
             (this.z4RouteActive = false),
             (this.z4LeftBlinkCount = 0),
+            (this.z4AltBathroomTurnBlinkCount = 0),
+            (this.z4AltBathroomTurnEnterStart = 0),
+            (this.z4AltBathroomTurnEnterDuration = 1050),
+            (this.__z4AltBathroomTurnLanding = false),
             (this.rightBlinkCount = 0),
             (this.z3bTurbulenceStart = -1),
             (this.z3TransitionStarted = !1),
@@ -771,8 +778,11 @@ void main() {
         tickSlide(e) {
           if ("idle" === this.slideState) return;
           const t = e - this.slideStart;
+          const __z4AltSlide = !!this.__z4AltBathroomSlide;
+          const __slideDur = __z4AltSlide ? 430 : 340;
+          const __blackHold = __z4AltSlide ? 28 : 80;
           if ("out" === this.slideState) {
-            const i = Math.min(t / 340, 1);
+            const i = Math.min(t / __slideDur, 1);
             ((this.slideOffset = i * i * window.innerWidth * this.slideDir),
               i >= 1 &&
                 ((this.slideOffset = window.innerWidth * this.slideDir),
@@ -786,18 +796,19 @@ void main() {
                 (this.cy = 0),
                 (this.povSwitchTime = e)));
           } else if ("black" === this.slideState)
-            t >= 80 &&
+            t >= __blackHold &&
               ((this.slideOffset = -window.innerWidth * this.slideDir),
               (this.slideState = "in"),
               (this.slideStart = e));
           else if ("in" === this.slideState) {
-            const e = Math.min(t / 340, 1),
+            const e = Math.min(t / __slideDur, 1),
               i = 1 - (1 - e) * (1 - e);
             ((this.slideOffset = -window.innerWidth * this.slideDir * (1 - i)),
               e >= 1 &&
                 ((this.slideOffset = 0),
                 (this.slideState = "idle"),
-                (this.pendingPOV = null)));
+                (this.pendingPOV = null),
+                (this.__z4AltBathroomSlide = false)));
           }
           const i = document.getElementById("c");
           i &&
@@ -833,6 +844,10 @@ void main() {
           return { N: 0, S: Math.PI, W: Math.PI / 2, E: -Math.PI / 2 }[f] || 0;
         }
         checkPOVThreshold(e, t) {
+          // Movement is locked while the alt-annex bathroom-turn landing is
+          // in progress; the player can only look around until they blink
+          // twice and the plate swaps back to the normal bathroom.
+          if (this.__z4AltBathroomTurnLanding) return;
           if (
             "idle" !== this.slideState ||
             e - this.povSwitchTime < 600
@@ -951,6 +966,17 @@ void main() {
             void 0 === this.cx && ((this.cx = t), (this.cy = i)),
             (this.cx += 0.12 * (t - this.cx)),
             (this.cy += 0.12 * (i - this.cy)));
+          // Alt-annex bathroom-turn landing: instead of letting the player's
+          // (zeroed) look input drive the plate, swing the club-turn bathroom
+          // into place as if completing a left turn, easing to settled. This is
+          // the motion that masks the engine swap -- no black cover needed.
+          if (this.__z4AltBathroomTurnLanding) {
+            const __ed = this.z4AltBathroomTurnEnterDuration || 1050;
+            const __ep = Math.max(0, Math.min(1, (e - (this.z4AltBathroomTurnEnterStart || e)) / __ed));
+            const __ease = 1 - Math.pow(1 - __ep, 3); // easeOutCubic
+            this.cx = (1 - __ease) * 2.4;
+            this.cy = (1 - __ease) * 0.30;
+          }
           let a = 0;
           if (window.audioAnalyser) {
             window.audioAnalyser.getByteFrequencyData(window.audioData);
@@ -1030,7 +1056,25 @@ void main() {
                   : ((this.rBlink = 0),
                     (this.blinking = !1),
                     (this.modeSwapped = !1),
+                    (this.__z4AltBathroomBlinkConsumed = false),
                     "left" === this.activePOV &&
+                      "z4_alt_bathroom_turn" === this.seqState &&
+                      ((this.__z4AltBathroomBlinkConsumed = true),
+                      this.z4AltBathroomTurnBlinkCount++,
+                      this.z4AltBathroomTurnBlinkCount >= 2 &&
+                        (this.setLeftRoomTexture && this.setLeftRoomTexture("normal"),
+                        (this.seqState = "initial"),
+                        (this.leftBlinkCount = 0),
+                        (this.z4AltBathroomTurnBlinkCount = 0),
+                        (this.z4AltBathroomTurnEnterStart = 0),
+                        (this.__z4AltBathroomTurnLanding = false),
+                        (this.z4RouteActive = false),
+                        (this.z4RouteStep = 0),
+                        (this.z4LeftBlinkCount = 0),
+                        (this.zone3Route = "z3"),
+                        (this.__z4RouteDisabledUntil = performance.now() + 12000))),
+                    !this.__z4AltBathroomBlinkConsumed &&
+                      "left" === this.activePOV &&
                       "initial" === this.seqState &&
                       (this.leftBlinkCount++,
                       this.leftBlinkCount >= 2 &&
@@ -1567,11 +1611,50 @@ void main() {
             }
           }
         }
+        _enterAltAnnexBathroomTurnLanding(now) {
+          if (typeof now !== "number") now = performance.now();
+          // Land already inside Zone2, facing the left/bathroom wall, showing
+          // the BATHROOM-CLUB-TURN plate. Movement stays locked until the
+          // player blinks twice, at which point the plate swaps to the normal
+          // bathroom and free movement is restored (see blink logic above).
+          this.activePOV = "left";
+          this.facing = "W";
+          this.pendingPOV = null;
+          this.slideState = "idle";
+          this.slideOffset = 0;
+          this.slideDir = 0;
+          this.povSwitchTime = now;
+          this.hallwayYaw = this._yawForFacing ? this._yawForFacing("W") : Math.PI / 2;
+          this.hallwayYawTarget = this.hallwayYaw;
+          this.intersectionReached = true;
+          this.camZ = typeof this.INTERSECTION_Z === "number" ? this.INTERSECTION_Z : this.camZ;
+          this.seqState = "z4_alt_bathroom_turn";
+          this.zone3Route = "z3";
+          this.z4RouteActive = false;
+          this.z4RouteStep = 0;
+          this.z4LeftBlinkCount = 0;
+          this.leftBlinkCount = 0;
+          this.z4AltBathroomTurnBlinkCount = 0;
+          this.z4AltBathroomTurnEnterStart = now;
+          this.z4AltBathroomTurnEnterDuration = 1050;
+          this.__fromAltAnnexDoor = true;
+          this.__z4AltBathroomTurnLanding = true;
+          this.__z4RouteDisabledUntil = now + 12000;
+          this.setLeftRoomTexture && this.setLeftRoomTexture("clubTurn");
+          window.__z4Route = false;
+          window.__z4RouteActive = false;
+          window.mx = 0;
+          window.my = 0;
+          window.z2SpaceHeld = false;
+          window.z2TouchHeld = false;
+          return true;
+        }
         setLeftRoomTexture(e) {
           const t = {
             normal: this.texBathroomNormal,
             blood: this.texBathroomBlood,
-            hole: this.texBathroomHole
+            hole: this.texBathroomHole,
+            clubTurn: this.texBathroomClubTurn
           }[e];
           return !!(this.leftRoom && t && ((this.leftRoom.tex = t), true));
         }
@@ -1638,36 +1721,40 @@ void main() {
           window.__unlockAllVideos && window.__unlockAllVideos());
         if (opts && opts.fromZ4AltAnnexDoor && window.currentZone2) {
           var z2 = window.currentZone2;
-          z2.activePOV = "center";
-          z2.pendingPOV = null;
-          z2.slideState = "idle";
-          z2.slideOffset = 0;
-          z2.slideDir = 0;
-          z2.povSwitchTime = performance.now();
-          z2.facing = "S";
-          z2.hallwayYaw = Math.PI;
-          z2.hallwayYawTarget = z2.hallwayYaw;
-          z2.intersectionReached = true;
-          z2.camZ = typeof z2.INTERSECTION_Z === "number" ? z2.INTERSECTION_Z - 0.75 : 1.65;
-          z2.seqState = "initial";
-          z2.zone3Route = "z3";
-          z2.z4RouteActive = false;
-          z2.z4RouteStep = 0;
-          z2.z4LeftBlinkCount = 0;
-          z2.z4TransitionStarted = false;
-          z2.z4RouteTriggered = false;
-          z2.route3Active = false;
-          z2.route3Step = 0;
-          z2.readyForZone3 = false;
-          z2.z3TransitionStarted = false;
-          z2.z2ExitStarted = false;
-          z2.z2ExitTime = 0;
-          z2.__fromAltAnnexDoor = true;
-          z2.__z4RouteDisabledUntil = performance.now() + 12000;
-          window.mx = 0;
-          window.my = 0;
-          window.z2SpaceHeld = false;
-          window.z2TouchHeld = false;
+          if (opts.altBathroomTurn && typeof z2._enterAltAnnexBathroomTurnLanding === "function") {
+            z2._enterAltAnnexBathroomTurnLanding();
+          } else {
+            z2.activePOV = "center";
+            z2.pendingPOV = null;
+            z2.slideState = "idle";
+            z2.slideOffset = 0;
+            z2.slideDir = 0;
+            z2.povSwitchTime = performance.now();
+            z2.facing = "S";
+            z2.hallwayYaw = Math.PI;
+            z2.hallwayYawTarget = z2.hallwayYaw;
+            z2.intersectionReached = true;
+            z2.camZ = typeof z2.INTERSECTION_Z === "number" ? z2.INTERSECTION_Z - 0.75 : 1.65;
+            z2.seqState = "initial";
+            z2.zone3Route = "z3";
+            z2.z4RouteActive = false;
+            z2.z4RouteStep = 0;
+            z2.z4LeftBlinkCount = 0;
+            z2.z4TransitionStarted = false;
+            z2.z4RouteTriggered = false;
+            z2.route3Active = false;
+            z2.route3Step = 0;
+            z2.readyForZone3 = false;
+            z2.z3TransitionStarted = false;
+            z2.z2ExitStarted = false;
+            z2.z2ExitTime = 0;
+            z2.__fromAltAnnexDoor = true;
+            z2.__z4RouteDisabledUntil = performance.now() + 12000;
+            window.mx = 0;
+            window.my = 0;
+            window.z2SpaceHeld = false;
+            window.z2TouchHeld = false;
+          }
         } else if (opts && opts.fromZ4BathroomReturn && window.currentZone2) {
           var z2 = window.currentZone2;
           z2.activePOV = "left";
@@ -1690,10 +1777,10 @@ void main() {
           (e.style.cssText =
             "position:fixed;inset:0;background:black;pointer-events:none;transition:opacity 0.2s ease-in-out;z-index:99999;"),
           document.body.appendChild(e)),
-          (e.style.opacity = "1"),
+          (e.style.opacity = (opts && opts.altBathroomTurn) ? "0" : "1"),
           setTimeout(() => {
             e.style.opacity = "0";
-          }, opts && (opts.fromZ4BathroomReturn || opts.fromZ4AltAnnexDoor) ? 120 : 50),
+          }, opts && opts.altBathroomTurn ? 20 : opts && (opts.fromZ4BathroomReturn || opts.fromZ4AltAnnexDoor) ? 80 : 50),
           !(opts && (opts.fromZ4BathroomReturn || opts.fromZ4AltAnnexDoor)) && setTimeout(() => {
             "function" == typeof window.showTransientCenterOverlay &&
               window.showTransientCenterOverlay(

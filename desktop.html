@@ -10,6 +10,19 @@
     box-sizing: border-box;
   }
 
+  :root {
+    --icon-size: clamp(58px, 5.6vmin, 104px);
+    --icon-width: calc(var(--icon-size) + clamp(22px, 2.1vmin, 46px));
+    --icon-pad-x: clamp(4px, 0.45vmin, 10px);
+    --icon-pad-top: clamp(4px, 0.45vmin, 10px);
+    --icon-pad-bottom: clamp(6px, 0.7vmin, 16px);
+    --icon-gap: clamp(8px, 1.35vmin, 24px);
+    --icon-label-gap: clamp(4px, 0.45vmin, 9px);
+    --icon-font-size: clamp(10px, 0.95vmin, 17px);
+    --desktop-pad-y: clamp(12px, 2vh, 34px);
+    --desktop-pad-x: clamp(10px, 1.5vw, 34px);
+  }
+
   html,
   body {
     width: 100%;
@@ -32,13 +45,13 @@
   .desktop {
     position: absolute;
     inset: 0;
-    padding: 2vh 1.5vw;
+    padding: var(--desktop-pad-y) var(--desktop-pad-x);
   }
 
   .icon-grid {
     display: flex;
     flex-direction: column;
-    gap: 1.2vh;
+    gap: var(--icon-gap);
     width: max-content;
   }
 
@@ -46,24 +59,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 90px;
-    padding: 4px 4px 6px;
+    width: var(--icon-width);
+    padding: var(--icon-pad-top) var(--icon-pad-x) var(--icon-pad-bottom);
     cursor: pointer;
     border: 1px dashed transparent;
     border-radius: 2px;
   }
 
   .icon img {
-    width: 64px;
-    height: 64px;
+    width: var(--icon-size);
+    height: var(--icon-size);
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     pointer-events: none;
   }
 
   .icon span {
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: var(--icon-label-gap);
+    font-size: var(--icon-font-size);
     color: #fff;
     text-shadow:
       1px 1px 0 #000,
