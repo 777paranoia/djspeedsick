@@ -378,26 +378,48 @@
         // Forward drag deltas to parent so the laptop scene can pan/exit
         let _dragLast = null;
         function _inParent() {
-          try { return window.parent && window.parent !== window; } catch(e) { return false; }
-        }
-        document.addEventListener("pointerdown", (e) => {
-          if (e.button !== 0 || !_inParent()) return;
-          _dragLast = { x: e.clientX, y: e.clientY };
-        }, true);
-        document.addEventListener("pointermove", (e) => {
-          if (!_dragLast || !_inParent()) return;
-          const dx = e.clientX - _dragLast.x;
-          const dy = e.clientY - _dragLast.y;
-          _dragLast = { x: e.clientX, y: e.clientY };
-          window.parent.postMessage({ type: "laptop-drag", dx, dy }, "*");
-        }, true);
-        document.addEventListener("pointerup", () => {
-          if (_dragLast && _inParent()) {
-            window.parent.postMessage({ type: "laptop-drag-end" }, "*");
+          try {
+            return window.parent && window.parent !== window;
+          } catch (e) {
+            return false;
           }
-          _dragLast = null;
-        }, true);
-        document.addEventListener("pointercancel", () => { _dragLast = null; }, true);
+        }
+        document.addEventListener(
+          "pointerdown",
+          (e) => {
+            if (e.button !== 0 || !_inParent()) return;
+            _dragLast = { x: e.clientX, y: e.clientY };
+          },
+          true,
+        );
+        document.addEventListener(
+          "pointermove",
+          (e) => {
+            if (!_dragLast || !_inParent()) return;
+            const dx = e.clientX - _dragLast.x;
+            const dy = e.clientY - _dragLast.y;
+            _dragLast = { x: e.clientX, y: e.clientY };
+            window.parent.postMessage({ type: "laptop-drag", dx, dy }, "*");
+          },
+          true,
+        );
+        document.addEventListener(
+          "pointerup",
+          () => {
+            if (_dragLast && _inParent()) {
+              window.parent.postMessage({ type: "laptop-drag-end" }, "*");
+            }
+            _dragLast = null;
+          },
+          true,
+        );
+        document.addEventListener(
+          "pointercancel",
+          () => {
+            _dragLast = null;
+          },
+          true,
+        );
 
         function openVid() {
           vidWindow.classList.add("open");

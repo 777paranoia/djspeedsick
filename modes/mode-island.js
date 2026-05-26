@@ -397,7 +397,12 @@
               )
                 return null;
               var vs = z4bIslandLevelCompile(gl.VERTEX_SHADER, GLSL.vert),
-                fsSrc = GLSL.core + "\n" + (GLSL.hallucinationFn || "") + "\n" + GLSL.modules.z4b_island;
+                fsSrc =
+                  GLSL.core +
+                  "\n" +
+                  (GLSL.hallucinationFn || "") +
+                  "\n" +
+                  GLSL.modules.z4b_island;
               "undefined" != typeof IS_MOBILE &&
                 IS_MOBILE &&
                 (fsSrc = "#define MOBILE\n" + fsSrc);
@@ -634,7 +639,7 @@
                       ? islandMoved >= 4.8
                         ? 5
                         : 4
-                      : 2,
+                      : 0,
                     islandTrip =
                       "function" == typeof window.__hallucinationTripForLevel
                         ? window.__hallucinationTripForLevel(islandLevel)

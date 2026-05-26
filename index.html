@@ -785,11 +785,33 @@
     </script>
     <script>
       (() => {
-        let state = 0;
+        let clickCount = 0;
         const conky = () => document.getElementById("conky-sidebar");
         const debug = () => document.getElementById("debug-menu-box");
+        const tickers = () => document.querySelectorAll(".ticker-wrap");
         const setVis = (el, on) => {
           if (el) el.style.display = on ? "block" : "none";
+        };
+        const setSiteUI = (on) => {
+          const box = conky();
+          setVis(box, on);
+          if (box && !on) box.style.transform = "";
+          tickers().forEach((el) => setVis(el, on));
+          if (on) {
+            if (typeof updateSystemParams === "function") updateSystemParams();
+            if (typeof updateIntelligence === "function") updateIntelligence();
+            setTimeout(function () {
+              if (typeof initBrainMonitor === "function") initBrainMonitor();
+            }, 100);
+          } else if (typeof stopBrainMonitor === "function") {
+            stopBrainMonitor();
+          }
+        };
+        const setDebugUI = (on) => {
+          if (on && !debug() && typeof window.makeUI === "function") {
+            window.makeUI();
+          }
+          setVis(debug(), on);
         };
 
         window.__cycleConkyDebug = function () {
@@ -798,15 +820,9 @@
             return;
           }
 
-          state = (state + 1) % 4;
-          const showConky = state === 0 || state === 3;
-          const showDebug = state === 1 || state === 3;
-
-          if (showDebug && !debug() && typeof window.makeUI === "function") {
-            window.makeUI();
-          }
-          setVis(conky(), showConky);
-          setVis(debug(), showDebug);
+          clickCount += 1;
+          setSiteUI(false);
+          setDebugUI(clickCount % 2 === 1);
         };
       })();
     </script>

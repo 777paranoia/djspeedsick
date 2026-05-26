@@ -682,9 +682,9 @@ window.makeUI = function () {
       })));
   const theaterGoto = (p) => {
     "function" == typeof window.startModeTheater
-      ? ((window.startModeTheater({ progress: p }),
+      ? (window.startModeTheater({ progress: p }),
         "function" == typeof window.__theaterDebugGoto &&
-          window.__theaterDebugGoto(p)))
+          window.__theaterDebugGoto(p))
       : "function" == typeof window.__theaterDebugGoto
         ? window.__theaterDebugGoto(p)
         : console.error("[debug] mode-theater not loaded");

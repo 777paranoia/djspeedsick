@@ -846,12 +846,12 @@ class Zone2Engine {
         this.solidProg,
         compile(
           gl.FRAGMENT_SHADER,
-	      "precision mediump float; uniform vec4 u_col; void main(){ gl_FragColor = u_col; }",
-	        ),
-	      ),
-	      gl.linkProgram(this.solidProg),
-	      (this.blackHoleProg = this._buildModuleProgram("z3_alt_blackhole_walk")),
-	      (this.windowFBO = this.makeFBO()),
+          "precision mediump float; uniform vec4 u_col; void main(){ gl_FragColor = u_col; }",
+        ),
+      ),
+      gl.linkProgram(this.solidProg),
+      (this.blackHoleProg = this._buildModuleProgram("z3_alt_blackhole_walk")),
+      (this.windowFBO = this.makeFBO()),
       (this.holeFBO = this.makeFBO()),
       (this.mirrorFBO = this.makeFBO()),
       (this.rightHoleFBO = this.makeFBO()),
@@ -958,108 +958,123 @@ class Zone2Engine {
       (this.__z4AltBathroomTurnLanding = !1),
       (this.__z4AltBathroomTurnMotionDone = !1),
       (this.__framedKitchenForwardWall = !1),
-	      (this.rightBlinkCount = 0),
-	      (this.z3bTurbulenceStart = -1),
-	      (this.z3TransitionStarted = !1),
-	      (this.isDead = !1));
-	    this._resetZone2BlackholePath();
-	  }
-	  _buildModuleProgram(e) {
-	    if (!GLSL.modules || !GLSL.modules[e]) return null;
-	    const t = gl.createProgram(),
-	      i = compile(gl.VERTEX_SHADER, GLSL.vert);
-	    let o = GLSL.modules[e];
-	    IS_MOBILE && (o = "#define MOBILE\n" + o);
-	    const n = compile(gl.FRAGMENT_SHADER, o);
-	    return i && n
-	      ? (gl.attachShader(t, i),
-	        gl.attachShader(t, n),
-	        gl.linkProgram(t),
-	        gl.getProgramParameter(t, gl.LINK_STATUS)
-	          ? t
-	          : (console.error(
-	              "[Zone2] shader link error (" + e + "):",
-	              gl.getProgramInfoLog(t),
-	            ),
-	            gl.deleteProgram(t),
-	            null))
-	      : (gl.deleteProgram(t), null);
-	  }
-	  _bhPathCenterX(e) {
-	    const t = Math.max(0, Math.min(1, (-e - 50) / 2800));
-	    return 22 * Math.sin(0.00165 * e + 0.7) * t + 3.5 * Math.sin(0.006 * e + 1.8);
-	  }
-	  _bhPathCenterY(e) {
-	    const t = Math.max(0, Math.min(1, (e - -2400) / -700));
-	    return t * t * (3 - 2 * t) * 30 - 1.25;
-	  }
-	  _resetZone2BlackholePath() {
-	    const e = -260;
-	    ((this.blackholeSeed = 1e4 * Math.random()),
-	      (this.bhCamPos = {
-	        x: this._bhPathCenterX(e),
-	        y: this._bhPathCenterY(e) + 3.85,
-	        z: e,
-	      }),
-	      (this.bhYaw = 0),
-	      (this.bhPitch = -0.05),
-	      (this.bhMovePhase = 0),
-	      (this.bhSpeed = 0),
-	      (this.__z2BlackholePathActive = !0));
-	  }
-	  _updateZone2BlackholePath(e, t) {
-	    this.__z2BlackholePathActive || this._resetZone2BlackholePath();
-	    const i = Math.max(0.2, Math.min(4, t / 33.33)),
-	      o = "z3b_red" === this.seqState,
-	      n = "z3b_turbulence" === this.seqState,
-	      l = o ? 46 : n ? 24 : 7,
-	      r = o ? 1.35 : n ? 0.95 : 0.45;
-	    ((this.bhCamPos.z = Math.max(-3050, this.bhCamPos.z - i * l)),
-	      (this.bhMovePhase += i * (o ? 22 : n ? 12 : 3.8)),
-	      (this.bhSpeed += (r - this.bhSpeed) * Math.min(1, 0.18 * i)));
-	    const s = 0.001 * e,
-	      a = 0.012 * Math.sin(0.8 * s) + 0.006 * Math.sin(1.3 * s),
-	      h = 0.015 * Math.sin(0.35 * s) + 0.008 * Math.sin(0.57 * s),
-	      d = 0.07 * Math.sin(2 * this.bhMovePhase) * this.bhSpeed,
-	      g = 0.05 * Math.sin(this.bhMovePhase) * this.bhSpeed,
-	      c = 0.24 * (this.cx || 0) + (o ? 0.4 * Math.sin(0.004 * e) : 0),
-	      u = 0.11 * (this.cy || 0) - 0.05 + (o ? 0.14 * Math.sin(0.005 * e) : 0);
-	    ((this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z) + g + h),
-	      (this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.85 + d + a),
-	      (this.bhYaw += (c - this.bhYaw) * Math.min(1, 0.1 * i)),
-	      (this.bhPitch += (u - this.bhPitch) * Math.min(1, 0.1 * i)));
-	  }
-	  _renderZone2BlackholePath(e, t, i, o, n) {
-	    if (!e || !this.bhCamPos) return;
-	    (gl.useProgram(e),
-	      gl.uniform2f(gl.getUniformLocation(e, "u_resolution"), t, i),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_time"), 0.001 * o),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_yaw"), this.bhYaw || 0),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_pitch"), this.bhPitch || 0),
-	      gl.uniform3f(
-	        gl.getUniformLocation(e, "u_camPos"),
-	        this.bhCamPos.x,
-	        this.bhCamPos.y,
-	        this.bhCamPos.z,
-	      ),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_movePhase"), this.bhMovePhase || 0),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_speed"), this.bhSpeed || 0),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_seed"), this.blackholeSeed || this.z2ModeSeed || 0),
-	      gl.uniform1f(gl.getUniformLocation(e, "u_audio"), n || 0),
-	      gl.uniform1f(
-	        gl.getUniformLocation(e, "u_trip"),
-	        Math.max(this.z2Trip || 0, "z3b_red" === this.seqState ? 2.2 : "z3b_turbulence" === this.seqState ? 1.65 : 1.1),
-	      ),
-	      gl.activeTexture(gl.TEXTURE0),
-	      gl.bindTexture(gl.TEXTURE_2D, this.texBottom),
-	      gl.uniform1i(gl.getUniformLocation(e, "u_texGround"), 0),
-	      gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
-	    const l = gl.getAttribLocation(e, "p");
-	    (gl.enableVertexAttribArray(l),
-	      gl.vertexAttribPointer(l, 2, gl.FLOAT, !1, 0, 0),
-	      gl.drawArrays(gl.TRIANGLES, 0, 3));
-	  }
-	  makeFBO() {
+      (this.rightBlinkCount = 0),
+      (this.z3bTurbulenceStart = -1),
+      (this.z3TransitionStarted = !1),
+      (this.isDead = !1));
+    this._resetZone2BlackholePath();
+  }
+  _buildModuleProgram(e) {
+    if (!GLSL.modules || !GLSL.modules[e]) return null;
+    const t = gl.createProgram(),
+      i = compile(gl.VERTEX_SHADER, GLSL.vert);
+    let o = GLSL.modules[e];
+    IS_MOBILE && (o = "#define MOBILE\n" + o);
+    const n = compile(gl.FRAGMENT_SHADER, o);
+    return i && n
+      ? (gl.attachShader(t, i),
+        gl.attachShader(t, n),
+        gl.linkProgram(t),
+        gl.getProgramParameter(t, gl.LINK_STATUS)
+          ? t
+          : (console.error(
+              "[Zone2] shader link error (" + e + "):",
+              gl.getProgramInfoLog(t),
+            ),
+            gl.deleteProgram(t),
+            null))
+      : (gl.deleteProgram(t), null);
+  }
+  _bhPathCenterX(e) {
+    const t = Math.max(0, Math.min(1, (-e - 50) / 2800));
+    return (
+      22 * Math.sin(0.00165 * e + 0.7) * t + 3.5 * Math.sin(0.006 * e + 1.8)
+    );
+  }
+  _bhPathCenterY(e) {
+    const t = Math.max(0, Math.min(1, (e - -2400) / -700));
+    return t * t * (3 - 2 * t) * 30 - 1.25;
+  }
+  _resetZone2BlackholePath() {
+    const e = -260;
+    ((this.blackholeSeed = 1e4 * Math.random()),
+      (this.bhCamPos = {
+        x: this._bhPathCenterX(e),
+        y: this._bhPathCenterY(e) + 3.85,
+        z: e,
+      }),
+      (this.bhYaw = 0),
+      (this.bhPitch = -0.05),
+      (this.bhMovePhase = 0),
+      (this.bhSpeed = 0),
+      (this.__z2BlackholePathActive = !0));
+  }
+  _updateZone2BlackholePath(e, t) {
+    this.__z2BlackholePathActive || this._resetZone2BlackholePath();
+    const i = Math.max(0.2, Math.min(4, t / 33.33)),
+      o = "z3b_red" === this.seqState,
+      n = "z3b_turbulence" === this.seqState,
+      l = o ? 46 : n ? 24 : 7,
+      r = o ? 1.35 : n ? 0.95 : 0.45;
+    ((this.bhCamPos.z = Math.max(-3050, this.bhCamPos.z - i * l)),
+      (this.bhMovePhase += i * (o ? 22 : n ? 12 : 3.8)),
+      (this.bhSpeed += (r - this.bhSpeed) * Math.min(1, 0.18 * i)));
+    const s = 0.001 * e,
+      a = 0.012 * Math.sin(0.8 * s) + 0.006 * Math.sin(1.3 * s),
+      h = 0.015 * Math.sin(0.35 * s) + 0.008 * Math.sin(0.57 * s),
+      d = 0.07 * Math.sin(2 * this.bhMovePhase) * this.bhSpeed,
+      g = 0.05 * Math.sin(this.bhMovePhase) * this.bhSpeed,
+      c = 0.24 * (this.cx || 0) + (o ? 0.4 * Math.sin(0.004 * e) : 0),
+      u = 0.11 * (this.cy || 0) - 0.05 + (o ? 0.14 * Math.sin(0.005 * e) : 0);
+    ((this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z) + g + h),
+      (this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.85 + d + a),
+      (this.bhYaw += (c - this.bhYaw) * Math.min(1, 0.1 * i)),
+      (this.bhPitch += (u - this.bhPitch) * Math.min(1, 0.1 * i)));
+  }
+  _renderZone2BlackholePath(e, t, i, o, n) {
+    if (!e || !this.bhCamPos) return;
+    (gl.useProgram(e),
+      gl.uniform2f(gl.getUniformLocation(e, "u_resolution"), t, i),
+      gl.uniform1f(gl.getUniformLocation(e, "u_time"), 0.001 * o),
+      gl.uniform1f(gl.getUniformLocation(e, "u_yaw"), this.bhYaw || 0),
+      gl.uniform1f(gl.getUniformLocation(e, "u_pitch"), this.bhPitch || 0),
+      gl.uniform3f(
+        gl.getUniformLocation(e, "u_camPos"),
+        this.bhCamPos.x,
+        this.bhCamPos.y,
+        this.bhCamPos.z,
+      ),
+      gl.uniform1f(
+        gl.getUniformLocation(e, "u_movePhase"),
+        this.bhMovePhase || 0,
+      ),
+      gl.uniform1f(gl.getUniformLocation(e, "u_speed"), this.bhSpeed || 0),
+      gl.uniform1f(
+        gl.getUniformLocation(e, "u_seed"),
+        this.blackholeSeed || this.z2ModeSeed || 0,
+      ),
+      gl.uniform1f(gl.getUniformLocation(e, "u_audio"), n || 0),
+      gl.uniform1f(
+        gl.getUniformLocation(e, "u_trip"),
+        Math.max(
+          this.z2Trip || 0,
+          "z3b_red" === this.seqState
+            ? 2.2
+            : "z3b_turbulence" === this.seqState
+              ? 1.65
+              : 1.1,
+        ),
+      ),
+      gl.activeTexture(gl.TEXTURE0),
+      gl.bindTexture(gl.TEXTURE_2D, this.texBottom),
+      gl.uniform1i(gl.getUniformLocation(e, "u_texGround"), 0),
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
+    const l = gl.getAttribLocation(e, "p");
+    (gl.enableVertexAttribArray(l),
+      gl.vertexAttribPointer(l, 2, gl.FLOAT, !1, 0, 0),
+      gl.drawArrays(gl.TRIANGLES, 0, 3));
+  }
+  makeFBO() {
     const e = document.getElementById("c");
     var t = e ? e.width : window.innerWidth,
       i = e ? e.height : window.innerHeight;
@@ -1301,13 +1316,14 @@ class Zone2Engine {
               (this.redStartTime = -1)),
             "E" === newFacing ||
               this.z4RouteActive ||
-	              ("bedroom_2" !== this.seqState &&
-	                "z3b_turbulence" !== this.seqState &&
-	                "z3b_red" !== this.seqState) ||
-	              ((this.seqState = "bedroom_visited"),
-	              (this.rightBlinkCount = 0),
-	              (this.z3bTurbulenceStart = -1),
-	              (this.__z2BlackholePathActive = !1)));
+              ("N" === newFacing && "bedroom_2" === this.seqState) ||
+              ("bedroom_2" !== this.seqState &&
+                "z3b_turbulence" !== this.seqState &&
+                "z3b_red" !== this.seqState) ||
+              ((this.seqState = "bedroom_visited"),
+              (this.rightBlinkCount = 0),
+              (this.z3bTurbulenceStart = -1),
+              (this.__z2BlackholePathActive = !1)));
           var z4Consumed = !1;
           if (
             "blood" === this.seqState ||
@@ -1366,17 +1382,14 @@ class Zone2Engine {
                     (this.theaterRouteActive = !1),
                     (z4Consumed = !0),
                     console.log("[Z4Route] COMPLETE -> z4_bathroom"))
-	                  : "L" === dir && "E" === newFacing
-	                    ? ((this.seqState = "theater_tunnel"),
-	                      (this.zone3Route = "theater"),
-	                      (this.z4RouteStep = 0),
-	                      (this.z4RouteActive = !1),
-	                      (this.theaterRouteActive = !1),
-	                      (this.theaterTunnelStart = performance.now()),
-	                      (this.theaterTransitionStarted = !0),
-	                      (z4Consumed = !0),
-	                      console.log("[TheaterRoute] COMPLETE -> theater_tunnel"),
-	                      this.beginTheaterTransition())
+                  : "L" === dir && "E" === newFacing
+                    ? ((this.seqState = "theater_armed"),
+                      (this.zone3Route = "theater"),
+                      (this.z4RouteStep = 0),
+                      (this.z4RouteActive = !1),
+                      (this.theaterRouteActive = !1),
+                      (z4Consumed = !0),
+                      console.log("[TheaterRoute] COMPLETE -> theater_armed (portal live)"))
                     : (console.log("[Z4Route] RESET — wrong final turn"),
                       (this.z4RouteStep = 0),
                       (this.z4RouteActive = !1),
@@ -1397,16 +1410,20 @@ class Zone2Engine {
                   this.leftRoom && (this.leftRoom.tex = this.texBathroomHole),
                   (this.mode9_T_hole = performance.now()))
                 : "E" === newFacing &&
-                  "bedroom_visited" === this.seqState &&
-                  ((this.seqState = "bedroom_2"),
-                  (this.zone3Route = "z3b"),
-                  (this.rightBlinkCount = 0),
-	                  (this.z3bTurbulenceStart = -1),
-	                  (this.redStartTime = -1),
-	                  (this.z4RouteActive = !1),
-	                  (this.theaterRouteActive = !1),
-	                  (this.z4RouteStep = 0),
-	                  this._resetZone2BlackholePath && this._resetZone2BlackholePath()));
+                  "bedroom_visited" === this.seqState
+                  ? ((this.seqState = "bedroom_2"),
+                    (this.zone3Route = "z3b"),
+                    (this.rightBlinkCount = 0),
+                    (this.z3bTurbulenceStart = -1),
+                    (this.redStartTime = -1),
+                    (this.z4RouteActive = !1),
+                    (this.theaterRouteActive = !1),
+                    (this.z4RouteStep = 0),
+                    this._resetZone2BlackholePath &&
+                      this._resetZone2BlackholePath())
+                  : "N" === newFacing &&
+                    "bedroom_2" === this.seqState &&
+                    ((this.readyForZone3 = !0), (this.zone3Route = "z3b")));
         }
       }
     }
@@ -1625,37 +1642,40 @@ class Zone2Engine {
       "z3b_turbulence" === this.seqState ||
       "z3b_red" === this.seqState ||
       "theater_tunnel" === this.seqState;
-	    if (
-	      (this.rightRoom && (this.rightRoom.bcSourceTex = null),
-	      m && this.rightHoleFBO && (this.modeBH || this.blackHoleProg))
-	    ) {
-	      const z2BlackholePathActive =
-	          "bedroom_2" === this.seqState ||
-	          "z3b_turbulence" === this.seqState ||
-	          "z3b_red" === this.seqState,
-	        z2UseBlackholePath =
-	          z2BlackholePathActive && this.blackHoleProg && this.rightHolePostFBO;
-	      if (z2UseBlackholePath) {
-	        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHolePostFBO.fbo),
-	          gl.viewport(0, 0, u, f),
-	          gl.clearColor(0, 0, 0, 1),
-	          gl.clear(gl.COLOR_BUFFER_BIT),
-	          this._updateZone2BlackholePath(e, s),
-	          this._renderZone2BlackholePath(this.blackHoleProg, u, f, e, a));
-	      } else
-	        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHoleFBO.fbo),
-	          gl.viewport(0, 0, u, f),
-	          gl.clearColor(0, 0, 0, 1),
-	          gl.clear(gl.COLOR_BUFFER_BIT),
-	          (window.__tripAmount = Math.max(
-	            this.z2Trip,
-	            "z3b_turbulence" === this.seqState ? 1.2 : 0.9,
-	          )),
-	          this.modeBH && this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed));
-	      const t = z2UseBlackholePath ? this.rightHolePostFBO.tex : this.rightHoleFBO.tex;
-	      (gl.bindFramebuffer(gl.FRAMEBUFFER, null),
-	        gl.viewport(0, 0, u, f),
-	        (this.rightRoom.bcSourceTex = t));
+    if (
+      (this.rightRoom && (this.rightRoom.bcSourceTex = null),
+      m && this.rightHoleFBO && (this.modeBH || this.blackHoleProg))
+    ) {
+      const z2BlackholePathActive =
+          "bedroom_2" === this.seqState ||
+          "z3b_turbulence" === this.seqState ||
+          "z3b_red" === this.seqState,
+        z2UseBlackholePath =
+          z2BlackholePathActive && this.blackHoleProg && this.rightHolePostFBO;
+      if (z2UseBlackholePath) {
+        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHolePostFBO.fbo),
+          gl.viewport(0, 0, u, f),
+          gl.clearColor(0, 0, 0, 1),
+          gl.clear(gl.COLOR_BUFFER_BIT),
+          this._updateZone2BlackholePath(e, s),
+          this._renderZone2BlackholePath(this.blackHoleProg, u, f, e, a));
+      } else
+        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHoleFBO.fbo),
+          gl.viewport(0, 0, u, f),
+          gl.clearColor(0, 0, 0, 1),
+          gl.clear(gl.COLOR_BUFFER_BIT),
+          (window.__tripAmount = Math.max(
+            this.z2Trip,
+            "z3b_turbulence" === this.seqState ? 1.2 : 0.9,
+          )),
+          this.modeBH &&
+            this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed));
+      const t = z2UseBlackholePath
+        ? this.rightHolePostFBO.tex
+        : this.rightHoleFBO.tex;
+      (gl.bindFramebuffer(gl.FRAMEBUFFER, null),
+        gl.viewport(0, 0, u, f),
+        (this.rightRoom.bcSourceTex = t));
     }
     if (
       (("right" !== this.activePOV && "left" !== this.activePOV) ||
@@ -1994,7 +2014,7 @@ class Zone2Engine {
           : this.texFront,
         backTex =
           "theater_armed" === this.seqState
-            ? this.texFrontAlt
+            ? this.texBackAlt
             : "initial" === this.seqState
               ? this.texBack
               : "z4_ready" === this.seqState || "z4" === this.zone3Route
@@ -2227,10 +2247,10 @@ class Zone2Engine {
       gl.deleteTexture(this.texRight),
       gl.deleteTexture(this.texTop),
       gl.deleteTexture(this.texBottom),
-	      gl.deleteTexture(this.texVoidVid),
-	      gl.deleteProgram(this.holeProg),
-	      gl.deleteProgram(this.solidProg),
-	      this.blackHoleProg && gl.deleteProgram(this.blackHoleProg));
+      gl.deleteTexture(this.texVoidVid),
+      gl.deleteProgram(this.holeProg),
+      gl.deleteProgram(this.solidProg),
+      this.blackHoleProg && gl.deleteProgram(this.blackHoleProg));
   }
 }
 

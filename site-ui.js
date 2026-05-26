@@ -48,8 +48,8 @@ function toggleConky() {
     window.currentZone3.isAltRoute &&
     "void" === window.currentZone3.centerPhase &&
     "none" === window.currentZone3.bhEscapePhase &&
-    ((window.currentZone3.bhEscapeArmed = !0),
-    (window.currentZone3.bhEscapeBlinkCount = 0)),
+    ((window.currentZone3.bhEscapePhase = "rising"),
+    (window.currentZone3.bhEscapeStart = performance.now())),
     "none" === e.style.display || "" === e.style.display
       ? ((e.style.display = "block"),
         t.forEach((e) => (e.style.display = "block")),

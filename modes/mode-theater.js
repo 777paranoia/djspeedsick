@@ -1126,21 +1126,36 @@
                     b.quad(p000, p100, p101, p001, color));
                 }
                 function wing(sign) {
-                  const top = [
-                      P(0.4 * sign, -0.05, 0.65),
-                      P(5.25 * sign, -0.42, -1.28),
-                      P(5 * sign, -0.48, -2.05),
-                      P(0.58 * sign, -0.08, -0.82),
-                    ],
-                    bot = top.map((p) => [
-                      p[0] - up[0] * scale * 0.06,
-                      p[1] - up[1] * scale * 0.06,
-                      p[2] - up[2] * scale * 0.06,
-                    ]);
-                  (b.quad(top[0], top[1], top[2], top[3], metal),
-                    b.quad(bot[3], bot[2], bot[1], bot[0], belly),
-                    b.quad(top[1], bot[1], bot[2], top[2], dark),
-                    b.quad(top[0], top[3], bot[3], bot[0], dark));
+                  const dih = 0.11;
+                  // wP: jet-local coords with dihedral baked into y
+                  function wP(x, y, z) { return P(sign * x, y + x * dih, z); }
+                  // Corners derived analytically from mode9's sdBox wA/wB/wC geometry
+                  // Section A – inner panel (wA: center 0.5,0.025,0.25 sweep -0.06 hx0.40 hy0.052 hz0.78)
+                  const aLE0=wP(0.054,0.077,1.004), aLE1=wP(0.852,0.077,1.052),
+                        aTE1=wP(0.946,0.077,-0.504), aTE0=wP(0.148,0.077,-0.552),
+                        aLE0b=wP(0.054,-0.027,1.004), aLE1b=wP(0.852,-0.027,1.052),
+                        aTE1b=wP(0.946,-0.027,-0.504), aTE0b=wP(0.148,-0.027,-0.552);
+                  (b.quad(aLE0,aLE1,aTE1,aTE0,metal), b.quad(aTE0b,aTE1b,aLE1b,aLE0b,belly),
+                   b.quad(aLE0,aLE0b,aLE1b,aLE1,metal), b.quad(aTE1,aTE1b,aTE0b,aTE0,dark),
+                   b.quad(aLE1,aLE1b,aTE1b,aTE1,dark), b.quad(aTE0,aTE0b,aLE0b,aLE0,dark));
+                  // Section B – mid panel (wB: center 1.9,0.159,-0.25 sweep -0.16 hx1.18 hy0.038 hz0.60)
+                  const bLE0=wP(0.640,0.197,0.154), bLE1=wP(2.970,0.197,0.530),
+                        bTE1=wP(3.160,0.197,-0.654), bTE0=wP(0.830,0.197,-1.030),
+                        bLE0b=wP(0.640,0.121,0.154), bLE1b=wP(2.970,0.121,0.530),
+                        bTE1b=wP(3.160,0.121,-0.654), bTE0b=wP(0.830,0.121,-1.030);
+                  (b.quad(bLE0,bLE1,bTE1,bTE0,metal), b.quad(bTE0b,bTE1b,bLE1b,bLE0b,belly),
+                   b.quad(bLE0,bLE0b,bLE1b,bLE1,metal), b.quad(bTE1,bTE1b,bTE0b,bTE0,dark),
+                   b.quad(bLE1,bLE1b,bTE1b,bTE1,dark), b.quad(bTE0,bTE0b,bLE0b,bLE0,dark));
+                  // Section C – outer panel (wC: center 4.0,0.370,-1.05 sweep -0.25 hx0.98 hy0.024 hz0.40)
+                  const cLE0=wP(2.951,0.394,-0.904), cLE1=wP(4.851,0.394,-0.420),
+                        cTE1=wP(5.049,0.394,-1.196), cTE0=wP(3.149,0.394,-1.680),
+                        cLE0b=wP(2.951,0.346,-0.904), cLE1b=wP(4.851,0.346,-0.420),
+                        cTE1b=wP(5.049,0.346,-1.196), cTE0b=wP(3.149,0.346,-1.680);
+                  (b.quad(cLE0,cLE1,cTE1,cTE0,metal), b.quad(cTE0b,cTE1b,cLE1b,cLE0b,belly),
+                   b.quad(cLE0,cLE0b,cLE1b,cLE1,metal), b.quad(cTE1,cTE1b,cTE0b,cTE0,dark),
+                   b.quad(cLE1,cLE1b,cTE1b,cTE1,dark), b.quad(cTE0,cTE0b,cLE0b,cLE0,dark));
+                  // Winglet (mode9: x=5.0, y_dih=0.39, z=-1.30, half-extents 0.028×0.26×0.20)
+                  obox(sign * 5.0, 0.39, -1.30, 0.028, 0.26, 0.20, metal);
                 }
                 (b.beam(P(0, 0, -5.7), P(0, 0.03, 2.9), 0.42 * scale, fuselage),
                   b.beam(
@@ -1158,21 +1173,26 @@
                   wing(-1),
                   wing(1));
                 for (const sx of [-1, 1])
+                  // engine nacelle (mode9: eY = -0.36 - 1.90*0.11 = -0.569 world-y)
                   (b.beam(
-                    P(1.92 * sx, -0.58, 0.75),
-                    P(1.92 * sx, -0.62, -0.58),
-                    0.25 * scale,
+                    P(1.90 * sx, -0.569, 0.80),
+                    P(1.90 * sx, -0.569, -0.52),
+                    0.24 * scale,
                     [0.42, 0.44, 0.5],
                   ),
                     b.beam(
-                      P(1.92 * sx, -0.61, -0.66),
-                      P(1.92 * sx, -0.61, -0.92),
+                      P(1.90 * sx, -0.569, -0.52),
+                      P(1.90 * sx, -0.569, -0.72),
                       0.18 * scale,
                       engineHot,
                     ),
-                    obox(0.95 * sx, 0.14, -5.12, 0.78, 0.035, 0.38, metal));
+                    // pylon (mode9: pY = -0.19 - 1.90*0.11 = -0.399 world-y)
+                    obox(1.90 * sx, -0.399, -0.12, 0.052, 0.16, 0.50, [0.50, 0.52, 0.58]),
+                    // horizontal stabilizer (mode9: x=±0.88, y=0.13, z=-5.0, hx0.76 hy0.028 hz0.34)
+                    obox(0.88 * sx, 0.13, -5.00, 0.76, 0.028, 0.34, metal));
                 return (
-                  obox(0, 0.78, -4.68, 0.06, 0.82, 0.72, metal),
+                  // vertical fin (mode9: x=0, y=0.54, z=-4.5, hx0.034 hy0.70 hz0.80)
+                  obox(0, 0.54, -4.50, 0.034, 0.70, 0.80, metal),
                   obox(0, 0.18, 3.58, 0.22, 0.16, 0.28, [1.55, 1.42, 1.08]),
                   new Float32Array(b.data)
                 );
@@ -1389,7 +1409,7 @@
             gl.uniform1f(locHallucinationTrip, theaterTrip),
             gl.uniform1f(
               locHallucinationSeed,
-              17.13 * state.stageStartBlinkIndex + 3.7,
+              17.13 * Math.floor(state.blinkClock / 3.35) + 3.7,
             ),
             gl.drawArrays(gl.TRIANGLES, 0, 3),
             gl.disable(gl.BLEND)),

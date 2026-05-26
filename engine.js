@@ -1037,12 +1037,16 @@ function _laptopTuvToCanvasPx(u, v) {
     t = Math.max(0, Math.min(1, (sa - 0.7) / 1.3)),
     va = imgA + t * t * (3 - 2 * t) * (0.68 - imgA),
     zAmt = Math.max(0, Math.min(1, (laptopZoom - 0.82) / 0.18)),
-    rawT = "waking" === phase ? Math.max(0, Math.min(1, (performance.now() - start) / 3e3)) : 1,
+    rawT =
+      "waking" === phase
+        ? Math.max(0, Math.min(1, (performance.now() - start) / 3e3))
+        : 1,
     wakeL = rawT >= 1 ? 1 : 1 - Math.pow(1 - rawT, 3),
     k = 1 - 0.08 * zAmt * zAmt,
     // invert shader chain: undo camera offset → undo wake → undo zoom → undo fitLaptopImage scale
     preU = ((u + cx * 0.18 - 0.5 * (1 - k)) / k - 0.06) / 0.88,
-    preV = ((v + cy * 0.12 - (1 - wakeL) * 0.22 - 0.43 * (1 - k)) / k - 0.06) / 0.88;
+    preV =
+      ((v + cy * 0.12 - (1 - wakeL) * 0.22 - 0.43 * (1 - k)) / k - 0.06) / 0.88;
   let uvX, uvY;
   return (
     sa > va
@@ -1508,7 +1512,7 @@ function checkPOVThreshold() {
     "idle" === slideState &&
     !(laptopIframe && e.source !== laptopIframe.contentWindow)
   ) {
-    (mx = -1.35), (my = 0), (cx = 0), (cy = 0), (isDragging = !1);
+    ((mx = -1.35), (my = 0), (cx = 0), (cy = 0), (isDragging = !1));
     beginSlide("left", -1);
   } else if ("laptop-drag" === t.type && "laptop" === activePOV) {
     isDragging = !0;
@@ -1521,8 +1525,12 @@ function checkPOVThreshold() {
   } else if ("laptop-drag-end" === t.type && "laptop" === activePOV) {
     isDragging = !1;
     if ("idle" === slideState) {
-      mx = 0; my = 0; cx = 0; cy = 0;
-      window.mx = 0; window.my = 0;
+      mx = 0;
+      my = 0;
+      cx = 0;
+      cy = 0;
+      window.mx = 0;
+      window.my = 0;
     }
   }
 }),
@@ -1595,7 +1603,7 @@ function advanceMode() {
   ((lastMode = mode),
     (mode = e),
     modeSeed++,
-    (tripIntensity = engine1HallucinationTrip()),
+    (tripIntensity = 0.2 + 1.5 * Math.random()),
     (fractalSeed = 100 * Math.random()),
     (blinkPeakTime = performance.now()),
     currentEngine && currentEngine.destroy(),
@@ -1611,8 +1619,7 @@ function initSideEngines() {
 }
 
 function render(e) {
-  ((tripIntensity = engine1HallucinationTrip()),
-    window.butterchurnVisualizer && window.butterchurnVisualizer.render());
+  (window.butterchurnVisualizer && window.butterchurnVisualizer.render());
   let t = e - lastNow;
   (t > 250 || t <= 0) && (t = 33.33);
   let i = t / (IS_MOBILE ? 50 : 33.33),
@@ -1663,6 +1670,7 @@ function render(e) {
       : "black_blink" === phase && e - start > 120
         ? ((phase = "opening_blink"),
           (start = e),
+          (tripIntensity = 0.2 + 1.5 * Math.random()),
           (fractalSeed = 100 * Math.random()),
           (blinkPeakTime = e))
         : "opening_blink" === phase
