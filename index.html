@@ -1,23 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 
 <html lang="en">
-<head>
-<meta charset="utf-8"/>
-<title>DJSPEEDSICK.COM</title>
-<meta charset="utf-8"/>
-<title>DJSPEEDSICK.COM</title>
-<meta content="https://www.djspeedsick.com/prev.png" property="og:image"/>
-<meta content="DJ Speedsick" property="og:title"/>
-<meta content="THE OFFICIAL WEBSITE OF DJ SPEEDSICK" property="og:description"/>
-<meta content="website" property="og:type"/>
-<script>
+  <head>
+    <meta charset="utf-8" />
+    <title>DJSPEEDSICK.COM</title>
+    <meta charset="utf-8" />
+    <title>DJSPEEDSICK.COM</title>
+    <meta content="https://www.djspeedsick.com/prev.png" property="og:image" />
+    <meta content="DJ Speedsick" property="og:title" />
+    <meta
+      content="THE OFFICIAL WEBSITE OF DJ SPEEDSICK"
+      property="og:description"
+    />
+    <meta content="website" property="og:type" />
+    <script>
       (/Mobi|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(
         navigator.userAgent,
       ) ||
         (navigator.maxTouchPoints > 1 && window.innerWidth < 1024)) &&
         window.location.replace("https://m.djspeedsick.com");
     </script>
-<style>
+    <style>
       :root {
         --ui-base-width: 1440;
         --ui-base-height: 900;
@@ -157,9 +160,31 @@
         -webkit-user-select: none;
       }
 
+      #tutorial-link {
+        position: absolute;
+        bottom: 34px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 6;
+        color: #f0f;
+        font-family: "Courier New", monospace;
+        font-size: 18px;
+        letter-spacing: 2px;
+        text-decoration: none;
+        text-transform: uppercase;
+        text-shadow: 0 0 5px rgba(255, 0, 255, 0.75);
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      #tutorial-link:hover {
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.75);
+      }
+
       #conky-sidebar {
         position: fixed;
-        top: 8%;
+        top: 4%;
         left: 4%;
         width: clamp(260px, 22vw, 520px);
         color: #f0f;
@@ -433,10 +458,10 @@
         }
       }
     </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCprDCcZDIqfl92MoMDv_OAJ2bxBSkQ0JA&amp;libraries=places"></script>
-</head>
-<body>
-<script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCprDCcZDIqfl92MoMDv_OAJ2bxBSkQ0JA&amp;libraries=places"></script>
+  </head>
+  <body>
+    <script>
       if (
         location.hostname !== "localhost" &&
         location.hostname !== "127.0.0.1" &&
@@ -448,232 +473,387 @@
         window.location.replace("https://m.djspeedsick.com");
       }
     </script>
-<div id="loading-screen">
-<img id="loading-strobe" src="files/img/splash/load.gif"/>
-</div>
-<div id="splash-screen">
-<div id="background-container">
-<img draggable="false" id="layer-gif" src="files/img/splash/aerial.gif"/>
-<img draggable="false" id="layer-png" src="files/img/splash/aerial.png"/>
-</div>
-<img id="enter-button" onmousedown="enterSite()" ontouchend="enterSite()" src="files/img/splash/enter-button.gif"/>
-<div id="enter-label">CLICK TO ENTER</div>
-</div>
-<img id="secret-button" onclick="__cycleConkyDebug()" src="files/img/buttin.png"/><canvas id="c"></canvas>
-<div id="conky-sidebar">
-<div class="conky-line" id="host-val">SCANNING...</div>
-<div class="conky-line" id="system-ip">SCANNING...</div>
-<div class="separator"></div>
-<br/>
-<div class="conky-line">NEAREST PLACE TO BUY CIGARETTES:</div>
-<div class="conky-invert" id="cig-display">SCANNING...</div>
-<br/>
-<div class="conky-line" id="cig-link"></div>
-<br/>
-<div class="separator">-----------------------</div>
-<div class="conky-line">UPCOMING SHOWS</div>
-<div class="separator">-----------------------</div>
-      <br/>
+    <div id="loading-screen">
+      <img id="loading-strobe" src="files/img/splash/load.gif" />
+    </div>
+    <div id="splash-screen">
+      <div id="background-container">
+        <img
+          draggable="false"
+          id="layer-gif"
+          src="files/img/splash/aerial.gif"
+        />
+        <img
+          draggable="false"
+          id="layer-png"
+          src="files/img/splash/aerial.png"
+        />
+      </div>
+      <img
+        id="enter-button"
+        onclick="enterSite()"
+        onmousedown="enterSite()"
+        ontouchend="enterSite()"
+        src="files/img/splash/enter-button.gif"
+      />
+      <div id="enter-label">CLICK TO ENTER</div>
+      <a
+        id="tutorial-link"
+        href="#"
+        onclick="startTutorialFromSplash(event)"
+        onmousedown="event.stopPropagation()"
+        ontouchstart="event.stopPropagation()"
+        >TUTORIAL</a
+      >
+    </div>
+    <img
+      id="secret-button"
+      onclick="__cycleConkyDebug()"
+      src="files/img/buttin.png"
+    /><canvas id="c"></canvas>
+    <div id="conky-sidebar">
+      <div class="conky-line" id="host-val">SCANNING...</div>
+      <div class="conky-line" id="system-ip">SCANNING...</div>
+      <div class="separator"></div>
+      <br />
+      <div class="conky-line">NEAREST PLACE TO BUY CIGARETTES:</div>
+      <div class="conky-invert" id="cig-display">SCANNING...</div>
+      <br />
+      <div class="conky-line" id="cig-link"></div>
+      <br />
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">UPCOMING SHOWS</div>
+      <div class="separator">-----------------------</div>
+      <br />
       05/29/2026
-      <br/>
+      <br />
       LOS ANGELES, CA @ NOTHING USUAL
-      <br/>
+      <br />
       2347 E OLYMPIC BLVD
-      <br/>
-      <br/>
+      <br />
+      <br />
       with
-      <br/>
+      <br />
       PRESSER
-      <br/>
-      TRUE COMMANDONO
-      <br/>
+      <br />
+      TRUE COMMANDO
+      <br />
       xTIEDxTOxAxTREEx
-      <br/>
+      <br />
       CREMATION9
-      <br/>
-      <br/>
+      <br />
+      <br />
       TICKETS: WERENICEKIDS.BIGCARTEL.COM
-      <br/>
+      <br />
       <div style="height: 0.6em"></div>
-<div style="height: 0.6em"></div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">CONTACT</div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">
-<a class="conky-link" href="/cdn-cgi/l/email-protection#e88a878d9c9c838da88c829b988d8d8c9b818b83c68b8785">&gt;&gt; BOOKING</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="/cdn-cgi/l/email-protection#0d69674d69677e7d6868697e646e66236e6260">&gt;&gt; PRESS</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="/cdn-cgi/l/email-protection#6b5c5c5c1b0a190a0504020a2b0c060a020745080406">&gt;&gt; COMMISSIONS</a>
-</div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">
-<a class="conky-link" href="http://escalation.ist">&gt;&gt; ESCALATIONIST</a>
-</div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">
-<a class="conky-link" href="portfolio.html">&gt;&gt; PORTFOLIO</a>
-</div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">EXTERNAL LINKS</div>
-<div class="separator">-----------------------</div>
-<div class="conky-line">
-<a class="conky-link" href="https://www.soundcloud.com/speedsick">&gt; SOUNDCLOUD</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://djspeedsick.bandcamp.com">&gt; BANDCAMP</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://www.instagram.com/djspeedsick">&gt; INSTAGRAM</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://www.x.com/djspeedsick">&gt; X</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://en.wikipedia.org/wiki/DJ_Speedsick">&gt; WIKIPEDIA</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX">&gt; SPOTIFY</a>
-</div>
-<div class="conky-line">
-<a class="conky-link" href="https://www.discogs.com/artist/5782732-DJ-Speedsick">&gt; DISCOGS</a>
-</div>
-<br/>
-<div class="separator">------------------------</div>
-<div class="conky-link" onclick="toggleAbout()" style="cursor: pointer">
+      <div style="height: 0.6em"></div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">CONTACT</div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">
+        <a
+          class="conky-link"
+          href="/cdn-cgi/l/email-protection#e88a878d9c9c838da88c829b988d8d8c9b818b83c68b8785"
+          >&gt;&gt; BOOKING</a
+        >
+      </div>
+      <div class="conky-line">
+        <a
+          class="conky-link"
+          href="/cdn-cgi/l/email-protection#0d69674d69677e7d6868697e646e66236e6260"
+          >&gt;&gt; PRESS</a
+        >
+      </div>
+      <div class="conky-line">
+        <a
+          class="conky-link"
+          href="/cdn-cgi/l/email-protection#6b5c5c5c1b0a190a0504020a2b0c060a020745080406"
+          >&gt;&gt; COMMISSIONS</a
+        >
+      </div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">
+        <a class="conky-link" href="http://escalation.ist"
+          >&gt;&gt; ESCALATIONIST</a
+        >
+      </div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">
+        <a class="conky-link" href="portfolio.html">&gt;&gt; PORTFOLIO</a>
+      </div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">EXTERNAL LINKS</div>
+      <div class="separator">-----------------------</div>
+      <div class="conky-line">
+        <a class="conky-link" href="https://www.soundcloud.com/speedsick"
+          >&gt; SOUNDCLOUD</a
+        >
+      </div>
+      <div class="conky-line">
+        <a class="conky-link" href="https://djspeedsick.bandcamp.com"
+          >&gt; BANDCAMP</a
+        >
+      </div>
+      <div class="conky-line">
+        <a class="conky-link" href="https://www.instagram.com/djspeedsick"
+          >&gt; INSTAGRAM</a
+        >
+      </div>
+      <div class="conky-line">
+        <a class="conky-link" href="https://www.x.com/djspeedsick">&gt; X</a>
+      </div>
+      <div class="conky-line">
+        <a class="conky-link" href="https://en.wikipedia.org/wiki/DJ_Speedsick"
+          >&gt; WIKIPEDIA</a
+        >
+      </div>
+      <div class="conky-line">
+        <a
+          class="conky-link"
+          href="https://open.spotify.com/artist/6CZm9kdgqsQmxDrp6OHmxX"
+          >&gt; SPOTIFY</a
+        >
+      </div>
+      <div class="conky-line">
+        <a
+          class="conky-link"
+          href="https://www.discogs.com/artist/5782732-DJ-Speedsick"
+          >&gt; DISCOGS</a
+        >
+      </div>
+      <br />
+      <div class="separator">------------------------</div>
+      <div class="conky-link" onclick="toggleAbout()" style="cursor: pointer">
         &gt;&gt; ABOUT
       </div>
-<div class="separator">------------------------</div>
-<div class="conky-line conky-dim" id="privacy-cheat" style="cursor:default;-webkit-user-select:none;user-select:none;">
-        PRIVACY NOTE:<br/>IP ADDRESSES NOT LOGGED
+      <div class="separator">------------------------</div>
+      <div
+        class="conky-line conky-dim"
+        id="privacy-note"
+        style="cursor: default; -webkit-user-select: none; user-select: none"
+      >
+        PRIVACY NOTE:<br />IP ADDRESSES NOT LOGGED
       </div>
-<div id="cheat-overlay" style="position:fixed;inset:0;z-index:9500;pointer-events:none;display:none;align-items:center;justify-content:center;">
-<img src="files/img/cheat.png" style="max-width:90vw;max-height:90vh;object-fit:contain;opacity:0.8;"/>
-</div>
-<script>
-(function(){
-  var el=document.getElementById('privacy-cheat'),ov=document.getElementById('cheat-overlay');
-  if(!el||!ov)return;
-  var tid=0;
-  function show(){ov.style.display='flex';}
-  function hide(){clearTimeout(tid);ov.style.display='none';}
-  el.addEventListener('mousedown',function(e){e.preventDefault();tid=setTimeout(show,400);});
-  el.addEventListener('mouseup',hide);
-  el.addEventListener('mouseleave',hide);
-  el.addEventListener('touchstart',function(e){e.preventDefault();tid=setTimeout(show,400);},{passive:false});
-  el.addEventListener('touchend',hide);
-  el.addEventListener('touchcancel',hide);
-})();
-</script>
-<div class="separator">------------------------</div>
-</div>
-<div class="ticker-wrap top" id="wrap-top">
-<div class="ticker" id="rss-top"></div>
-</div>
-<div class="ticker-wrap bottom" id="wrap-bottom">
-<div class="ticker" id="rss-bottom"></div>
-</div>
-<div class="ticker-wrap left" id="wrap-left">
-<div class="ticker" id="rss-left"></div>
-</div>
-<div class="ticker-wrap right" id="wrap-right">
-<div class="ticker" id="rss-right"></div>
-</div>
-<div id="aboutOverlay" style="display: none">
-<div id="aboutContent">
-<img alt="" class="responsive-image" src="files/img/me.jpg"/>
-<p id="aboutText">
-<span style="font-size: 2rem">DJ Speedsick</span><br/><span style="font-size: 1rem; font-style: italic">a.k.a. "A*** E********"</span>
-</p>
-<div style="height: 0.6em"></div>
-<span style="font-size: 0.75rem">b. 1992</span><br/><span style="font-size: 0.75rem">d. ????</span>
-<div style="height: 0.6em"></div>
-<span style="font-size: 0.65rem">current location: Chicago, IL</span>
-<p></p>
-<div id="legalNotice">
-<p><b>LEGAL NOTICE</b></p>
-<p>
+      <div class="separator">------------------------</div>
+    </div>
+    <div class="ticker-wrap top" id="wrap-top">
+      <div class="ticker" id="rss-top"></div>
+    </div>
+    <div class="ticker-wrap bottom" id="wrap-bottom">
+      <div class="ticker" id="rss-bottom"></div>
+    </div>
+    <div class="ticker-wrap left" id="wrap-left">
+      <div class="ticker" id="rss-left"></div>
+    </div>
+    <div class="ticker-wrap right" id="wrap-right">
+      <div class="ticker" id="rss-right"></div>
+    </div>
+    <div id="aboutOverlay" style="display: none">
+      <div id="aboutContent">
+        <img alt="" class="responsive-image" src="files/img/me.jpg" />
+        <p id="aboutText">
+          <span style="font-size: 2rem">DJ Speedsick</span><br /><span
+            style="font-size: 1rem; font-style: italic"
+            >a.k.a. "A*** E********"</span
+          >
+        </p>
+        <div style="height: 0.6em"></div>
+        <span style="font-size: 0.75rem">b. 1992</span><br /><span
+          style="font-size: 0.75rem"
+          >d. ????</span
+        >
+        <div style="height: 0.6em"></div>
+        <span style="font-size: 0.65rem">current location: Chicago, IL</span>
+        <p></p>
+        <div id="legalNotice">
+          <p><b>LEGAL NOTICE</b></p>
+          <p>
             © DJ Speedsick. All content provided for informational and artistic
             purposes only. No material here constitutes legal or financial
             advice. External media remain property of their owners. No personal
             data collected. Use at your own risk.
           </p>
-</div>
-</div>
-</div>
-<audio id="audioPlayer"></audio>
-<script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js?v=20260523-altannexturn2"></script>
-<script src="lodash.js?v=20260523-altannexturn2"></script>
-<script src="butterchurn.js?v=20260523-altannexturn2"></script>
-<script src="butterchurnPresets.min.js?v=20260523-altannexturn2"></script><script src="site-ui.js?v=20260523-altannexturn2"></script><script src="glsl-core.js?v=20260523-altannexturn2"></script><script src="modes/mode1.js?v=20260523-altannexturn2"></script><script src="modes/mode2.js?v=20260523-altannexturn2"></script><script src="modes/mode-bh.js?v=20260523-altannexturn2"></script><script src="modes/mode3.js?v=20260523-altannexturn2"></script><script src="modes/mode4.js?v=20260523-altannexturn2"></script><script src="modes/mode5.js?v=20260523-altannexturn2"></script><script src="modes/mode6.js?v=20260523-altannexturn2"></script><script src="modes/mode7.js?v=20260523-altannexturn2"></script><script src="modes/mode9.js?v=20260523-altannexturn2"></script><script src="modes/mode-right.js?v=20260523-altannexturn2"></script><script src="modes/mode-back.js?v=20260523-altannexturn2"></script><script src="modes/mode-left.js?v=20260523-altannexturn2"></script><script src="modes/mode-left2.js?v=20260523-altannexturn2"></script><script src="modes/mode-right2.js?v=20260523-altannexturn2"></script><script src="modes/mode-bedroom3.js?v=20260523-altannexturn2"></script><script src="modes/mode-cabin.js?v=20260523-altannexturn2"></script><script src="modes/mode-door.js?v=20260523-altannexturn2"></script><script src="modes/mode-elevator.js?v=20260523-altannexturn2"></script><script src="modes/mode-station.js?v=20260523-altannexturn2"></script><script src="modes/mode-alt-annex.js?v=20260523-altannexturn2"></script><script src="modes/mode-annex.js?v=20260523-altannexturn2"></script><script src="modes/mode-laptop.js?v=20260523-altannexturn2"></script><script src="modes/mode-island.js?v=20260523-altannexturn2"></script><script src="engine.js?v=20260523-altannexturn2"></script><script src="engine2.js?v=20260523-altannexturn2"></script><script src="engine3.js?v=20260523-altannexturn2"></script><script src="engine4.js?v=20260523-altannexturn2"></script><script src="brain-monitor.js?v=20260523-altannexturn2"></script><script src="player.js?v=20260523-altannexturn2"></script><script src="videos.js?v=20260523-altannexturn2"></script><script src="gallery.js?v=20260523-altannexturn2"></script><script src="debug-ui.js?v=20260523-altannexturn2"></script>
-<style>
-  #__laptopClose {
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    width: 22px;
-    height: 22px;
-    background: #c83232;
-    color: #fff;
-    font: bold 14px/22px "Courier New", monospace;
-    text-align: center;
-    cursor: pointer;
-    z-index: 999999;
-    border: 1px solid #000;
-    box-sizing: border-box;
-    user-select: none;
-    display: none;  /* hidden by default; shown only when iframed */
-  }
-  #__laptopClose:hover  { background: #ff4040; }
-  #__laptopClose:active { background: #a82020; }
-</style>
-<div id="__laptopClose" title="close">×</div>
-<script>
-  (() => {
-    
-    const iframed = (() => {
-      try { return window.self !== window.top; }
-      catch (e) { return true; }   
-    })();
-    const btn = document.getElementById('__laptopClose');
-    if (iframed) {
-      btn.style.display = 'block';
-      btn.addEventListener('click', () => { location.href = 'desktop.html'; });
-    }
-  })();
-</script>
-<script>
-  
-  
-  
-  
-  (() => {
-    let state = 0;  
-    const conky = () => document.getElementById('conky-sidebar');
-    const debug = () => document.getElementById('debug-menu-box');
-    const setVis = (el, on) => { if (el) el.style.display = on ? 'block' : 'none'; };
+        </div>
+      </div>
+    </div>
+    <audio id="audioPlayer"></audio>
+    <script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+    <script src="lodash.js"></script>
+    <script src="butterchurn.js"></script>
+    <script src="butterchurnPresets.min.js"></script>
+    <script>
+      function __loadBundleFallback() {
+        if (window.__bundleFallbackLoaded) return;
+        window.__bundleFallbackLoaded = true;
+        document.write(
+          '<script src="bundle-modes.js"><\/script><script src="bundle-core.js"><\/script>',
+        );
+      }
+      window.addEventListener(
+        "error",
+        function (event) {
+          var target = event.target;
+          if (!target || target.tagName !== "SCRIPT" || !target.src) return;
+          if (target.src.indexOf("bundle-") !== -1) return;
+          __loadBundleFallback();
+        },
+        true,
+      );
+    </script>
+    <script src="site-ui.js"></script>
+    <script src="glsl-core.js"></script>
+    <script src="modes/mode1.js"></script>
+    <script src="modes/mode2.js"></script>
+    <script src="modes/mode-bh.js"></script>
+    <script src="modes/mode3.js"></script>
+    <script src="modes/mode4.js"></script>
+    <script src="modes/mode5.js"></script>
+    <script src="modes/mode6.js"></script>
+    <script src="modes/mode7.js"></script>
+    <script src="modes/mode9.js"></script>
+    <script src="modes/mode-neighborhood.js"></script>
+    <script src="modes/mode-right.js"></script>
+    <script src="modes/mode-back.js"></script>
+    <script src="modes/mode-left.js"></script>
+    <script src="modes/mode-left2.js"></script>
+    <script src="modes/mode-right2.js"></script>
+    <script src="modes/mode-bedroom3.js"></script>
+    <script src="modes/mode-cabin.js"></script>
+    <script src="modes/mode-door.js"></script>
+    <script src="modes/mode-elevator.js"></script>
+    <script src="modes/mode-station.js"></script>
+    <script src="modes/mode-alt-annex.js"></script>
+    <script src="modes/mode-annex.js"></script>
+    <script src="modes/mode-laptop.js"></script>
+    <script src="modes/mode-island.js"></script>
+    <script src="modes/mode-theater.js"></script>
+    <script src="engine.js"></script>
+    <script src="engine2.js"></script>
+    <script src="engine3.js"></script>
+    <script src="engine4.js"></script>
+    <script src="brain-monitor.js"></script>
+    <script src="player.js"></script>
+    <script src="videos.js"></script>
+    <script src="gallery.js"></script>
+    <script src="debug-ui.js"></script>
 
-    window.__cycleConkyDebug = function () {
-      
-      if (typeof __debugAllowed === 'undefined' || !__debugAllowed) {
-        if (typeof toggleConky === 'function') toggleConky();
-        return;
+    <style>
+      #__laptopClose {
+        position: fixed;
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        background: #c83232;
+        color: #fff;
+        font:
+          bold 14px/22px "Courier New",
+          monospace;
+        text-align: center;
+        cursor: pointer;
+        z-index: 999999;
+        border: 1px solid #000;
+        box-sizing: border-box;
+        user-select: none;
+        display: none;
       }
-      
-      
-      state = (state + 1) % 4;
-      const showConky = (state === 0 || state === 3);
-      const showDebug = (state === 1 || state === 3);
-      
-      if (showDebug && !debug() && typeof window.makeUI === 'function') {
-        window.makeUI();
+      #__laptopClose:hover {
+        background: #ff4040;
       }
-      setVis(conky(), showConky);
-      setVis(debug(), showDebug);
-    };
-  })();
-</script>
- </body>
+      #__laptopClose:active {
+        background: #a82020;
+      }
+    </style>
+    <div id="__laptopClose" title="close">×</div>
+    <script>
+      (() => {
+        const iframed = (() => {
+          try {
+            return window.self !== window.top;
+          } catch (e) {
+            return true;
+          }
+        })();
+        const btn = document.getElementById("__laptopClose");
+        if (iframed) {
+          btn.style.display = "block";
+          btn.addEventListener("click", () => {
+            location.href = "desktop.html";
+          });
+        }
+      })();
+    </script>
+    <script>
+      (() => {
+        let state = 0;
+        const conky = () => document.getElementById("conky-sidebar");
+        const debug = () => document.getElementById("debug-menu-box");
+        const setVis = (el, on) => {
+          if (el) el.style.display = on ? "block" : "none";
+        };
+
+        window.__cycleConkyDebug = function () {
+          if (typeof __debugAllowed === "undefined" || !__debugAllowed) {
+            if (typeof toggleConky === "function") toggleConky();
+            return;
+          }
+
+          state = (state + 1) % 4;
+          const showConky = state === 0 || state === 3;
+          const showDebug = state === 1 || state === 3;
+
+          if (showDebug && !debug() && typeof window.makeUI === "function") {
+            window.makeUI();
+          }
+          setVis(conky(), showConky);
+          setVis(debug(), showDebug);
+        };
+      })();
+    </script>
+    <script>
+      (() => {
+        let start = null;
+        let sent = false;
+
+        function sendSwipe() {
+          if (sent) return;
+          try {
+            if (window.parent && window.parent !== window) {
+              sent = true;
+              window.parent.postMessage({ type: "laptop-screen-swipe" }, "*");
+            }
+          } catch (err) {}
+        }
+
+        document.addEventListener(
+          "pointerdown",
+          (e) => {
+            if (e.button !== 0) return;
+            start = { x: e.clientX, y: e.clientY };
+            sent = false;
+          },
+          true,
+        );
+
+        document.addEventListener(
+          "pointermove",
+          (e) => {
+            if (!start || sent) return;
+            const dx = e.clientX - start.x;
+            const dy = e.clientY - start.y;
+            if (dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.45) sendSwipe();
+          },
+          true,
+        );
+
+        function reset() {
+          start = null;
+          sent = false;
+        }
+
+        document.addEventListener("pointerup", reset, true);
+        document.addEventListener("pointercancel", reset, true);
+      })();
+    </script>
+  </body>
 </html>

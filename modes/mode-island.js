@@ -1,1567 +1,1628 @@
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-
-(function () {
-  if (window.__z4bIslandRuntimeInstalled) return;
-  window.__z4bIslandRuntimeInstalled = true;
-
-  var TAU = Math.PI * 2.0;
-  var RX = 30.0;
-  var RZ = 17.0;
-  var BEACH = 3.4;
-  var SPEED = 0.235;
-  var ISLAND_WALK_RATE = 0.28;
-  var ISLAND_BEACH_WALK_RATE = 0.92;
-
-  var texSpecs = [
-    { key: "moai1", path: "files/img/rooms/z4/island/etc/MOAI-1.png", names: ["u_z4bMoaiFace1"], unit: 0, pixel: [72, 70, 66, 255] },
-    { key: "moai2", path: "files/img/rooms/z4/island/etc/MOAI-2.png", names: ["u_z4bMoaiFace2"], unit: 1, pixel: [72, 70, 66, 255] },
-    { key: "moai3", path: "files/img/rooms/z4/island/etc/MOAI-3.png", names: ["u_z4bMoaiFace3"], unit: 2, pixel: [72, 70, 66, 255] },
-    { key: "moai4", path: "files/img/rooms/z4/island/etc/MOAI-4.png", names: ["u_z4bMoaiFace4"], unit: 3, pixel: [72, 70, 66, 255] },
-    { key: "moai5", path: "files/img/rooms/z4/island/etc/MOAI-5.png", names: ["u_z4bMoaiFace5"], unit: 4, pixel: [72, 70, 66, 255] },
-    { key: "moaiSide", path: "files/img/rooms/z4/island/etc/MOAI-SIDE.png", names: ["u_z4bMoaiSide"], unit: 5, pixel: [72, 70, 66, 255] },
-    { key: "moaiBack", path: "files/img/rooms/z4/island/etc/MOAI-BACK.png", names: ["u_z4bMoaiBack"], unit: 6, pixel: [72, 70, 66, 255] },
-    { key: "wing", path: "files/img/rooms/z4/island/wing.png", names: ["u_z4bWingTex"], ready: "u_z4bWingReady", unit: 7, pixel: [0, 0, 0, 0] },];
-  var textures = {};
-  var ready = {};
-  var locNames = new WeakMap();
-  var progCache = new WeakMap();
-
-  var islandPointerDown = false;
-  var islandLookX = typeof window.__z4bIslandLookX === "number" ? window.__z4bIslandLookX : 0.0;
-  var islandLookY = typeof window.__z4bIslandLookY === "number" ? window.__z4bIslandLookY : 0.0;
-  var islandTargetLookX = islandLookX;
-  var islandTargetLookY = islandLookY;
-  var islandLookReady = false;
-  var islandLookLastT = 0.0;
-  var islandLastClientX = 0.0;
-  var islandLastClientY = 0.0;
-  var islandHasLastClient = false;
-  var islandLastDragT = 0.0;
-  var islandGuideShiftHeld = false;
-
-  function islandClamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
-  }
-
-  function islandSetLook(x, y) {
-    if (typeof x !== "number" || !isFinite(x)) x = islandLookX;
-    if (typeof y !== "number" || !isFinite(y)) y = islandLookY;
-
-    islandLookX = islandClamp(x, -1.65, 1.65);
-    islandLookY = islandClamp(y, -0.95, 0.95);
-    islandTargetLookX = islandLookX;
-    islandTargetLookY = islandLookY;
-    islandLookReady = true;
-    islandLookLastT = performance.now();
-
-    window.__z4bIslandLookX = islandLookX;
-    window.__z4bIslandLookY = islandLookY;
-  }
-
-  function islandDragDelta(dx, dy) {
-    if (typeof dx !== "number" || !isFinite(dx)) dx = 0.0;
-    if (typeof dy !== "number" || !isFinite(dy)) dy = 0.0;
-
-    var w = Math.max(1.0, window.innerWidth || 1.0);
-    var h = Math.max(1.0, window.innerHeight || 1.0);
-    var sx = 3.8 / w;
-    var sy = 2.7 / h;
-
-    islandTargetLookX = islandClamp(islandTargetLookX + dx * sx, -1.65, 1.65);
-    islandTargetLookY = islandClamp(islandTargetLookY - dy * sy, -0.95, 0.95);
-    islandLastDragT = performance.now();
-    islandLookReady = true;
-  }
-
-  if (!window.__z4bIslandRelativeLookV2Installed) {
-    window.__z4bIslandRelativeLookV2Installed = true;
-
-    window.addEventListener("mousedown", function (e) {
-      if (window.__z4bIslandActive === true || z4bCurrentProgramIsIsland()) {
-        islandPointerDown = true;
-        islandHasLastClient = true;
-        islandLastClientX = e.clientX;
-        islandLastClientY = e.clientY;
-      }
-    }, true);
-
-    window.addEventListener("mousemove", function (e) {
-      if (window.__z4bIslandActive === true && islandPointerDown) {
-        var dx = typeof e.movementX === "number" ? e.movementX : e.clientX - islandLastClientX;
-        var dy = typeof e.movementY === "number" ? e.movementY : e.clientY - islandLastClientY;
-
-        islandLastClientX = e.clientX;
-        islandLastClientY = e.clientY;
-        islandHasLastClient = true;
-
-        if (Math.abs(dx) > 0.0 || Math.abs(dy) > 0.0) islandDragDelta(dx, dy);
-      }
-    }, true);
-
-    window.addEventListener("mouseup", function () {
-      if (window.__z4bIslandActive === true) {
-        islandPointerDown = false;
-        islandHasLastClient = false;
-      }
-    }, true);
-
-    window.addEventListener("touchstart", function (e) {
-      if (window.__z4bIslandActive === true && e.touches && e.touches.length) {
-        islandPointerDown = true;
-        islandHasLastClient = true;
-        islandLastClientX = e.touches[0].clientX;
-        islandLastClientY = e.touches[0].clientY;
-      }
-    }, true);
-
-    window.addEventListener("touchmove", function (e) {
-      if (window.__z4bIslandActive === true && islandPointerDown && e.touches && e.touches.length) {
-        var x = e.touches[0].clientX;
-        var y = e.touches[0].clientY;
-
-        if (islandHasLastClient) islandDragDelta(x - islandLastClientX, y - islandLastClientY);
-
-        islandLastClientX = x;
-        islandLastClientY = y;
-        islandHasLastClient = true;
-      }
-    }, true);
-
-    window.addEventListener("touchend", function () {
-      if (window.__z4bIslandActive === true) {
-        islandPointerDown = false;
-        islandHasLastClient = false;
-      }
-    }, true);
-
-    window.addEventListener("touchcancel", function () {
-      if (window.__z4bIslandActive === true) {
-        islandPointerDown = false;
-        islandHasLastClient = false;
-      }
-    }, true);
-
-    window.addEventListener("blur", function () {
-      islandPointerDown = false;
-      islandHasLastClient = false;
-    }, true);
-  }
-
-
-  if (!window.__z4bIslandShiftGuideInstalled) {
-    window.__z4bIslandShiftGuideInstalled = true;
-    islandGuideShiftHeld = false;
-    window.__z4bIslandGuideShiftHeld = false;
-    window.__z4bIslandForceGuide = false;
-    window.__z4bIslandDebugGuideActive = false;
-  }
-
-function islandHeldMouseValue(x, y) {
-    if (!islandLookReady) {
-      if (typeof window.__z4bIslandLookX === "number") islandLookX = window.__z4bIslandLookX;
-      if (typeof window.__z4bIslandLookY === "number") islandLookY = window.__z4bIslandLookY;
-
-      islandTargetLookX = islandLookX;
-      islandTargetLookY = islandLookY;
-      islandLookReady = true;
-      islandLookLastT = performance.now();
-    }
-
-    var now = performance.now();
-    var dt = now - islandLookLastT;
-
-    if (dt > 250 || dt <= 0) dt = 33.33;
-
-    islandLookLastT = now;
-
-    var frame = typeof IS_MOBILE !== "undefined" && IS_MOBILE ? 50.0 : 33.33;
-    var step = dt / frame;
-    var k = Math.min(1.0, 0.22 * step);
-
-    islandLookX += (islandTargetLookX - islandLookX) * k;
-    islandLookY += (islandTargetLookY - islandLookY) * k;
-
-    escapeState.mouseX = islandLookX;
-    escapeState.mouseY = islandLookY;
-    window.__z4bIslandLookX = islandLookX;
-    window.__z4bIslandLookY = islandLookY;
-
-    return [islandLookX, islandLookY];
-  }
-
-  var escapeState = window.__z4bIslandEscapeState || {
-    walk: 0,
-    mouseX: 0,
-    mouseY: 0,
-    blink: 0,
-    blinks: 0,
-    escape: false,
-    escapeWalk0: 0,
-    flashStart: -1,
-    lastStare: 0,
-    stareStarted: 0,
-    autoBlinkStage: 0
-  };
-
-  var blinkState = window.__z4bIslandBlinkState || {
-    next: 0,
-    start: -1,
-    active: false,
-    value: 0
-  };
-
-  window.__z4bIslandEscapeState = escapeState;
-  window.__z4bIslandBlinkState = blinkState;
-function islandApplyBlinkOverlay(v) {
-    var ov = document.getElementById("z4b-island-blink-overlay");
-
-    if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
-  }
-
-  function num(v) {
-    return typeof v === "number" && isFinite(v);
-  }
-
-  function mod(a, b) {
-    return ((a % b) + b) % b;
-  }
-
-  function len(v) {
-    return Math.sqrt(v.x * v.x + v.y * v.y);
-  }
-
-  function norm(v) {
-    var l = len(v) || 1.0;
-    return { x: v.x / l, y: v.y / l };
-  }
-
-  function dot(a, b) {
-    return a.x * b.x + a.y * b.y;
-  }
-
-  function rot(v, a) {
-    var c = Math.cos(a);
-    var s = Math.sin(a);
-    return { x: c * v.x - s * v.y, y: s * v.x + c * v.y };
-  }
-
-  function radiusBump(a) {
-    return 1.0 + 0.075 * Math.sin(a * 2.0 + 0.4) + 0.055 * Math.sin(a * 5.0 - 1.6) + 0.040 * Math.sin(a * 9.0 + 2.1);
-  }
-
-  function boundaryAt(a) {
-    var r = radiusBump(a);
-    return { x: Math.cos(a) * RX * r, y: Math.sin(a) * RZ * r };
-  }
-
-  function outDir(a) {
-    var b = boundaryAt(a);
-    return norm({ x: b.x + 0.001, y: b.y });
-  }
-
-  function pathPoint(a) {
-    var b = boundaryAt(a);
-    var o = outDir(a);
-    var wob = Math.sin(a * 3.0 + 1.1) * 0.42 + Math.sin(a * 7.0 - 0.3) * 0.22;
-    return { x: b.x - o.x * (BEACH + wob), y: b.y - o.y * (BEACH + wob) };
-  }
-
-  function moaiPlace(ang, inward) {
-    var p = pathPoint(ang);
-    var o = outDir(ang);
-    return { x: p.x - o.x * inward, y: p.y - o.y * inward };
-  }
-
-  function islandSelfMoaiGuideMetrics() {
-    var selfA = 3.72;
-    var camA = mod(escapeState.walk * SPEED, TAU);
-    var cam = pathPoint(camA);
-    var self = moaiPlace(selfA, 8.8);
-    var selfYaw = -2.787223;
-    var faceDir = norm({ x: Math.cos(selfYaw), y: Math.sin(selfYaw) });
-    var faceSide = { x: -faceDir.y, y: faceDir.x };
-    var eyeTarget = { x: self.x + faceDir.x * 1.10, y: self.y + faceDir.y * 1.10 };
-    var rel = { x: cam.x - eyeTarget.x, y: cam.y - eyeTarget.y };
-    var guideForward = dot(rel, faceDir);
-    var guideAcross = dot(rel, faceSide);
-    var frontMin = 0.05;
-    var frontMax = 8.90;
-    var laneT = Math.max(0.0, Math.min(1.0, (guideForward - frontMin) / (frontMax - frontMin)));
-    var halfWidth = 0.72 + 0.86 * laneT;
-    var nearStatue = len({ x: cam.x - self.x, y: cam.y - self.y }) < 12.0;
-    var standingInGuide = nearStatue && guideForward > frontMin && guideForward < frontMax && Math.abs(guideAcross) < halfWidth;
-
-    return {
-      nearStatue: nearStatue,
-      standingInGuide: standingInGuide,
-      guideForward: guideForward,
-      guideAcross: guideAcross,
-      halfWidth: halfWidth,
-      frontMin: frontMin,
-      frontMax: frontMax
-    };
-  }
-
-  function islandDebugGuideValue() {
-    islandGuideShiftHeld = false;
-    window.__z4bIslandGuideShiftHeld = false;
-    window.__z4bIslandForceGuide = false;
-    window.__z4bIslandDebugGuideActive = false;
-    window.__z4bIslandGuideDebug = null;
-    return 0.0;
-  }
-
-function makeTexture(spec) {
-    if (typeof gl === "undefined") return null;
-    if (textures[spec.key]) return textures[spec.key];
-
-    var tex = gl.createTexture();
-    textures[spec.key] = tex;
-    ready[spec.key] = false;
-
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      1,
-      1,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array(spec.pixel)
-    );
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-    var img = new Image();
-    img.crossOrigin = "anonymous";
-
-    img.onload = function () {
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      ready[spec.key] = true;
-      console.log("[mode-island] loaded:", spec.path, img.width, img.height);
-    };
-
-    img.onerror = function () {
-      ready[spec.key] = false;
-      console.error("[mode-island] failed:", spec.path);
-    };
-
-    img.src = spec.path + "?z4bMoai=" + Date.now();
-
-    return tex;
-  }
-
-  function makeAllTextures() {
-    for (var i = 0; i < texSpecs.length; i++) {
-      makeTexture(texSpecs[i]);
-    }
-  }
-
-  function z4bCurrentProgramIsIsland() {
-    if (typeof gl === "undefined") return false;
-
-    var prog = null;
-
-    try {
-      prog = gl.getParameter(gl.CURRENT_PROGRAM);
-    } catch (e) {
-      return false;
-    }
-
-    if (!prog) return false;
-
-    try {
-      return !!(
-        gl.getUniformLocation(prog, "u_z4bMoaiReady") ||
-        gl.getUniformLocation(prog, "u_z4bWingReady") ||
-        gl.getUniformLocation(prog, "u_z4bPalmLeafReady") ||
-        gl.getUniformLocation(prog, "u_z4bIslandEscape")
-      );
-    } catch (e) {
-      return false;
-    }
-  }
-function scheduleIslandBlink(t) {
-    blinkState.next = t + 6500 + Math.random() * 9000;
-  }
-
-  function islandBlinkEase(t) {
-    t = Math.max(0, Math.min(1, t));
-    return t * t * (3.0 - 2.0 * t);
-  }
-function islandBlinkValue(t) {
-    if (typeof t !== "number" || !isFinite(t)) t = performance.now();
-
-    var closeMs = 135;
-    var holdMs = 85;
-    var openMs = 150;
-    var total = closeMs + holdMs + openMs;
-    var start = -1;
-    var v = 0.0;
-
-    if (typeof blinkState.forceStart === "number" && blinkState.forceStart > 0) {
-      start = blinkState.forceStart;
-    } else {
-      if (!blinkState.next) scheduleIslandBlink(t);
-
-      if (!blinkState.active && t >= blinkState.next) {
-        blinkState.active = true;
-        blinkState.start = t;
-        blinkState.next = t + 6500 + Math.random() * 9000;
-      }
-
-      if (blinkState.active) start = blinkState.start;
-    }
-
-    if (start >= 0) {
-      var age = t - start;
-
-      if (age < closeMs) {
-        v = islandBlinkEase(age / closeMs);
-      } else if (age < closeMs + holdMs) {
-        v = 1.0;
-      } else if (age < total) {
-        v = 1.0 - islandBlinkEase((age - closeMs - holdMs) / openMs);
-      } else {
-        v = 0.0;
-        blinkState.active = false;
-        blinkState.start = -1;
-        blinkState.forceStart = 0;
-      }
-    }
-
-    v = Math.max(0.0, Math.min(1.0, v));
-    blinkState.value = v;
-    escapeState.blink = v;
-    window.__z4bIslandBlinkValue = v;
-    islandApplyBlinkOverlay(0.0);
-
-    return v;
-  }
-function isStaringAtSelfMoai() {
-    if (window.__z4bIslandActive !== true && !z4bCurrentProgramIsIsland()) return false;
-    if (escapeState.escape) return false;
-
-    var mx = escapeState.mouseX;
-    var my = escapeState.mouseY;
-
-    if (num(window.__z4bIslandLookX)) mx = window.__z4bIslandLookX;
-    if (num(window.__z4bIslandLookY)) my = window.__z4bIslandLookY;
-
-    var selfA = 3.72;
-    var a = mod(escapeState.walk * SPEED, TAU);
-
-    var p0 = pathPoint(a - 0.035);
-    var p1 = pathPoint(a + 0.035);
-    var pathT = norm({ x: p1.x - p0.x, y: p1.y - p0.y });
-    var shoreD = outDir(a);
-    var cam = pathPoint(a);
-
-    var base = norm({
-      x: pathT.x + shoreD.x * 0.95,
-      y: pathT.y + shoreD.y * 0.95
-    });
-
-    var look = rot(base, mx * 2.05 + Math.PI);
-
-    var self = moaiPlace(selfA, 8.8);
-    var selfYaw = -2.787223;
-    var faceDir = norm({ x: Math.cos(selfYaw), y: Math.sin(selfYaw) });
-    var faceSide = { x: -faceDir.y, y: faceDir.x };
-
-    var eyeTarget = {
-      x: self.x + faceDir.x * 1.10,
-      y: self.y + faceDir.y * 1.10
-    };
-
-    var rel = {
-      x: cam.x - eyeTarget.x,
-      y: cam.y - eyeTarget.y
-    };
-
-    var guideForward = dot(rel, faceDir);
-    var guideAcross = dot(rel, faceSide);
-    var nearStatue = len({ x: cam.x - self.x, y: cam.y - self.y }) < 9.25;
-
-    var frontMin = 0.05;
-    var frontMax = 8.90;
-    var laneT = Math.max(0.0, Math.min(1.0, (guideForward - frontMin) / (frontMax - frontMin)));
-    var halfWidth = 0.72 + 0.86 * laneT;
-
-    var standingInFront =
-      nearStatue &&
-      guideForward > frontMin &&
-      guideForward < frontMax &&
-      Math.abs(guideAcross) < halfWidth;
-
-    var toEye = {
-      x: eyeTarget.x - cam.x,
-      y: eyeTarget.y - cam.y
-    };
-
-    var d = len(toEye);
-    var toEyeN = norm(toEye);
-    var aim = dot(look, toEyeN);
-    var ahead = dot(toEye, look);
-    var perpx = toEye.x - look.x * ahead;
-    var perpy = toEye.y - look.y * ahead;
-    var miss = Math.sqrt(perpx * perpx + perpy * perpy);
-
-    var pitchOK = Math.abs(my) < 0.92;
-    var distanceOK = d > 0.35 && d < 9.60;
-
-    var facingMoai = ahead > -0.08 && aim > 0.30 && miss < Math.max(1.18, d * 0.68);
-    var ok = standingInFront && pitchOK && distanceOK && facingMoai;
-
-    escapeState.lastAim = aim;
-    escapeState.lastDistance = d;
-    escapeState.lastRayMiss = miss;
-    escapeState.lastForwardDist = ahead;
-    escapeState.lastGuideForward = guideForward;
-    escapeState.lastGuideAcross = guideAcross;
-    escapeState.lastStandingInGuide = standingInFront;
-    escapeState.lastPitchOK = pitchOK;
-    escapeState.lastDistanceOK = distanceOK;
-    escapeState.lastFacingMoaiOK = facingMoai;
-    escapeState.lastTightFacingOK = facingMoai;
-    escapeState.lastMoaiEyeTargetX = eyeTarget.x;
-    escapeState.lastMoaiEyeTargetY = eyeTarget.y;
-    escapeState.lastMouseX = mx;
-    escapeState.lastMouseY = my;
-    escapeState.lastGuideFrontMin = frontMin;
-    escapeState.lastGuideFrontMax = frontMax;
-    escapeState.lastGuideHalfWidth = halfWidth;
-    escapeState.lastMoaiFaceDirX = faceDir.x;
-    escapeState.lastMoaiFaceDirY = faceDir.y;
-    escapeState.lastStareCheck = performance.now();
-
-    window.__z4bIslandSelfMoaiStaring = ok;
-    window.__z4bIslandEscapeDebug = escapeState;
-
-    return ok;
-  }
-function countIslandBlink(v) {
-    if (typeof v !== "number" || !isFinite(v)) v = 0.0;
-
-    escapeState.blink = v;
-    window.__z4bIslandBlinkValue = v;
-
-    if (v > 0.55 && escapeState._moaiBlinkHigh !== true) {
-      escapeState._moaiBlinkHigh = true;
-      escapeState.lastBlinkPeak = performance.now();
-    }
-
-    if (v < 0.18) {
-      escapeState._moaiBlinkHigh = false;
-    }
-  }
-function driveSelfMoaiStare() {
-    if (window.__z4bIslandActive !== true && !z4bCurrentProgramIsIsland()) return;
-
-    var t = performance.now();
-    var staring = isStaringAtSelfMoai();
-
-    window.__z4bIslandSelfMoaiStaring = staring;
-    window.__z4bIslandEscapeDebug = escapeState;
-
-    if (escapeState.escape) return;
-
-    if (staring) escapeState.lastValidStare = t;
-
-    if (!staring && !escapeState.sequenceLocked) {
-      escapeState.stareStarted = 0;
-      escapeState.sequenceStart = 0;
-      escapeState.autoBlinkStage = 0;
-      escapeState.blinks = 0;
-      escapeState.stareBlinkCount = 0;
-      escapeState._moaiBlinkHigh = false;
-      escapeState._escapeQueued = false;
-      window.__z4bIslandMoaiBlinkArmed = false;
-      return;
-    }
-
-    if (staring && !escapeState.stareStarted) {
-      escapeState.stareStarted = t;
-      escapeState.lastValidStare = t;
-      escapeState.sequenceLocked = false;
-      escapeState.sequenceStart = 0;
-      escapeState.autoBlinkStage = 0;
-      escapeState.blinks = 0;
-      escapeState.stareBlinkCount = 0;
-      escapeState._moaiBlinkHigh = false;
-      escapeState._escapeQueued = false;
-
-      blinkState.active = false;
-      blinkState.start = -1;
-      blinkState.forceStart = 0;
-      blinkState.next = t + 9000;
-
-      window.__z4bIslandMoaiBlinkArmed = false;
-    }
-
-    if (escapeState.sequenceLocked) {
-      var lastGood = typeof escapeState.lastValidStare === "number" ? escapeState.lastValidStare : 0;
-      if (!staring && (!lastGood || t - lastGood > 1200)) {
-        escapeState.stareStarted = 0;
-        escapeState.sequenceLocked = false;
-        escapeState.sequenceStart = 0;
-        escapeState.autoBlinkStage = 0;
-        escapeState.blinks = 0;
-        escapeState.stareBlinkCount = 0;
-        escapeState._moaiBlinkHigh = false;
-        escapeState._escapeQueued = false;
-        blinkState.forceStart = 0;
-        window.__z4bIslandMoaiBlinkArmed = false;
-        return;
-      }
-    }
-
-    var age = t - escapeState.stareStarted;
-
-    if (!escapeState.sequenceLocked && staring && age > 240) {
-      escapeState.sequenceLocked = true;
-      escapeState.sequenceStart = t;
-      escapeState.autoBlinkStage = 0;
-      blinkState.active = false;
-      blinkState.start = -1;
-      blinkState.forceStart = 0;
-      blinkState.next = t + 9000;
-    }
-
-    if (!escapeState.sequenceLocked) return;
-
-    var seqAge = t - escapeState.sequenceStart;
-
-    if (seqAge > 360 && escapeState.autoBlinkStage < 1) {
-      escapeState.autoBlinkStage = 1;
-      escapeState.blinks = 1;
-      escapeState.stareBlinkCount = 1;
-      forceBlink();
-    }
-
-    if (seqAge > 1420 && escapeState.autoBlinkStage < 2) {
-      escapeState.autoBlinkStage = 2;
-      escapeState.blinks = 2;
-      escapeState.stareBlinkCount = 2;
-      forceBlink();
-    }
-
-    if (seqAge > 1780 && escapeState.autoBlinkStage >= 2 && !escapeState.escape) {
-      window.__z4bIslandMoaiBlinkArmed = true;
-      window.__z4bIslandMoaiBlinkArmedAt = t;
-      activateEscape(true);
-    }
-  }
-
-  function bindIslandRuntime() {
-    if (typeof gl === "undefined") return;
-    if (!z4bCurrentProgramIsIsland()) return;
-
-    makeAllTextures();
-
-    var prog = null;
-
-    try {
-      prog = gl.getParameter(gl.CURRENT_PROGRAM);
-    } catch (e) {
-      return;
-    }
-
-    if (!prog) return;
-
-    driveSelfMoaiStare();
-
-    var now = performance.now();
-    var flash = escapeState.escape && escapeState.flashStart > 0 ? Math.max(0.0, 1.0 - (now - escapeState.flashStart) / 620.0) : 0.0;
-    var age = escapeState.escape && escapeState.flashStart > 0 ? Math.max(0.0, (now - escapeState.flashStart) * 0.001) : 0.0;
-    checkIslandCabinExitToZone2();
-    var bv = islandBlinkValue(now);
-
-    countIslandBlink(bv);
-
-    var blinkLoc = null;
-    var escapeLoc = null;
-    var flashLoc = null;
-    var ageLoc = null;
-    var walk0Loc = null;
-    var guideLoc = null;
-    var guideOKLoc = null;
-
-    try { blinkLoc = gl.getUniformLocation(prog, "u_blink"); } catch (e) {}
-    try { escapeLoc = gl.getUniformLocation(prog, "u_z4bIslandEscape"); } catch (e) {}
-    try { flashLoc = gl.getUniformLocation(prog, "u_z4bIslandEscapeFlash"); } catch (e) {}
-    try { ageLoc = gl.getUniformLocation(prog, "u_z4bIslandEscapeAge"); } catch (e) {}
-    try { walk0Loc = gl.getUniformLocation(prog, "u_z4bIslandEscapeWalk0"); } catch (e) {}
-    try { guideLoc = gl.getUniformLocation(prog, "u_z4bIslandDebugGuide"); } catch (e) {}
-    try { guideOKLoc = gl.getUniformLocation(prog, "u_z4bIslandDebugGuideOK"); } catch (e) {}
-
-    if (blinkLoc) gl.uniform1f(blinkLoc, bv);
-    if (escapeLoc) gl.uniform1f(escapeLoc, escapeState.escape ? 1.0 : 0.0);
-    if (flashLoc) gl.uniform1f(flashLoc, flash);
-    if (ageLoc) gl.uniform1f(ageLoc, age);
-    if (walk0Loc) gl.uniform1f(walk0Loc, escapeState.escapeWalk0 || 0.0);
-    if (guideLoc) gl.uniform1f(guideLoc, 0.0);
-    if (guideOKLoc) gl.uniform1f(guideOKLoc, 0.0);
-
-    var maxUnits = 8;
-
-    try {
-      maxUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) || 8;
-    } catch (e) {}
-
-    for (var i = 0; i < texSpecs.length; i++) {
-      var spec = texSpecs[i];
-
-      if (spec.unit >= maxUnits) continue;
-
-      var tex = makeTexture(spec);
-      if (!tex) continue;
-
-      gl.activeTexture(gl.TEXTURE0 + spec.unit);
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-
-      for (var j = 0; j < spec.names.length; j++) {
-        var loc = null;
-
-        try {
-          loc = gl.getUniformLocation(prog, spec.names[j]);
-        } catch (e) {}
-
-        if (loc) gl.uniform1i(loc, spec.unit);
-      }
-
-      if (spec.ready) {
-        var readyLoc = null;
-
-        try {
-          readyLoc = gl.getUniformLocation(prog, spec.ready);
-        } catch (e) {}
-
-        if (readyLoc) gl.uniform1f(readyLoc, ready[spec.key] ? 1.0 : 0.0);
-      }
-    }
-
-    var moaiReadyLoc = null;
-
-    try {
-      moaiReadyLoc = gl.getUniformLocation(prog, "u_z4bMoaiReady");
-    } catch (e) {}
-
-    if (moaiReadyLoc) gl.uniform1f(moaiReadyLoc, 1.0);
-  }
-function lockLook(x, y) {
-    islandSetLook(x, y);
-
-    escapeState.mouseX = islandLookX;
-    escapeState.mouseY = islandLookY;
-    window.__z4bIslandLookX = islandLookX;
-    window.__z4bIslandLookY = islandLookY;
-  }
-function holdIslandLook() {
-    return;
-  }
-function forceBlink() {
-    var t = performance.now();
-
-    blinkState.forceStart = t;
-    blinkState.active = false;
-    blinkState.start = -1;
-    blinkState.value = 0.0;
-    blinkState.next = t + 9000;
-
-    window.__z4bIslandBlinkPulseTime = t;
-
-    return true;
-  }
-function activateEscape(force) {
-    if (force !== true && window.__z4bIslandMoaiBlinkArmed !== true) return false;
-    if (escapeState.escape) return true;
-
-    escapeState.escape = true;
-    escapeState.escapeWalk0 = escapeState.walk;
-    escapeState.flashStart = performance.now();
-    escapeState.stareStarted = 0;
-    escapeState.sequenceLocked = false;
-    escapeState.sequenceStart = 0;
-    escapeState.autoBlinkStage = 3;
-    escapeState.blinks = 2;
-    escapeState.stareBlinkCount = 2;
-    escapeState._escapeQueued = false;
-    escapeState.returnedToZone2 = false;
-
-    window.__z4bIslandMoaiBlinkArmed = false;
-    window.__z4bIslandEscapeActive = true;
-    window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0;
-    window.__z4bIslandEscapeFlashStart = escapeState.flashStart;
-    window.__z4bIslandReturnToZone2 = false;
-
-    return true;
-  }
-
-
-function z4bIslandHandoffOverlay() {
-    var ov = document.getElementById("z4b-island-cabin-handoff-fog");
-
-    if (!ov) {
-      ov = document.createElement("div");
-      ov.id = "z4b-island-cabin-handoff-fog";
-      ov.style.cssText = [
-        "position:fixed",
-        "inset:0",
-        "z-index:2147483647",
-        "pointer-events:none",
-        "opacity:0",
-        "transition:opacity 420ms ease",
-        "background:",
-          "radial-gradient(circle at 50% 54%, rgba(190,230,255,0.92) 0%, rgba(90,150,205,0.74) 32%, rgba(8,18,38,0.96) 78%),",
-          "linear-gradient(180deg, rgba(120,190,255,0.26), rgba(0,8,28,0.90))",
-        ";",
-        "backdrop-filter:blur(13px) saturate(1.30) brightness(1.12)",
-        "-webkit-backdrop-filter:blur(13px) saturate(1.30) brightness(1.12)",
-        "will-change:opacity"
-      ].join(";");
-      document.body.appendChild(ov);
-    }
-
-    return ov;
-  }
-
-  function z4bIslandSetHandoffFog(on) {
-    var ov = z4bIslandHandoffOverlay();
-    var canvas = document.getElementById("c");
-
-    if (canvas) {
-      canvas.style.transition = "filter 420ms ease";
-      canvas.style.filter = on ? "blur(7px) saturate(1.28) brightness(1.16)" : "";
-    }
-
-    requestAnimationFrame(function () {
-      ov.style.opacity = on ? "1" : "0";
-    });
-
-    if (!on) {
-      setTimeout(function () {
-        var kill = document.getElementById("z4b-island-cabin-handoff-fog");
-        if (kill && kill.parentNode) kill.parentNode.removeChild(kill);
-
-        var c = document.getElementById("c");
-        if (c) {
-          c.style.filter = "";
-          c.style.transition = "";
-        }
-      }, 520);
-    }
-
-    return ov;
-  }
-
-  function z4bIslandScrubZone2FromCabin() {
-    window.__z4Route = false;
-    window.__z4RouteActive = false;
-    window.__z4bIslandActive = false;
-    window.__z4bIslandEscapeActive = false;
-    window.__z4bIslandMoaiBlinkArmed = false;
-
-    var z2 = window.currentZone2;
-    if (!z2) return false;
-
-    z2.activePOV = "center";
-    z2.pendingPOV = null;
-    z2.slideState = "idle";
-    z2.slideOffset = 0;
-    z2.slideDir = 0;
-    z2.povSwitchTime = performance.now();
-
-    z2.facing = "S";
-    z2.hallwayYaw = Math.PI;
-    z2.hallwayYawTarget = Math.PI;
-
-    if (typeof z2.INTERSECTION_Z === "number") {
-      z2.camZ = z2.INTERSECTION_Z - 0.75;
-    } else {
-      z2.camZ = 1.65;
-    }
-
-    z2.intersectionReached = true;
-    z2.seqState = "initial";
-    z2.z4RouteActive = false;
-    z2.z4RouteStep = 0;
-    z2.z4LeftBlinkCount = 0;
-    z2.z4TransitionStarted = false;
-    z2.z4RouteTriggered = false;
-    z2.route3Active = false;
-    z2.route3Step = 0;
-    z2.readyForZone3 = false;
-    z2.z3TransitionStarted = false;
-    z2.z2ExitStarted = false;
-    z2.z2ExitTime = 0;
-    z2.zone3Route = "z3";
-    z2.__fromIslandCabin = true;
-    z2.__z4RouteDisabledUntil = performance.now() + 12000;
-
-    window.mx = 0;
-    window.my = 0;
-    window.z2SpaceHeld = false;
-    window.z2TouchHeld = false;
-
-    return true;
-  }
-
-  function beginIslandCabinBlueHandoff() {
-    if (escapeState.returnedToZone2) return true;
-    if (window.__z4bIslandCabinHandoffActive === true) return true;
-
-    window.__z4bIslandCabinHandoffActive = true;
-    window.__z4bIslandCabinHandoffStartedAt = performance.now();
-
-    z4bIslandLevelSpaceHeld = false;
-    z4bIslandSetHandoffFog(true);
-
-    setTimeout(function () {
-      returnToZone2Hallway();
-    }, 430);
-
-    return true;
-  }
-
-function z4bIslandInstallZone2ControlsSuppressor() {
-    if (window.__z4bZone2ControlsSuppressorInstalled === true) return true;
-
-    window.__z4bZone2ControlsSuppressorInstalled = true;
-
-    var install = function () {
-      if (typeof window.showTransientCenterOverlay !== "function") return false;
-      if (window.showTransientCenterOverlay.__z4bSuppressWrapped === true) return true;
-
-      var base = window.showTransientCenterOverlay;
-
-      window.showTransientCenterOverlay = function (src) {
-        var now = performance.now();
-        var suppressUntil = typeof window.__z4bSuppressZone2ControlsUntil === "number"
-          ? window.__z4bSuppressZone2ControlsUntil
-          : 0;
-
-        var img = String(src || "");
-        var isControls =
-          img.indexOf("ctrls.png") >= 0 ||
-          img.indexOf("ctrl.png") >= 0 ||
-          img.indexOf("/ctrls") >= 0 ||
-          img.indexOf("/ctrl") >= 0;
-
-        if (isControls && now < suppressUntil) {
-          return false;
-        }
-
-        return base.apply(this, arguments);
-      };
-
-      window.showTransientCenterOverlay.__z4bSuppressWrapped = true;
-      window.showTransientCenterOverlay.__z4bBase = base;
-
-      return true;
-    };
-
-    if (!install()) {
-      var tries = 0;
-      var timer = setInterval(function () {
-        tries++;
-        if (install() || tries > 40) clearInterval(timer);
-      }, 50);
-    }
-
-    return true;
-  }
-
-function returnToZone2Hallway() {
-    if (escapeState.returnedToZone2) return true;
-
-    z4bIslandInstallZone2ControlsSuppressor();
-    window.__z4bSuppressZone2ControlsUntil = performance.now() + 3600;
-
-    escapeState.returnedToZone2 = true;
-    window.__z4bIslandReturnToZone2 = true;
-    window.__z4bIslandRouteBlockUntil = performance.now() + 12000;
-    window.__z4Route = false;
-    window.__z4RouteActive = false;
-    window.__z4bIslandActive = false;
-    window.__z4bIslandEscapeActive = false;
-    window.__z4bIslandMoaiBlinkArmed = false;
-
-    z4bIslandSetHandoffFog(true);
-
-    if (
-      typeof window.startZone4 === "function" &&
-      window.__z4bIslandStartZone4GuardInstalled !== true
-    ) {
-      window.__z4bIslandStartZone4GuardInstalled = true;
-      window.__z4bIslandStartZone4Base = window.startZone4;
-      window.startZone4 = function () {
-        if (
-          typeof window.__z4bIslandRouteBlockUntil === "number" &&
-          performance.now() < window.__z4bIslandRouteBlockUntil
-        ) {
-          return false;
-        }
-        return window.__z4bIslandStartZone4Base.apply(this, arguments);
-      };
-    }
-
-    try {
-      window.isEngine1Dead = true;
-
-      if (typeof currentEngine !== "undefined" && currentEngine) {
-        currentEngine.destroy && currentEngine.destroy();
-        currentEngine = null;
-      }
-      if (typeof leftEngine !== "undefined" && leftEngine) {
-        leftEngine.destroy && leftEngine.destroy();
-        leftEngine = null;
-      }
-      if (typeof rightEngine !== "undefined" && rightEngine) {
-        rightEngine.destroy && rightEngine.destroy();
-        rightEngine = null;
-      }
-      if (typeof backEngine !== "undefined" && backEngine) {
-        backEngine.destroy && backEngine.destroy();
-        backEngine = null;
-      }
-      if (window.currentZone3) {
-        window.currentZone3.destroy && window.currentZone3.destroy();
-        window.currentZone3 = null;
-      }
-      if (window.currentZone4) {
-        window.currentZone4.destroy && window.currentZone4.destroy();
-        window.currentZone4 = null;
-      }
-    } catch (e) {}
-
-    var canvas = document.getElementById("c");
-    if (canvas) canvas.style.transform = "";
-
-    if (typeof window.startZone2 !== "function") {
-      z4bIslandSetHandoffFog(false);
-      return false;
-    }
-
-    window.startZone2();
-
-    z4bIslandScrubZone2FromCabin();
-    setTimeout(z4bIslandScrubZone2FromCabin, 30);
-    setTimeout(z4bIslandScrubZone2FromCabin, 90);
-    setTimeout(z4bIslandScrubZone2FromCabin, 180);
-    setTimeout(z4bIslandScrubZone2FromCabin, 420);
-
-    setTimeout(function () {
-      window.__z4bIslandCabinHandoffActive = false;
-      z4bIslandSetHandoffFog(false);
-    }, 360);
-
-    return true;
-  }
-
-function checkIslandCabinExitToZone2() {
-    if (!escapeState.escape || escapeState.returnedToZone2) return false;
-
-    var moved = escapeState.walk - (escapeState.escapeWalk0 || 0);
-
-    if (moved >= 12.10) {
-      if (typeof beginIslandCabinBlueHandoff === "function") {
-        return beginIslandCabinBlueHandoff();
-      }
-      return returnToZone2Hallway();
-    }
-
-    return false;
-  }
-
-function install() {
-    if (typeof gl === "undefined") {
-      requestAnimationFrame(install);
-      return;
-    }
-
-    if (gl.__z4bIslandRuntimeDrawHookInstalled) return;
-    gl.__z4bIslandRuntimeDrawHookInstalled = true;
-
-    var baseGet = gl.getUniformLocation.bind(gl);
-    var base1f = gl.uniform1f.bind(gl);
-    var base2f = gl.uniform2f.bind(gl);
-    var baseDrawArrays = gl.drawArrays.bind(gl);
-    var baseDrawElements = gl.drawElements ? gl.drawElements.bind(gl) : null;
-
-    gl.getUniformLocation = function (prog, name) {
-      var loc = baseGet(prog, name);
-
-      if (loc && typeof name === "string") {
-        try {
-          locNames.set(loc, name);
-        } catch (e) {}
-      }
-
-      return loc;
-    };
-
-    gl.uniform1f = function (loc, value) {
-      var name = null;
-
-      try {
-        name = locNames.get(loc);
-      } catch (e) {}
-
-      if (name === "u_walk") {
-        window.__z4bIslandRawWalk = value;
-
-        if (
-          typeof window.__z4bIslandDebugWalkTarget === "number" &&
-          isFinite(window.__z4bIslandDebugWalkTarget)
-        ) {
-          if (
-            typeof window.__z4bIslandDebugWalkBase !== "number" ||
-            !isFinite(window.__z4bIslandDebugWalkBase)
-          ) {
-            window.__z4bIslandDebugWalkBase = value;
+((window.GLSL = window.GLSL || {}),
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (function () {
+    if (!window.__z4bIslandRuntimeInstalled) {
+      window.__z4bIslandRuntimeInstalled = !0;
+      var TAU = 2 * Math.PI,
+        texSpecs = [
+          {
+            key: "moai1",
+            path: "files/img/rooms/z4/island/etc/MOAI-1.png",
+            names: ["u_z4bMoaiFace1"],
+            unit: 0,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moai2",
+            path: "files/img/rooms/z4/island/etc/MOAI-2.png",
+            names: ["u_z4bMoaiFace2"],
+            unit: 1,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moai3",
+            path: "files/img/rooms/z4/island/etc/MOAI-3.png",
+            names: ["u_z4bMoaiFace3"],
+            unit: 2,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moai4",
+            path: "files/img/rooms/z4/island/etc/MOAI-4.png",
+            names: ["u_z4bMoaiFace4"],
+            unit: 3,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moai5",
+            path: "files/img/rooms/z4/island/etc/MOAI-5.png",
+            names: ["u_z4bMoaiFace5"],
+            unit: 4,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moaiSide",
+            path: "files/img/rooms/z4/island/etc/MOAI-SIDE.png",
+            names: ["u_z4bMoaiSide"],
+            unit: 5,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "moaiBack",
+            path: "files/img/rooms/z4/island/etc/MOAI-BACK.png",
+            names: ["u_z4bMoaiBack"],
+            unit: 6,
+            pixel: [72, 70, 66, 255],
+          },
+          {
+            key: "wing",
+            path: "files/img/rooms/z4/island/wing.png",
+            names: ["u_z4bWingTex"],
+            ready: "u_z4bWingReady",
+            unit: 7,
+            pixel: [0, 0, 0, 0],
+          },
+        ],
+        textures = {},
+        ready = {},
+        locNames = new WeakMap(),
+        islandPointerDown = (new WeakMap(), !1),
+        islandLookX =
+          "number" == typeof window.__z4bIslandLookX
+            ? window.__z4bIslandLookX
+            : 0,
+        islandLookY =
+          "number" == typeof window.__z4bIslandLookY
+            ? window.__z4bIslandLookY
+            : 0,
+        islandTargetLookX = islandLookX,
+        islandTargetLookY = islandLookY,
+        islandLookReady = !1,
+        islandLookLastT = 0,
+        islandLastClientX = 0,
+        islandLastClientY = 0,
+        islandHasLastClient = !1;
+      (window.__z4bIslandRelativeLookV2Installed ||
+        ((window.__z4bIslandRelativeLookV2Installed = !0),
+        window.addEventListener(
+          "mousedown",
+          function (e) {
+            (!0 === window.__z4bIslandActive || z4bCurrentProgramIsIsland()) &&
+              ((islandPointerDown = !0),
+              (islandHasLastClient = !0),
+              (islandLastClientX = e.clientX),
+              (islandLastClientY = e.clientY));
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "mousemove",
+          function (e) {
+            if (!0 === window.__z4bIslandActive && islandPointerDown) {
+              var dx =
+                  "number" == typeof e.movementX
+                    ? e.movementX
+                    : e.clientX - islandLastClientX,
+                dy =
+                  "number" == typeof e.movementY
+                    ? e.movementY
+                    : e.clientY - islandLastClientY;
+              ((islandLastClientX = e.clientX),
+                (islandLastClientY = e.clientY),
+                (islandHasLastClient = !0),
+                (Math.abs(dx) > 0 || Math.abs(dy) > 0) &&
+                  islandDragDelta(dx, dy));
+            }
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "mouseup",
+          function () {
+            !0 === window.__z4bIslandActive &&
+              ((islandPointerDown = !1), (islandHasLastClient = !1));
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "touchstart",
+          function (e) {
+            !0 === window.__z4bIslandActive &&
+              e.touches &&
+              e.touches.length &&
+              ((islandPointerDown = !0),
+              (islandHasLastClient = !0),
+              (islandLastClientX = e.touches[0].clientX),
+              (islandLastClientY = e.touches[0].clientY));
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "touchmove",
+          function (e) {
+            if (
+              !0 === window.__z4bIslandActive &&
+              islandPointerDown &&
+              e.touches &&
+              e.touches.length
+            ) {
+              var x = e.touches[0].clientX,
+                y = e.touches[0].clientY;
+              (islandHasLastClient &&
+                islandDragDelta(x - islandLastClientX, y - islandLastClientY),
+                (islandLastClientX = x),
+                (islandLastClientY = y),
+                (islandHasLastClient = !0));
+            }
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "touchend",
+          function () {
+            !0 === window.__z4bIslandActive &&
+              ((islandPointerDown = !1), (islandHasLastClient = !1));
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "touchcancel",
+          function () {
+            !0 === window.__z4bIslandActive &&
+              ((islandPointerDown = !1), (islandHasLastClient = !1));
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "blur",
+          function () {
+            ((islandPointerDown = !1), (islandHasLastClient = !1));
+          },
+          !0,
+        )),
+        window.__z4bIslandShiftGuideInstalled ||
+          ((window.__z4bIslandShiftGuideInstalled = !0),
+          (window.__z4bIslandGuideShiftHeld = !1),
+          (window.__z4bIslandForceGuide = !1),
+          (window.__z4bIslandDebugGuideActive = !1)));
+      var escapeState = window.__z4bIslandEscapeState || {
+          walk: 0,
+          mouseX: 0,
+          mouseY: 0,
+          blink: 0,
+          blinks: 0,
+          escape: !1,
+          escapeWalk0: 0,
+          flashStart: -1,
+          lastStare: 0,
+          stareStarted: 0,
+          autoBlinkStage: 0,
+        },
+        blinkState = window.__z4bIslandBlinkState || {
+          next: 0,
+          start: -1,
+          active: !1,
+          value: 0,
+        };
+      ((window.__z4bIslandEscapeState = escapeState),
+        (window.__z4bIslandBlinkState = blinkState));
+      var z4bIslandLevelToken = 0,
+        z4bIslandLevelSpaceHeld = !1,
+        z4bIslandLevelProgram = null,
+        z4bIslandLevelQuad = null,
+        z4bIslandLevelBlackTex = null,
+        z4bIslandLevelUniforms = null;
+      (window.__z4bIslandLevelInputInstalled ||
+        ((window.__z4bIslandLevelInputInstalled = !0),
+        window.addEventListener(
+          "keydown",
+          function (e) {
+            !0 === window.__z4bIslandActive &&
+              z4bIslandLevelSpaceKey(e) &&
+              ((z4bIslandLevelSpaceHeld = !0),
+              e.preventDefault && e.preventDefault());
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "keyup",
+          function (e) {
+            z4bIslandLevelSpaceKey(e) &&
+              ((z4bIslandLevelSpaceHeld = !1),
+              !0 === window.__z4bIslandActive &&
+                e.preventDefault &&
+                e.preventDefault());
+          },
+          !0,
+        ),
+        window.addEventListener(
+          "blur",
+          function () {
+            z4bIslandLevelSpaceHeld = !1;
+          },
+          !0,
+        )),
+        (window.startZ4BIsland = function (opts) {
+          opts = opts || {};
+          var targetCanvas = null;
+          try {
+            targetCanvas =
+              "undefined" != typeof canvas && canvas
+                ? canvas
+                : document.getElementById("c");
+          } catch (e) {
+            targetCanvas = null;
           }
-
-          value = value + (window.__z4bIslandDebugWalkTarget - window.__z4bIslandDebugWalkBase);
-        }
-
-        escapeState.walk = value;
-      }
-
-      if (name === "u_blink" && (window.__z4bIslandActive === true || z4bCurrentProgramIsIsland())) {
-        var bv = islandBlinkValue(performance.now());
-        countIslandBlink(bv);
-        return base1f(loc, bv);
-      }
-
-      if (name === "u_blink") escapeState.blink = value;
-
-      return base1f(loc, value);
-    };
-
-    gl.uniform2f = function (loc, x, y) {
-      var name = null;
-
-      try {
-        name = locNames.get(loc);
-      } catch (e) {}
-
-      if (name === "u_mouse" && (window.__z4bIslandActive === true || z4bCurrentProgramIsIsland())) {
-        var rel = islandHeldMouseValue(x, y);
-        return base2f(loc, rel[0], rel[1]);
-      }
-
-      if (name === "u_mouse") {
-        escapeState.mouseX = x;
-        escapeState.mouseY = y;
-        window.__z4bIslandLookX = x;
-        window.__z4bIslandLookY = y;
-      }
-
-      return base2f(loc, x, y);
-    };
-
-    gl.drawArrays = function () {
-      if (z4bCurrentProgramIsIsland()) {
-        bindIslandRuntime();
-      }
-      return baseDrawArrays.apply(gl, arguments);
-    };
-
-    if (baseDrawElements) {
-      gl.drawElements = function () {
-        if (z4bCurrentProgramIsIsland()) {
-          bindIslandRuntime();
-        }
-        return baseDrawElements.apply(gl, arguments);
+          if ("undefined" == typeof gl || !targetCanvas)
+            return (
+              console.error(
+                "[Z4B Island] no WebGL context/canvas; island draw aborted",
+              ),
+              !1
+            );
+          ((targetCanvas.width && targetCanvas.height) ||
+            ((targetCanvas.width = Math.max(
+              1,
+              targetCanvas.clientWidth || window.innerWidth || 1280,
+            )),
+            (targetCanvas.height = Math.max(
+              1,
+              targetCanvas.clientHeight || window.innerHeight || 720,
+            ))),
+            install());
+          var prog,
+            token = ++z4bIslandLevelToken;
+          if (
+            ((function () {
+              try {
+                (window.currentZone2 &&
+                  window.currentZone2.destroy &&
+                  window.currentZone2.destroy(),
+                  (window.currentZone2 = null));
+              } catch (e) {}
+              try {
+                (window.currentZone3 &&
+                  window.currentZone3.destroy &&
+                  window.currentZone3.destroy(),
+                  (window.currentZone3 = null));
+              } catch (e) {}
+              try {
+                (window.currentZone4 &&
+                  window.currentZone4.destroy &&
+                  window.currentZone4.destroy(),
+                  (window.currentZone4 = null));
+              } catch (e) {}
+              try {
+                "undefined" != typeof currentEngine &&
+                  currentEngine &&
+                  currentEngine.destroy &&
+                  currentEngine.destroy();
+              } catch (e) {}
+              try {
+                "undefined" != typeof leftEngine &&
+                  leftEngine &&
+                  leftEngine.destroy &&
+                  leftEngine.destroy();
+              } catch (e) {}
+              try {
+                "undefined" != typeof rightEngine &&
+                  rightEngine &&
+                  rightEngine.destroy &&
+                  rightEngine.destroy();
+              } catch (e) {}
+              try {
+                "undefined" != typeof backEngine &&
+                  backEngine &&
+                  backEngine.destroy &&
+                  backEngine.destroy();
+              } catch (e) {}
+              try {
+                "undefined" != typeof doorEngine &&
+                  doorEngine &&
+                  doorEngine.destroy &&
+                  doorEngine.destroy();
+              } catch (e) {}
+              try {
+                "undefined" != typeof laptopEngine &&
+                  laptopEngine &&
+                  laptopEngine.destroy &&
+                  laptopEngine.destroy();
+              } catch (e) {}
+              try {
+                ((currentEngine = null),
+                  (leftEngine = null),
+                  (rightEngine = null),
+                  (backEngine = null),
+                  (doorEngine = null),
+                  (laptopEngine = null));
+              } catch (e) {}
+              try {
+                window.__z4LoopToken && window.__z4LoopToken++;
+              } catch (e) {}
+            })(),
+            (window.isEngine1Dead = !0),
+            (window.__z4bIslandActive = !0),
+            (window.__z4bIslandEscapeActive = !1),
+            (window.__z4bIslandReturnToZone2 = !1),
+            (window.__z4bIslandMoaiBlinkArmed = !1),
+            (window.__lastOOB = !1),
+            (escapeState.walk =
+              "number" == typeof opts.walk && isFinite(opts.walk)
+                ? opts.walk
+                : 0),
+            (escapeState.mouseX =
+              "number" == typeof opts.lookX && isFinite(opts.lookX)
+                ? opts.lookX
+                : 0),
+            (escapeState.mouseY =
+              "number" == typeof opts.lookY && isFinite(opts.lookY)
+                ? opts.lookY
+                : 0),
+            (escapeState.blink = 0),
+            (escapeState.blinks = 0),
+            (escapeState.escape = !1),
+            (escapeState.escapeWalk0 = 0),
+            (escapeState.flashStart = -1),
+            (escapeState.lastStare = 0),
+            (escapeState.stareStarted = 0),
+            (escapeState.sequenceLocked = !1),
+            (escapeState.sequenceStart = 0),
+            (escapeState.autoBlinkStage = 0),
+            (escapeState.stareBlinkCount = 0),
+            (escapeState._escapeQueued = !1),
+            (escapeState.returnedToZone2 = !1),
+            (window.__z4bIslandEscapeState = escapeState),
+            (window.__z4bIslandRawWalk = escapeState.walk),
+            (window.__z4bIslandLookX = escapeState.mouseX),
+            (window.__z4bIslandLookY = escapeState.mouseY),
+            lockLook(escapeState.mouseX, escapeState.mouseY),
+            z4bIslandLevelProgram)
+          ) {
+            try {
+              gl.deleteProgram(z4bIslandLevelProgram);
+            } catch (e) {}
+            z4bIslandLevelProgram = null;
+          }
+          if (
+            ((z4bIslandLevelProgram = (function () {
+              if ("undefined" == typeof gl) return null;
+              if (
+                !(
+                  window.GLSL &&
+                  GLSL.vert &&
+                  GLSL.core &&
+                  GLSL.modules &&
+                  GLSL.modules.z4b_island
+                )
+              )
+                return null;
+              var vs = z4bIslandLevelCompile(gl.VERTEX_SHADER, GLSL.vert),
+                fsSrc = GLSL.core + "\n" + (GLSL.hallucinationFn || "") + "\n" + GLSL.modules.z4b_island;
+              "undefined" != typeof IS_MOBILE &&
+                IS_MOBILE &&
+                (fsSrc = "#define MOBILE\n" + fsSrc);
+              var fs = z4bIslandLevelCompile(gl.FRAGMENT_SHADER, fsSrc);
+              if (!vs || !fs) return null;
+              var prog = gl.createProgram();
+              return (
+                gl.attachShader(prog, vs),
+                gl.attachShader(prog, fs),
+                gl.linkProgram(prog),
+                gl.getProgramParameter(prog, gl.LINK_STATUS)
+                  ? prog
+                  : (console.error(
+                      "[Z4B Island] program link error:",
+                      gl.getProgramInfoLog(prog),
+                    ),
+                    gl.deleteProgram(prog),
+                    null)
+              );
+            })()),
+            !z4bIslandLevelProgram)
+          )
+            return !1;
+          ((prog = z4bIslandLevelProgram),
+            (z4bIslandLevelUniforms = {
+              p: gl.getAttribLocation(prog, "p"),
+              res: gl.getUniformLocation(prog, "u_resolution"),
+              time: gl.getUniformLocation(prog, "u_time"),
+              mouse: gl.getUniformLocation(prog, "u_mouse"),
+              mode: gl.getUniformLocation(prog, "u_mode"),
+              blink: gl.getUniformLocation(prog, "u_blink"),
+              flash: gl.getUniformLocation(prog, "u_flash"),
+              shake: gl.getUniformLocation(prog, "u_shake"),
+              wake: gl.getUniformLocation(prog, "u_wake"),
+              modeSeed: gl.getUniformLocation(prog, "u_modeSeed"),
+              audio: gl.getUniformLocation(prog, "u_audio"),
+              texSize: gl.getUniformLocation(prog, "u_texSize"),
+              modeTime: gl.getUniformLocation(prog, "u_modeTime"),
+              trip: gl.getUniformLocation(prog, "u_trip"),
+              walk: gl.getUniformLocation(prog, "u_walk"),
+              isOOB: gl.getUniformLocation(prog, "u_isOOB"),
+            }),
+            z4bIslandLevelQuad ||
+              ((z4bIslandLevelQuad = gl.createBuffer()),
+              gl.bindBuffer(gl.ARRAY_BUFFER, z4bIslandLevelQuad),
+              gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([-1, -1, 3, -1, -1, 3]),
+                gl.STATIC_DRAW,
+              )),
+            gl.useProgram(z4bIslandLevelProgram),
+            (function (prog) {
+              var tex,
+                maxUnits = 8;
+              try {
+                maxUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) || 8;
+              } catch (e) {}
+              z4bIslandLevelBlackTex ||
+                ((tex = gl.createTexture()),
+                gl.bindTexture(gl.TEXTURE_2D, tex),
+                gl.texImage2D(
+                  gl.TEXTURE_2D,
+                  0,
+                  gl.RGBA,
+                  1,
+                  1,
+                  0,
+                  gl.RGBA,
+                  gl.UNSIGNED_BYTE,
+                  new Uint8Array([0, 0, 0, 255]),
+                ),
+                gl.texParameteri(
+                  gl.TEXTURE_2D,
+                  gl.TEXTURE_MIN_FILTER,
+                  gl.LINEAR,
+                ),
+                gl.texParameteri(
+                  gl.TEXTURE_2D,
+                  gl.TEXTURE_MAG_FILTER,
+                  gl.LINEAR,
+                ),
+                gl.texParameteri(
+                  gl.TEXTURE_2D,
+                  gl.TEXTURE_WRAP_S,
+                  gl.CLAMP_TO_EDGE,
+                ),
+                gl.texParameteri(
+                  gl.TEXTURE_2D,
+                  gl.TEXTURE_WRAP_T,
+                  gl.CLAMP_TO_EDGE,
+                ),
+                (z4bIslandLevelBlackTex = tex));
+              for (var i = 0; i < maxUnits; i++)
+                (gl.activeTexture(gl.TEXTURE0 + i),
+                  gl.bindTexture(gl.TEXTURE_2D, z4bIslandLevelBlackTex));
+              var names = [
+                "u_texB1",
+                "u_texB2",
+                "u_texB3",
+                "u_texB4",
+                "u_texB5",
+                "u_texB6",
+                "u_water",
+                "u_texWindow",
+                "u_texEnv1",
+                "u_texEnv2",
+                "u_texEnv3",
+                "u_texEnv4",
+                "u_texEnv5",
+                "u_texEnv6",
+                "u_voidTex",
+              ];
+              for (i = 0; i < names.length; i++) {
+                var loc = null;
+                try {
+                  loc = gl.getUniformLocation(prog, names[i]);
+                } catch (e) {}
+                loc && gl.uniform1i(loc, Math.min(i, maxUnits - 1));
+              }
+            })(z4bIslandLevelProgram));
+          var startT = performance.now(),
+            lastT = startT,
+            lastDraw = 0,
+            seed = 1e3 * Math.random();
+          return (
+            requestAnimationFrame(function frame(now) {
+              if (
+                token === z4bIslandLevelToken &&
+                !0 === window.__z4bIslandActive &&
+                !0 !== window.__z4bIslandReturnToZone2 &&
+                (requestAnimationFrame(frame),
+                !(now - lastDraw < 33.333333333333336))
+              ) {
+                var dt = now - lastT;
+                if (
+                  ((dt > 250 || dt < 0) && (dt = 33.33),
+                  (lastT = now),
+                  (lastDraw = now),
+                  "number" == typeof window.__z4bIslandDebugWalkTarget &&
+                  isFinite(window.__z4bIslandDebugWalkTarget)
+                    ? ((escapeState.walk = window.__z4bIslandDebugWalkTarget),
+                      (window.__z4bIslandRawWalk = escapeState.walk),
+                      delete window.__z4bIslandDebugWalk,
+                      delete window.__z4bIslandDebugWalkTarget,
+                      delete window.__z4bIslandDebugWalkBase)
+                    : z4bIslandLevelSpaceHeld &&
+                      (escapeState.walk +=
+                        0.001 *
+                        dt *
+                        (escapeState.escape ||
+                        !0 === window.__z4bIslandEscapeActive
+                          ? 0.28
+                          : 0.92)),
+                  (window.__z4bIslandRawWalk = escapeState.walk),
+                  gl.bindFramebuffer(gl.FRAMEBUFFER, null),
+                  gl.viewport(0, 0, targetCanvas.width, targetCanvas.height),
+                  gl.clearColor(0, 0, 0, 1),
+                  gl.clear(gl.COLOR_BUFFER_BIT),
+                  gl.useProgram(z4bIslandLevelProgram),
+                  gl.bindBuffer(gl.ARRAY_BUFFER, z4bIslandLevelQuad),
+                  z4bIslandLevelUniforms.p >= 0 &&
+                    (gl.enableVertexAttribArray(z4bIslandLevelUniforms.p),
+                    gl.vertexAttribPointer(
+                      z4bIslandLevelUniforms.p,
+                      2,
+                      gl.FLOAT,
+                      !1,
+                      0,
+                      0,
+                    )),
+                  z4bIslandLevelUniforms.res &&
+                    gl.uniform2f(
+                      z4bIslandLevelUniforms.res,
+                      targetCanvas.width,
+                      targetCanvas.height,
+                    ),
+                  z4bIslandLevelUniforms.time &&
+                    gl.uniform1f(z4bIslandLevelUniforms.time, 0.001 * now),
+                  z4bIslandLevelUniforms.mouse &&
+                    gl.uniform2f(
+                      z4bIslandLevelUniforms.mouse,
+                      window.__z4bIslandLookX || 0,
+                      window.__z4bIslandLookY || 0,
+                    ),
+                  z4bIslandLevelUniforms.mode &&
+                    gl.uniform1i(z4bIslandLevelUniforms.mode, 0),
+                  z4bIslandLevelUniforms.blink &&
+                    gl.uniform1f(z4bIslandLevelUniforms.blink, 0),
+                  z4bIslandLevelUniforms.flash &&
+                    gl.uniform1f(z4bIslandLevelUniforms.flash, 0),
+                  z4bIslandLevelUniforms.shake &&
+                    gl.uniform1f(z4bIslandLevelUniforms.shake, 0),
+                  z4bIslandLevelUniforms.wake &&
+                    gl.uniform1f(
+                      z4bIslandLevelUniforms.wake,
+                      (function (now) {
+                        var start = window.__z4bIslandWakeStart,
+                          dur = window.__z4bIslandWakeDuration;
+                        if (
+                          "number" != typeof start ||
+                          !isFinite(start) ||
+                          "number" != typeof dur ||
+                          !isFinite(dur) ||
+                          dur <= 0
+                        )
+                          return 1;
+                        var t = islandClamp((now - start) / dur, 0, 1);
+                        return (
+                          t >= 1 &&
+                            ((window.__z4bIslandWakeStart = 0),
+                            (window.__z4bIslandWakeDuration = 0)),
+                          t
+                        );
+                      })(now),
+                    ),
+                  z4bIslandLevelUniforms.modeSeed &&
+                    gl.uniform1f(z4bIslandLevelUniforms.modeSeed, seed),
+                  z4bIslandLevelUniforms.audio &&
+                    gl.uniform1f(z4bIslandLevelUniforms.audio, 0),
+                  z4bIslandLevelUniforms.texSize &&
+                    gl.uniform2f(z4bIslandLevelUniforms.texSize, 1, 1),
+                  z4bIslandLevelUniforms.modeTime &&
+                    gl.uniform1f(
+                      z4bIslandLevelUniforms.modeTime,
+                      0.001 * (now - startT),
+                    ),
+                  z4bIslandLevelUniforms.trip)
+                ) {
+                  var islandMoved = Math.max(
+                      0,
+                      escapeState.walk - (escapeState.escapeWalk0 || 0),
+                    ),
+                    islandLevel = escapeState.escape
+                      ? islandMoved >= 4.8
+                        ? 5
+                        : 4
+                      : 2,
+                    islandTrip =
+                      "function" == typeof window.__hallucinationTripForLevel
+                        ? window.__hallucinationTripForLevel(islandLevel)
+                        : 0.32 * islandLevel;
+                  gl.uniform1f(z4bIslandLevelUniforms.trip, islandTrip);
+                }
+                (z4bIslandLevelUniforms.walk &&
+                  gl.uniform1f(z4bIslandLevelUniforms.walk, escapeState.walk),
+                  z4bIslandLevelUniforms.isOOB &&
+                    gl.uniform1f(z4bIslandLevelUniforms.isOOB, 0),
+                  bindIslandRuntime(),
+                  gl.drawArrays(gl.TRIANGLES, 0, 3));
+              }
+            }),
+            !0
+          );
+        }),
+        (window.__z4bIslandGoPlaneDoor = function () {
+          var now = performance.now();
+          return (
+            (escapeState.escape = !0),
+            (escapeState.escapeWalk0 = escapeState.walk - 2.75),
+            (escapeState.flashStart = now),
+            (escapeState.stareStarted = 0),
+            (escapeState.autoBlinkStage = 3),
+            (escapeState.blinks = 2),
+            (escapeState.stareBlinkCount = 2),
+            (window.__z4bIslandMoaiBlinkArmed = !1),
+            (window.__z4bIslandEscapeActive = !0),
+            (window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0),
+            (window.__z4bIslandEscapeFlashStart = escapeState.flashStart),
+            !0
+          );
+        }),
+        (window.__z4bIslandGoPlaneCabin = function () {
+          var now = performance.now();
+          return (
+            (escapeState.escape = !0),
+            (escapeState.escapeWalk0 = escapeState.walk - 5.2),
+            (escapeState.flashStart = now),
+            (escapeState.stareStarted = 0),
+            (escapeState.autoBlinkStage = 3),
+            (escapeState.blinks = 2),
+            (escapeState.stareBlinkCount = 2),
+            (window.__z4bIslandMoaiBlinkArmed = !1),
+            (window.__z4bIslandEscapeActive = !0),
+            (window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0),
+            (window.__z4bIslandEscapeFlashStart = escapeState.flashStart),
+            !0
+          );
+        }),
+        (window.__z4bIslandForceBlink = forceBlink),
+        (window.__z4bIslandEscapeActivate = activateEscape),
+        (window.__z4bIslandEscapeIsStaring = isStaringAtSelfMoai),
+        (window.__z4bIslandLockLook = lockLook),
+        (window.__z4bInstallIslandRuntime = install),
+        install());
+    }
+    function islandClamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+    function islandDragDelta(dx, dy) {
+      (("number" == typeof dx && isFinite(dx)) || (dx = 0),
+        ("number" == typeof dy && isFinite(dy)) || (dy = 0));
+      var w = Math.max(1, window.innerWidth || 1),
+        sy = 2.7 / Math.max(1, window.innerHeight || 1);
+      ((islandTargetLookX = islandClamp(
+        islandTargetLookX + dx * (3.8 / w),
+        -1.65,
+        1.65,
+      )),
+        (islandTargetLookY = islandClamp(
+          islandTargetLookY - dy * sy,
+          -0.95,
+          0.95,
+        )),
+        performance.now(),
+        (islandLookReady = !0));
+    }
+    function num(v) {
+      return "number" == typeof v && isFinite(v);
+    }
+    function len(v) {
+      return Math.sqrt(v.x * v.x + v.y * v.y);
+    }
+    function norm(v) {
+      var l = len(v) || 1;
+      return {
+        x: v.x / l,
+        y: v.y / l,
       };
     }
-  }
-
-  var z4bIslandLevelToken = 0;
-  var z4bIslandLevelSpaceHeld = false;
-  var z4bIslandLevelProgram = null;
-  var z4bIslandLevelQuad = null;
-  var z4bIslandLevelBlackTex = null;
-  var z4bIslandLevelUniforms = null;
-
-  function z4bIslandLevelSpaceKey(e) {
-    return e && (e.code === "Space" || e.key === " " || e.key === "Spacebar");
-  }
-
-  if (!window.__z4bIslandLevelInputInstalled) {
-    window.__z4bIslandLevelInputInstalled = true;
-
-    window.addEventListener("keydown", function (e) {
-      if (window.__z4bIslandActive === true && z4bIslandLevelSpaceKey(e)) {
-        z4bIslandLevelSpaceHeld = true;
-        if (e.preventDefault) e.preventDefault();
-      }
-    }, true);
-
-    window.addEventListener("keyup", function (e) {
-      if (z4bIslandLevelSpaceKey(e)) {
-        z4bIslandLevelSpaceHeld = false;
-        if (window.__z4bIslandActive === true && e.preventDefault) e.preventDefault();
-      }
-    }, true);
-
-    window.addEventListener("blur", function () {
-      z4bIslandLevelSpaceHeld = false;
-    }, true);
-  }
-
-  function z4bIslandLevelCompile(type, source) {
-    var sh = gl.createShader(type);
-    gl.shaderSource(sh, source);
-    gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-      console.error("[Z4B Island] shader compile error:", gl.getShaderInfoLog(sh));
-      gl.deleteShader(sh);
-      return null;
+    function dot(a, b) {
+      return a.x * b.x + a.y * b.y;
     }
-    return sh;
-  }
-
-  function z4bIslandLevelBuildProgram() {
-    if (typeof gl === "undefined") return null;
-    if (!window.GLSL || !GLSL.vert || !GLSL.core || !GLSL.modules || !GLSL.modules.z4b_island) return null;
-
-    var vs = z4bIslandLevelCompile(gl.VERTEX_SHADER, GLSL.vert);
-    var fsSrc = GLSL.core + "\n" + GLSL.modules.z4b_island;
-
-    if (typeof IS_MOBILE !== "undefined" && IS_MOBILE) fsSrc = "#define MOBILE\n" + fsSrc;
-
-    var fs = z4bIslandLevelCompile(gl.FRAGMENT_SHADER, fsSrc);
-
-    if (!vs || !fs) return null;
-
-    var prog = gl.createProgram();
-
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error("[Z4B Island] program link error:", gl.getProgramInfoLog(prog));
-      gl.deleteProgram(prog);
-      return null;
+    function boundaryAt(a) {
+      var r = (function (a) {
+        return (
+          1 +
+          0.075 * Math.sin(2 * a + 0.4) +
+          0.055 * Math.sin(5 * a - 1.6) +
+          0.04 * Math.sin(9 * a + 2.1)
+        );
+      })(a);
+      return {
+        x: 30 * Math.cos(a) * r,
+        y: 17 * Math.sin(a) * r,
+      };
     }
-
-    return prog;
-  }
-
-  function z4bIslandLevelMakeBlackTex() {
-    var tex = gl.createTexture();
-
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-    return tex;
-  }
-
-  function z4bIslandLevelGetUniforms(prog) {
-    return {
-      p: gl.getAttribLocation(prog, "p"),
-      res: gl.getUniformLocation(prog, "u_resolution"),
-      time: gl.getUniformLocation(prog, "u_time"),
-      mouse: gl.getUniformLocation(prog, "u_mouse"),
-      mode: gl.getUniformLocation(prog, "u_mode"),
-      blink: gl.getUniformLocation(prog, "u_blink"),
-      flash: gl.getUniformLocation(prog, "u_flash"),
-      shake: gl.getUniformLocation(prog, "u_shake"),
-      wake: gl.getUniformLocation(prog, "u_wake"),
-      modeSeed: gl.getUniformLocation(prog, "u_modeSeed"),
-      audio: gl.getUniformLocation(prog, "u_audio"),
-      texSize: gl.getUniformLocation(prog, "u_texSize"),
-      modeTime: gl.getUniformLocation(prog, "u_modeTime"),
-      trip: gl.getUniformLocation(prog, "u_trip"),
-      walk: gl.getUniformLocation(prog, "u_walk"),
-      isOOB: gl.getUniformLocation(prog, "u_isOOB")
-    };
-  }
-
-  function z4bIslandLevelBindBlankSamplers(prog) {
-    var maxUnits = 8;
-
-    try {
-      maxUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) || 8;
-    } catch (e) {}
-
-    if (!z4bIslandLevelBlackTex) z4bIslandLevelBlackTex = z4bIslandLevelMakeBlackTex();
-
-    for (var i = 0; i < maxUnits; i++) {
-      gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, z4bIslandLevelBlackTex);
+    function outDir(a) {
+      var b = boundaryAt(a);
+      return norm({
+        x: b.x + 0.001,
+        y: b.y,
+      });
     }
-
-    var names = [
-      "u_texB1",
-      "u_texB2",
-      "u_texB3",
-      "u_texB4",
-      "u_texB5",
-      "u_texB6",
-      "u_water",
-      "u_texWindow",
-      "u_texEnv1",
-      "u_texEnv2",
-      "u_texEnv3",
-      "u_texEnv4",
-      "u_texEnv5",
-      "u_texEnv6",
-      "u_voidTex"
-    ];
-
-    for (var i = 0; i < names.length; i++) {
-      var loc = null;
+    function pathPoint(a) {
+      var b = boundaryAt(a),
+        o = outDir(a),
+        wob = 0.42 * Math.sin(3 * a + 1.1) + 0.22 * Math.sin(7 * a - 0.3);
+      return {
+        x: b.x - o.x * (3.4 + wob),
+        y: b.y - o.y * (3.4 + wob),
+      };
+    }
+    function makeTexture(spec) {
+      if ("undefined" == typeof gl) return null;
+      if (textures[spec.key]) return textures[spec.key];
+      var tex = gl.createTexture();
+      ((textures[spec.key] = tex),
+        (ready[spec.key] = !1),
+        gl.bindTexture(gl.TEXTURE_2D, tex),
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          1,
+          1,
+          0,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          new Uint8Array(spec.pixel),
+        ),
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR),
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR),
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE),
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE));
+      var img = new Image();
+      return (
+        (img.crossOrigin = "anonymous"),
+        (img.onload = function () {
+          (gl.bindTexture(gl.TEXTURE_2D, tex),
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, !1),
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              img,
+            ),
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR),
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR),
+            gl.texParameteri(
+              gl.TEXTURE_2D,
+              gl.TEXTURE_WRAP_S,
+              gl.CLAMP_TO_EDGE,
+            ),
+            gl.texParameteri(
+              gl.TEXTURE_2D,
+              gl.TEXTURE_WRAP_T,
+              gl.CLAMP_TO_EDGE,
+            ),
+            (ready[spec.key] = !0),
+            console.log(
+              "[mode-island] loaded:",
+              spec.path,
+              img.width,
+              img.height,
+            ));
+        }),
+        (img.onerror = function () {
+          ((ready[spec.key] = !1),
+            console.error("[mode-island] failed:", spec.path));
+        }),
+        (img.src = spec.path + "?z4bMoai=" + Date.now()),
+        tex
+      );
+    }
+    function z4bCurrentProgramIsIsland() {
+      if ("undefined" == typeof gl) return !1;
+      var prog = null;
       try {
-        loc = gl.getUniformLocation(prog, names[i]);
-      } catch (e) {}
-      if (loc) gl.uniform1i(loc, Math.min(i, maxUnits - 1));
-    }
-  }
-
-  function z4bIslandLevelStopOtherLevels() {
-    try { if (window.currentZone2 && window.currentZone2.destroy) window.currentZone2.destroy(); window.currentZone2 = null; } catch (e) {}
-    try { if (window.currentZone3 && window.currentZone3.destroy) window.currentZone3.destroy(); window.currentZone3 = null; } catch (e) {}
-    try { if (window.currentZone4 && window.currentZone4.destroy) window.currentZone4.destroy(); window.currentZone4 = null; } catch (e) {}
-
-    try { if (typeof currentEngine !== "undefined" && currentEngine && currentEngine.destroy) currentEngine.destroy(); } catch (e) {}
-    try { if (typeof leftEngine !== "undefined" && leftEngine && leftEngine.destroy) leftEngine.destroy(); } catch (e) {}
-    try { if (typeof rightEngine !== "undefined" && rightEngine && rightEngine.destroy) rightEngine.destroy(); } catch (e) {}
-    try { if (typeof backEngine !== "undefined" && backEngine && backEngine.destroy) backEngine.destroy(); } catch (e) {}
-    try { if (typeof doorEngine !== "undefined" && doorEngine && doorEngine.destroy) doorEngine.destroy(); } catch (e) {}
-    try { if (typeof laptopEngine !== "undefined" && laptopEngine && laptopEngine.destroy) laptopEngine.destroy(); } catch (e) {}
-
-    try {
-      currentEngine = null;
-      leftEngine = null;
-      rightEngine = null;
-      backEngine = null;
-      doorEngine = null;
-      laptopEngine = null;
-    } catch (e) {}
-
-    try { if (window.__z4LoopToken) window.__z4LoopToken++; } catch (e) {}
-  }
-
-  window.startZ4BIsland = function (opts) {
-    opts = opts || {};
-
-    var targetCanvas = null;
-    try {
-      targetCanvas = (typeof canvas !== "undefined" && canvas) ? canvas : document.getElementById("c");
-    } catch (e) {
-      targetCanvas = null;
-    }
-
-    if (typeof gl === "undefined" || !targetCanvas) {
-      console.error("[Z4B Island] no WebGL context/canvas; island draw aborted");
-      return false;
-    }
-
-    if (!targetCanvas.width || !targetCanvas.height) {
-      targetCanvas.width = Math.max(1, targetCanvas.clientWidth || window.innerWidth || 1280);
-      targetCanvas.height = Math.max(1, targetCanvas.clientHeight || window.innerHeight || 720);
-    }
-
-    if (typeof install === "function") install();
-
-    z4bIslandLevelToken++;
-
-    var token = z4bIslandLevelToken;
-
-    z4bIslandLevelStopOtherLevels();
-
-    window.isEngine1Dead = true;
-    window.__z4bIslandActive = true;
-    window.__z4bIslandEscapeActive = false;
-    window.__z4bIslandReturnToZone2 = false;
-    window.__z4bIslandMoaiBlinkArmed = false;
-    window.__lastOOB = false;
-
-    escapeState.walk = typeof opts.walk === "number" && isFinite(opts.walk) ? opts.walk : 0.0;
-    escapeState.mouseX = typeof opts.lookX === "number" && isFinite(opts.lookX) ? opts.lookX : 0.0;
-    escapeState.mouseY = typeof opts.lookY === "number" && isFinite(opts.lookY) ? opts.lookY : 0.0;
-    escapeState.blink = 0.0;
-    escapeState.blinks = 0;
-    escapeState.escape = false;
-    escapeState.escapeWalk0 = 0.0;
-    escapeState.flashStart = -1;
-    escapeState.lastStare = 0;
-    escapeState.stareStarted = 0;
-    escapeState.sequenceLocked = false;
-    escapeState.sequenceStart = 0;
-    escapeState.autoBlinkStage = 0;
-    escapeState.stareBlinkCount = 0;
-    escapeState._escapeQueued = false;
-    escapeState.returnedToZone2 = false;
-
-    window.__z4bIslandEscapeState = escapeState;
-    window.__z4bIslandRawWalk = escapeState.walk;
-    window.__z4bIslandLookX = escapeState.mouseX;
-    window.__z4bIslandLookY = escapeState.mouseY;
-
-    if (typeof lockLook === "function") lockLook(escapeState.mouseX, escapeState.mouseY);
-
-    if (z4bIslandLevelProgram) {
-      try { gl.deleteProgram(z4bIslandLevelProgram); } catch (e) {}
-      z4bIslandLevelProgram = null;
-    }
-
-    z4bIslandLevelProgram = z4bIslandLevelBuildProgram();
-
-    if (!z4bIslandLevelProgram) return false;
-
-    z4bIslandLevelUniforms = z4bIslandLevelGetUniforms(z4bIslandLevelProgram);
-
-    if (!z4bIslandLevelQuad) {
-      z4bIslandLevelQuad = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, z4bIslandLevelQuad);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 3.0, -1.0, -1.0, 3.0]), gl.STATIC_DRAW);
-    }
-
-    gl.useProgram(z4bIslandLevelProgram);
-    z4bIslandLevelBindBlankSamplers(z4bIslandLevelProgram);
-
-    var startT = performance.now();
-    var lastT = startT;
-    var lastDraw = 0;
-    var frameMs = 1000 / 30.0;
-    var seed = Math.random() * 1000.0;
-
-    function frame(now) {
-      if (token !== z4bIslandLevelToken) return;
-      if (window.__z4bIslandActive !== true) return;
-      if (window.__z4bIslandReturnToZone2 === true) return;
-
-      requestAnimationFrame(frame);
-
-      if (now - lastDraw < frameMs) return;
-
-      var dt = now - lastT;
-
-      if (dt > 250 || dt < 0) dt = 33.33;
-
-      lastT = now;
-      lastDraw = now;
-
-      if (typeof window.__z4bIslandDebugWalkTarget === "number" && isFinite(window.__z4bIslandDebugWalkTarget)) {
-        escapeState.walk = window.__z4bIslandDebugWalkTarget;
-        window.__z4bIslandRawWalk = escapeState.walk;
-        delete window.__z4bIslandDebugWalk;
-        delete window.__z4bIslandDebugWalkTarget;
-        delete window.__z4bIslandDebugWalkBase;
-      } else if (z4bIslandLevelSpaceHeld) {
-        escapeState.walk += dt * 0.001 * ((escapeState.escape || window.__z4bIslandEscapeActive === true) ? ISLAND_WALK_RATE : ISLAND_BEACH_WALK_RATE);
+        prog = gl.getParameter(gl.CURRENT_PROGRAM);
+      } catch (e) {
+        return !1;
       }
-
-      window.__z4bIslandRawWalk = escapeState.walk;
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, targetCanvas.width, targetCanvas.height);
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.useProgram(z4bIslandLevelProgram);
-      gl.bindBuffer(gl.ARRAY_BUFFER, z4bIslandLevelQuad);
-
-      if (z4bIslandLevelUniforms.p >= 0) {
-        gl.enableVertexAttribArray(z4bIslandLevelUniforms.p);
-        gl.vertexAttribPointer(z4bIslandLevelUniforms.p, 2, gl.FLOAT, false, 0, 0);
+      if (!prog) return !1;
+      try {
+        return !!(
+          gl.getUniformLocation(prog, "u_z4bMoaiReady") ||
+          gl.getUniformLocation(prog, "u_z4bWingReady") ||
+          gl.getUniformLocation(prog, "u_z4bPalmLeafReady") ||
+          gl.getUniformLocation(prog, "u_z4bIslandEscape")
+        );
+      } catch (e) {
+        return !1;
       }
-
-      if (z4bIslandLevelUniforms.res) gl.uniform2f(z4bIslandLevelUniforms.res, targetCanvas.width, targetCanvas.height);
-      if (z4bIslandLevelUniforms.time) gl.uniform1f(z4bIslandLevelUniforms.time, now * 0.001);
-      if (z4bIslandLevelUniforms.mouse) gl.uniform2f(z4bIslandLevelUniforms.mouse, window.__z4bIslandLookX || 0.0, window.__z4bIslandLookY || 0.0);
-      if (z4bIslandLevelUniforms.mode) gl.uniform1i(z4bIslandLevelUniforms.mode, 0);
-      if (z4bIslandLevelUniforms.blink) gl.uniform1f(z4bIslandLevelUniforms.blink, 0.0);
-      if (z4bIslandLevelUniforms.flash) gl.uniform1f(z4bIslandLevelUniforms.flash, 0.0);
-      if (z4bIslandLevelUniforms.shake) gl.uniform1f(z4bIslandLevelUniforms.shake, 0.0);
-      if (z4bIslandLevelUniforms.wake) gl.uniform1f(z4bIslandLevelUniforms.wake, 1.0);
-      if (z4bIslandLevelUniforms.modeSeed) gl.uniform1f(z4bIslandLevelUniforms.modeSeed, seed);
-      if (z4bIslandLevelUniforms.audio) gl.uniform1f(z4bIslandLevelUniforms.audio, 0.0);
-      if (z4bIslandLevelUniforms.texSize) gl.uniform2f(z4bIslandLevelUniforms.texSize, 1.0, 1.0);
-      if (z4bIslandLevelUniforms.modeTime) gl.uniform1f(z4bIslandLevelUniforms.modeTime, (now - startT) * 0.001);
-      if (z4bIslandLevelUniforms.trip) gl.uniform1f(z4bIslandLevelUniforms.trip, 0.0);
-      if (z4bIslandLevelUniforms.walk) gl.uniform1f(z4bIslandLevelUniforms.walk, escapeState.walk);
-      if (z4bIslandLevelUniforms.isOOB) gl.uniform1f(z4bIslandLevelUniforms.isOOB, 0.0);
-
-      if (typeof bindIslandRuntime === "function") bindIslandRuntime();
-
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
-
-    requestAnimationFrame(frame);
-
-    return true;
-  };
-
-
-  window.__z4bIslandGoPlaneDoor = function () {
-    var now = performance.now();
-
-    escapeState.escape = true;
-    escapeState.escapeWalk0 = escapeState.walk - 2.75;
-    escapeState.flashStart = now;
-    escapeState.stareStarted = 0;
-    escapeState.autoBlinkStage = 3;
-    escapeState.blinks = 2;
-    escapeState.stareBlinkCount = 2;
-
-    window.__z4bIslandMoaiBlinkArmed = false;
-    window.__z4bIslandEscapeActive = true;
-    window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0;
-    window.__z4bIslandEscapeFlashStart = escapeState.flashStart;
-
-    return true;
-  };
-
-  window.__z4bIslandGoPlaneCabin = function () {
-    var now = performance.now();
-
-    escapeState.escape = true;
-    escapeState.escapeWalk0 = escapeState.walk - 5.20;
-    escapeState.flashStart = now;
-    escapeState.stareStarted = 0;
-    escapeState.autoBlinkStage = 3;
-    escapeState.blinks = 2;
-    escapeState.stareBlinkCount = 2;
-
-    window.__z4bIslandMoaiBlinkArmed = false;
-    window.__z4bIslandEscapeActive = true;
-    window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0;
-    window.__z4bIslandEscapeFlashStart = escapeState.flashStart;
-
-    return true;
-  };
-
-  window.__z4bIslandForceBlink = forceBlink;
-  window.__z4bIslandEscapeActivate = activateEscape;
-  window.__z4bIslandEscapeIsStaring = isStaringAtSelfMoai;
-  window.__z4bIslandLockLook = lockLook;
-  window.__z4bInstallIslandRuntime = install;
-
-  install();
-})();
-
-GLSL.modules.z4b_island = `
+    function islandBlinkEase(t) {
+      return (t = Math.max(0, Math.min(1, t))) * t * (3 - 2 * t);
+    }
+    function islandBlinkValue(t) {
+      ("number" == typeof t && isFinite(t)) || (t = performance.now());
+      var ov,
+        start = -1,
+        v = 0;
+      if (
+        ("number" == typeof blinkState.forceStart && blinkState.forceStart > 0
+          ? (start = blinkState.forceStart)
+          : (blinkState.next ||
+              (function (t) {
+                blinkState.next = t + 6500 + 9e3 * Math.random();
+              })(t),
+            !blinkState.active &&
+              t >= blinkState.next &&
+              ((blinkState.active = !0),
+              (blinkState.start = t),
+              (blinkState.next = t + 6500 + 9e3 * Math.random())),
+            blinkState.active && (start = blinkState.start)),
+        start >= 0)
+      ) {
+        var age = t - start;
+        age < 135
+          ? (v = islandBlinkEase(age / 135))
+          : age < 220
+            ? (v = 1)
+            : age < 370
+              ? (v = 1 - islandBlinkEase((age - 135 - 85) / 150))
+              : ((v = 0),
+                (blinkState.active = !1),
+                (blinkState.start = -1),
+                (blinkState.forceStart = 0));
+      }
+      return (
+        (v = Math.max(0, Math.min(1, v))),
+        (blinkState.value = v),
+        (escapeState.blink = v),
+        (window.__z4bIslandBlinkValue = v),
+        (ov = document.getElementById("z4b-island-blink-overlay")) &&
+          ov.parentNode &&
+          ov.parentNode.removeChild(ov),
+        v
+      );
+    }
+    function isStaringAtSelfMoai() {
+      if (!0 !== window.__z4bIslandActive && !z4bCurrentProgramIsIsland())
+        return !1;
+      if (escapeState.escape) return !1;
+      var mx = escapeState.mouseX,
+        my = escapeState.mouseY;
+      (num(window.__z4bIslandLookX) && (mx = window.__z4bIslandLookX),
+        num(window.__z4bIslandLookY) && (my = window.__z4bIslandLookY));
+      var p,
+        o,
+        a = (function (a, b) {
+          return ((a % b) + b) % b;
+        })(0.235 * escapeState.walk, TAU),
+        p0 = pathPoint(a - 0.035),
+        p1 = pathPoint(a + 0.035),
+        pathT = norm({
+          x: p1.x - p0.x,
+          y: p1.y - p0.y,
+        }),
+        shoreD = outDir(a),
+        cam = pathPoint(a),
+        look = (function (v, a) {
+          var c = Math.cos(a),
+            s = Math.sin(a);
+          return {
+            x: c * v.x - s * v.y,
+            y: s * v.x + c * v.y,
+          };
+        })(
+          norm({
+            x: pathT.x + 0.95 * shoreD.x,
+            y: pathT.y + 0.95 * shoreD.y,
+          }),
+          2.05 * mx + Math.PI,
+        ),
+        self =
+          ((p = pathPoint(3.72)),
+          (o = outDir(3.72)),
+          {
+            x: p.x - 8.8 * o.x,
+            y: p.y - 8.8 * o.y,
+          }),
+        faceDir = norm({
+          x: Math.cos(-2.787223),
+          y: Math.sin(-2.787223),
+        }),
+        faceSide = {
+          x: -faceDir.y,
+          y: faceDir.x,
+        },
+        eyeTarget = {
+          x: self.x + 1.1 * faceDir.x,
+          y: self.y + 1.1 * faceDir.y,
+        },
+        rel = {
+          x: cam.x - eyeTarget.x,
+          y: cam.y - eyeTarget.y,
+        },
+        guideForward = dot(rel, faceDir),
+        guideAcross = dot(rel, faceSide),
+        nearStatue =
+          len({
+            x: cam.x - self.x,
+            y: cam.y - self.y,
+          }) < 9.25,
+        halfWidth =
+          0.72 + 0.86 * Math.max(0, Math.min(1, (guideForward - 0.05) / 8.85)),
+        standingInFront =
+          nearStatue &&
+          guideForward > 0.05 &&
+          guideForward < 8.9 &&
+          Math.abs(guideAcross) < halfWidth,
+        toEye = {
+          x: eyeTarget.x - cam.x,
+          y: eyeTarget.y - cam.y,
+        },
+        d = len(toEye),
+        aim = dot(look, norm(toEye)),
+        ahead = dot(toEye, look),
+        perpx = toEye.x - look.x * ahead,
+        perpy = toEye.y - look.y * ahead,
+        miss = Math.sqrt(perpx * perpx + perpy * perpy),
+        pitchOK = Math.abs(my) < 0.92,
+        distanceOK = d > 0.35 && d < 9.6,
+        facingMoai =
+          ahead > -0.08 && aim > 0.3 && miss < Math.max(1.18, 0.68 * d),
+        ok = standingInFront && pitchOK && distanceOK && facingMoai;
+      return (
+        (escapeState.lastAim = aim),
+        (escapeState.lastDistance = d),
+        (escapeState.lastRayMiss = miss),
+        (escapeState.lastForwardDist = ahead),
+        (escapeState.lastGuideForward = guideForward),
+        (escapeState.lastGuideAcross = guideAcross),
+        (escapeState.lastStandingInGuide = standingInFront),
+        (escapeState.lastPitchOK = pitchOK),
+        (escapeState.lastDistanceOK = distanceOK),
+        (escapeState.lastFacingMoaiOK = facingMoai),
+        (escapeState.lastTightFacingOK = facingMoai),
+        (escapeState.lastMoaiEyeTargetX = eyeTarget.x),
+        (escapeState.lastMoaiEyeTargetY = eyeTarget.y),
+        (escapeState.lastMouseX = mx),
+        (escapeState.lastMouseY = my),
+        (escapeState.lastGuideFrontMin = 0.05),
+        (escapeState.lastGuideFrontMax = 8.9),
+        (escapeState.lastGuideHalfWidth = halfWidth),
+        (escapeState.lastMoaiFaceDirX = faceDir.x),
+        (escapeState.lastMoaiFaceDirY = faceDir.y),
+        (escapeState.lastStareCheck = performance.now()),
+        (window.__z4bIslandSelfMoaiStaring = ok),
+        (window.__z4bIslandEscapeDebug = escapeState),
+        ok
+      );
+    }
+    function countIslandBlink(v) {
+      (("number" == typeof v && isFinite(v)) || (v = 0),
+        (escapeState.blink = v),
+        (window.__z4bIslandBlinkValue = v),
+        v > 0.55 &&
+          !0 !== escapeState._moaiBlinkHigh &&
+          ((escapeState._moaiBlinkHigh = !0),
+          (escapeState.lastBlinkPeak = performance.now())),
+        v < 0.18 && (escapeState._moaiBlinkHigh = !1));
+    }
+    function bindIslandRuntime() {
+      if ("undefined" != typeof gl && z4bCurrentProgramIsIsland()) {
+        !(function () {
+          for (var i = 0; i < texSpecs.length; i++) makeTexture(texSpecs[i]);
+        })();
+        var prog = null;
+        try {
+          prog = gl.getParameter(gl.CURRENT_PROGRAM);
+        } catch (e) {
+          return;
+        }
+        if (prog) {
+          !(function () {
+            if (
+              !0 === window.__z4bIslandActive ||
+              z4bCurrentProgramIsIsland()
+            ) {
+              var t = performance.now(),
+                staring = isStaringAtSelfMoai();
+              if (
+                ((window.__z4bIslandSelfMoaiStaring = staring),
+                (window.__z4bIslandEscapeDebug = escapeState),
+                !escapeState.escape)
+              ) {
+                if (
+                  (staring && (escapeState.lastValidStare = t),
+                  !staring && !escapeState.sequenceLocked)
+                )
+                  return (
+                    (escapeState.stareStarted = 0),
+                    (escapeState.sequenceStart = 0),
+                    (escapeState.autoBlinkStage = 0),
+                    (escapeState.blinks = 0),
+                    (escapeState.stareBlinkCount = 0),
+                    (escapeState._moaiBlinkHigh = !1),
+                    (escapeState._escapeQueued = !1),
+                    void (window.__z4bIslandMoaiBlinkArmed = !1)
+                  );
+                if (
+                  (staring &&
+                    !escapeState.stareStarted &&
+                    ((escapeState.stareStarted = t),
+                    (escapeState.lastValidStare = t),
+                    (escapeState.sequenceLocked = !1),
+                    (escapeState.sequenceStart = 0),
+                    (escapeState.autoBlinkStage = 0),
+                    (escapeState.blinks = 0),
+                    (escapeState.stareBlinkCount = 0),
+                    (escapeState._moaiBlinkHigh = !1),
+                    (escapeState._escapeQueued = !1),
+                    (blinkState.active = !1),
+                    (blinkState.start = -1),
+                    (blinkState.forceStart = 0),
+                    (blinkState.next = t + 9e3),
+                    (window.__z4bIslandMoaiBlinkArmed = !1)),
+                  escapeState.sequenceLocked)
+                ) {
+                  var lastGood =
+                    "number" == typeof escapeState.lastValidStare
+                      ? escapeState.lastValidStare
+                      : 0;
+                  if (!staring && (!lastGood || t - lastGood > 1200))
+                    return (
+                      (escapeState.stareStarted = 0),
+                      (escapeState.sequenceLocked = !1),
+                      (escapeState.sequenceStart = 0),
+                      (escapeState.autoBlinkStage = 0),
+                      (escapeState.blinks = 0),
+                      (escapeState.stareBlinkCount = 0),
+                      (escapeState._moaiBlinkHigh = !1),
+                      (escapeState._escapeQueued = !1),
+                      (blinkState.forceStart = 0),
+                      void (window.__z4bIslandMoaiBlinkArmed = !1)
+                    );
+                }
+                var age = t - escapeState.stareStarted;
+                if (
+                  (!escapeState.sequenceLocked &&
+                    staring &&
+                    age > 240 &&
+                    ((escapeState.sequenceLocked = !0),
+                    (escapeState.sequenceStart = t),
+                    (escapeState.autoBlinkStage = 0),
+                    (blinkState.active = !1),
+                    (blinkState.start = -1),
+                    (blinkState.forceStart = 0),
+                    (blinkState.next = t + 9e3)),
+                  escapeState.sequenceLocked)
+                ) {
+                  var seqAge = t - escapeState.sequenceStart;
+                  (seqAge > 360 &&
+                    escapeState.autoBlinkStage < 1 &&
+                    ((escapeState.autoBlinkStage = 1),
+                    (escapeState.blinks = 1),
+                    (escapeState.stareBlinkCount = 1),
+                    forceBlink()),
+                    seqAge > 1420 &&
+                      escapeState.autoBlinkStage < 2 &&
+                      ((escapeState.autoBlinkStage = 2),
+                      (escapeState.blinks = 2),
+                      (escapeState.stareBlinkCount = 2),
+                      forceBlink()),
+                    seqAge > 1780 &&
+                      escapeState.autoBlinkStage >= 2 &&
+                      !escapeState.escape &&
+                      ((window.__z4bIslandMoaiBlinkArmed = !0),
+                      (window.__z4bIslandMoaiBlinkArmedAt = t),
+                      activateEscape(!0)));
+                }
+              }
+            }
+          })();
+          var now = performance.now(),
+            flash =
+              escapeState.escape && escapeState.flashStart > 0
+                ? Math.max(0, 1 - (now - escapeState.flashStart) / 620)
+                : 0,
+            age =
+              escapeState.escape && escapeState.flashStart > 0
+                ? Math.max(0, 0.001 * (now - escapeState.flashStart))
+                : 0;
+          !escapeState.escape ||
+            escapeState.returnedToZone2 ||
+            (escapeState.walk - (escapeState.escapeWalk0 || 0) >= 12.1 &&
+              (escapeState.returnedToZone2 ||
+                !0 === window.__z4bIslandCabinHandoffActive ||
+                ((window.__z4bIslandCabinHandoffActive = !0),
+                (window.__z4bIslandCabinHandoffStartedAt = performance.now()),
+                (z4bIslandLevelSpaceHeld = !1),
+                z4bIslandSetHandoffFog(!0),
+                setTimeout(function () {
+                  !(function () {
+                    if (escapeState.returnedToZone2) return !0;
+                    (!(function () {
+                      if (!0 === window.__z4bZone2ControlsSuppressorInstalled)
+                        return !0;
+                      window.__z4bZone2ControlsSuppressorInstalled = !0;
+                      var install = function () {
+                        if (
+                          "function" != typeof window.showTransientCenterOverlay
+                        )
+                          return !1;
+                        if (
+                          !0 ===
+                          window.showTransientCenterOverlay.__z4bSuppressWrapped
+                        )
+                          return !0;
+                        var base = window.showTransientCenterOverlay;
+                        return (
+                          (window.showTransientCenterOverlay = function (src) {
+                            var now = performance.now(),
+                              suppressUntil =
+                                "number" ==
+                                typeof window.__z4bSuppressZone2ControlsUntil
+                                  ? window.__z4bSuppressZone2ControlsUntil
+                                  : 0,
+                              img = String(src || "");
+                            return (
+                              !(
+                                (img.indexOf("ctrls.png") >= 0 ||
+                                  img.indexOf("ctrl.png") >= 0 ||
+                                  img.indexOf("/ctrls") >= 0 ||
+                                  img.indexOf("/ctrl") >= 0) &&
+                                now < suppressUntil
+                              ) && base.apply(this, arguments)
+                            );
+                          }),
+                          (window.showTransientCenterOverlay.__z4bSuppressWrapped =
+                            !0),
+                          (window.showTransientCenterOverlay.__z4bBase = base),
+                          !0
+                        );
+                      };
+                      if (!install())
+                        var tries = 0,
+                          timer = setInterval(function () {
+                            (tries++,
+                              (install() || tries > 40) &&
+                                clearInterval(timer));
+                          }, 50);
+                    })(),
+                      (window.__z4bSuppressZone2ControlsUntil =
+                        performance.now() + 3600),
+                      (escapeState.returnedToZone2 = !0),
+                      (window.__z4bIslandReturnToZone2 = !0),
+                      (window.__z4bIslandRouteBlockUntil =
+                        performance.now() + 12e3),
+                      (window.__z4Route = !1),
+                      (window.__z4RouteActive = !1),
+                      (window.__z4bIslandActive = !1),
+                      (window.__z4bIslandEscapeActive = !1),
+                      (window.__z4bIslandMoaiBlinkArmed = !1),
+                      z4bIslandSetHandoffFog(!0),
+                      "function" == typeof window.startZone4 &&
+                        !0 !== window.__z4bIslandStartZone4GuardInstalled &&
+                        ((window.__z4bIslandStartZone4GuardInstalled = !0),
+                        (window.__z4bIslandStartZone4Base = window.startZone4),
+                        (window.startZone4 = function () {
+                          return (
+                            !(
+                              "number" ==
+                                typeof window.__z4bIslandRouteBlockUntil &&
+                              performance.now() <
+                                window.__z4bIslandRouteBlockUntil
+                            ) &&
+                            window.__z4bIslandStartZone4Base.apply(
+                              this,
+                              arguments,
+                            )
+                          );
+                        })));
+                    try {
+                      ((window.isEngine1Dead = !0),
+                        "undefined" != typeof currentEngine &&
+                          currentEngine &&
+                          (currentEngine.destroy && currentEngine.destroy(),
+                          (currentEngine = null)),
+                        "undefined" != typeof leftEngine &&
+                          leftEngine &&
+                          (leftEngine.destroy && leftEngine.destroy(),
+                          (leftEngine = null)),
+                        "undefined" != typeof rightEngine &&
+                          rightEngine &&
+                          (rightEngine.destroy && rightEngine.destroy(),
+                          (rightEngine = null)),
+                        "undefined" != typeof backEngine &&
+                          backEngine &&
+                          (backEngine.destroy && backEngine.destroy(),
+                          (backEngine = null)),
+                        window.currentZone3 &&
+                          (window.currentZone3.destroy &&
+                            window.currentZone3.destroy(),
+                          (window.currentZone3 = null)),
+                        window.currentZone4 &&
+                          (window.currentZone4.destroy &&
+                            window.currentZone4.destroy(),
+                          (window.currentZone4 = null)));
+                    } catch (e) {}
+                    var canvas = document.getElementById("c");
+                    (canvas && (canvas.style.transform = ""),
+                      "function" != typeof window.startZone2
+                        ? z4bIslandSetHandoffFog(!1)
+                        : (window.startZone2({
+                            fromIslandCrashReturn: !0,
+                            framedKitchenForward: !0,
+                          }),
+                          z4bIslandScrubZone2FromCabin(),
+                          setTimeout(z4bIslandScrubZone2FromCabin, 30),
+                          setTimeout(z4bIslandScrubZone2FromCabin, 90),
+                          setTimeout(z4bIslandScrubZone2FromCabin, 180),
+                          setTimeout(z4bIslandScrubZone2FromCabin, 420),
+                          setTimeout(function () {
+                            ((window.__z4bIslandCabinHandoffActive = !1),
+                              z4bIslandSetHandoffFog(!1));
+                          }, 360)));
+                  })();
+                }, 430))));
+          var bv = islandBlinkValue(now);
+          countIslandBlink(bv);
+          var blinkLoc = null,
+            escapeLoc = null,
+            flashLoc = null,
+            ageLoc = null,
+            walk0Loc = null,
+            guideLoc = null,
+            guideOKLoc = null;
+          try {
+            blinkLoc = gl.getUniformLocation(prog, "u_blink");
+          } catch (e) {}
+          try {
+            escapeLoc = gl.getUniformLocation(prog, "u_z4bIslandEscape");
+          } catch (e) {}
+          try {
+            flashLoc = gl.getUniformLocation(prog, "u_z4bIslandEscapeFlash");
+          } catch (e) {}
+          try {
+            ageLoc = gl.getUniformLocation(prog, "u_z4bIslandEscapeAge");
+          } catch (e) {}
+          try {
+            walk0Loc = gl.getUniformLocation(prog, "u_z4bIslandEscapeWalk0");
+          } catch (e) {}
+          try {
+            guideLoc = gl.getUniformLocation(prog, "u_z4bIslandDebugGuide");
+          } catch (e) {}
+          try {
+            guideOKLoc = gl.getUniformLocation(prog, "u_z4bIslandDebugGuideOK");
+          } catch (e) {}
+          (blinkLoc && gl.uniform1f(blinkLoc, bv),
+            escapeLoc && gl.uniform1f(escapeLoc, escapeState.escape ? 1 : 0),
+            flashLoc && gl.uniform1f(flashLoc, flash),
+            ageLoc && gl.uniform1f(ageLoc, age),
+            walk0Loc && gl.uniform1f(walk0Loc, escapeState.escapeWalk0 || 0),
+            guideLoc && gl.uniform1f(guideLoc, 0),
+            guideOKLoc && gl.uniform1f(guideOKLoc, 0));
+          var maxUnits = 8;
+          try {
+            maxUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) || 8;
+          } catch (e) {}
+          for (var i = 0; i < texSpecs.length; i++) {
+            var spec = texSpecs[i];
+            if (!(spec.unit >= maxUnits)) {
+              var tex = makeTexture(spec);
+              if (tex) {
+                (gl.activeTexture(gl.TEXTURE0 + spec.unit),
+                  gl.bindTexture(gl.TEXTURE_2D, tex));
+                for (var j = 0; j < spec.names.length; j++) {
+                  var loc = null;
+                  try {
+                    loc = gl.getUniformLocation(prog, spec.names[j]);
+                  } catch (e) {}
+                  loc && gl.uniform1i(loc, spec.unit);
+                }
+                if (spec.ready) {
+                  var readyLoc = null;
+                  try {
+                    readyLoc = gl.getUniformLocation(prog, spec.ready);
+                  } catch (e) {}
+                  readyLoc && gl.uniform1f(readyLoc, ready[spec.key] ? 1 : 0);
+                }
+              }
+            }
+          }
+          var moaiReadyLoc = null;
+          try {
+            moaiReadyLoc = gl.getUniformLocation(prog, "u_z4bMoaiReady");
+          } catch (e) {}
+          moaiReadyLoc && gl.uniform1f(moaiReadyLoc, 1);
+        }
+      }
+    }
+    function lockLook(x, y) {
+      (!(function (x, y) {
+        (("number" == typeof x && isFinite(x)) || (x = islandLookX),
+          ("number" == typeof y && isFinite(y)) || (y = islandLookY),
+          (islandLookX = islandClamp(x, -1.65, 1.65)),
+          (islandLookY = islandClamp(y, -0.95, 0.95)),
+          (islandTargetLookX = islandLookX),
+          (islandTargetLookY = islandLookY),
+          (islandLookReady = !0),
+          (islandLookLastT = performance.now()),
+          (window.__z4bIslandLookX = islandLookX),
+          (window.__z4bIslandLookY = islandLookY));
+      })(x, y),
+        (escapeState.mouseX = islandLookX),
+        (escapeState.mouseY = islandLookY),
+        (window.__z4bIslandLookX = islandLookX),
+        (window.__z4bIslandLookY = islandLookY));
+    }
+    function forceBlink() {
+      var t = performance.now();
+      return (
+        (blinkState.forceStart = t),
+        (blinkState.active = !1),
+        (blinkState.start = -1),
+        (blinkState.value = 0),
+        (blinkState.next = t + 9e3),
+        (window.__z4bIslandBlinkPulseTime = t),
+        !0
+      );
+    }
+    function activateEscape(force) {
+      return (
+        (!0 === force || !0 === window.__z4bIslandMoaiBlinkArmed) &&
+        (escapeState.escape ||
+          ((escapeState.escape = !0),
+          (escapeState.escapeWalk0 = escapeState.walk),
+          (escapeState.flashStart = performance.now()),
+          (escapeState.stareStarted = 0),
+          (escapeState.sequenceLocked = !1),
+          (escapeState.sequenceStart = 0),
+          (escapeState.autoBlinkStage = 3),
+          (escapeState.blinks = 2),
+          (escapeState.stareBlinkCount = 2),
+          (escapeState._escapeQueued = !1),
+          (escapeState.returnedToZone2 = !1),
+          (window.__z4bIslandMoaiBlinkArmed = !1),
+          (window.__z4bIslandEscapeActive = !0),
+          (window.__z4bIslandEscapeWalk0 = escapeState.escapeWalk0),
+          (window.__z4bIslandEscapeFlashStart = escapeState.flashStart),
+          (window.__z4bIslandReturnToZone2 = !1)),
+        !0)
+      );
+    }
+    function z4bIslandSetHandoffFog(on) {
+      var ov = (function () {
+          var ov = document.getElementById("z4b-island-cabin-handoff-fog");
+          return (
+            ov ||
+              (((ov = document.createElement("div")).id =
+                "z4b-island-cabin-handoff-fog"),
+              (ov.style.cssText = [
+                "position:fixed",
+                "inset:0",
+                "z-index:2147483647",
+                "pointer-events:none",
+                "opacity:0",
+                "transition:opacity 420ms ease",
+                "background:",
+                "radial-gradient(circle at 50% 54%, rgba(190,230,255,0.92) 0%, rgba(90,150,205,0.74) 32%, rgba(8,18,38,0.96) 78%),",
+                "linear-gradient(180deg, rgba(120,190,255,0.26), rgba(0,8,28,0.90))",
+                ";",
+                "backdrop-filter:blur(13px) saturate(1.30) brightness(1.12)",
+                "-webkit-backdrop-filter:blur(13px) saturate(1.30) brightness(1.12)",
+                "will-change:opacity",
+              ].join(";")),
+              document.body.appendChild(ov)),
+            ov
+          );
+        })(),
+        canvas = document.getElementById("c");
+      return (
+        canvas &&
+          ((canvas.style.transition = "filter 420ms ease"),
+          (canvas.style.filter = on
+            ? "blur(7px) saturate(1.28) brightness(1.16)"
+            : "")),
+        requestAnimationFrame(function () {
+          ov.style.opacity = on ? "1" : "0";
+        }),
+        on ||
+          setTimeout(function () {
+            var kill = document.getElementById("z4b-island-cabin-handoff-fog");
+            kill && kill.parentNode && kill.parentNode.removeChild(kill);
+            var c = document.getElementById("c");
+            c && ((c.style.filter = ""), (c.style.transition = ""));
+          }, 520),
+        ov
+      );
+    }
+    function z4bIslandScrubZone2FromCabin() {
+      ((window.__z4Route = !1),
+        (window.__z4RouteActive = !1),
+        (window.__z4bIslandActive = !1),
+        (window.__z4bIslandEscapeActive = !1),
+        (window.__z4bIslandMoaiBlinkArmed = !1));
+      var z2 = window.currentZone2;
+      return (
+        !!z2 &&
+        ((z2.activePOV = "center"),
+        (z2.pendingPOV = null),
+        (z2.slideState = "idle"),
+        (z2.slideOffset = 0),
+        (z2.slideDir = 0),
+        (z2.povSwitchTime = performance.now()),
+        (z2.facing = "S"),
+        (z2.hallwayYaw = Math.PI),
+        (z2.hallwayYawTarget = Math.PI),
+        "number" == typeof z2.INTERSECTION_Z
+          ? (z2.camZ = z2.INTERSECTION_Z - 0.75)
+          : (z2.camZ = 1.65),
+        (z2.intersectionReached = !0),
+        (z2.seqState = "initial"),
+        (z2.z4RouteActive = !1),
+        (z2.z4RouteStep = 0),
+        (z2.z4LeftBlinkCount = 0),
+        (z2.z4TransitionStarted = !1),
+        (z2.z4RouteTriggered = !1),
+        (z2.route3Active = !1),
+        (z2.route3Step = 0),
+        (z2.readyForZone3 = !1),
+        (z2.z3TransitionStarted = !1),
+        (z2.z2ExitStarted = !1),
+        (z2.z2ExitTime = 0),
+        (z2.zone3Route = "z3"),
+        (z2.__fromIslandCabin = !0),
+        z2.enableFramedKitchenForwardWall &&
+          z2.enableFramedKitchenForwardWall(),
+        (z2.__z4RouteDisabledUntil = performance.now() + 12e3),
+        (window.mx = 0),
+        (window.my = 0),
+        (window.z2SpaceHeld = !1),
+        (window.z2TouchHeld = !1),
+        !0)
+      );
+    }
+    function install() {
+      if ("undefined" != typeof gl) {
+        if (!gl.__z4bIslandRuntimeDrawHookInstalled) {
+          gl.__z4bIslandRuntimeDrawHookInstalled = !0;
+          var baseGet = gl.getUniformLocation.bind(gl),
+            base1f = gl.uniform1f.bind(gl),
+            base2f = gl.uniform2f.bind(gl),
+            baseDrawArrays = gl.drawArrays.bind(gl),
+            baseDrawElements = gl.drawElements
+              ? gl.drawElements.bind(gl)
+              : null;
+          ((gl.getUniformLocation = function (prog, name) {
+            var loc = baseGet(prog, name);
+            if (loc && "string" == typeof name)
+              try {
+                locNames.set(loc, name);
+              } catch (e) {}
+            return loc;
+          }),
+            (gl.uniform1f = function (loc, value) {
+              var name = null;
+              try {
+                name = locNames.get(loc);
+              } catch (e) {}
+              if (
+                ("u_walk" === name &&
+                  ((window.__z4bIslandRawWalk = value),
+                  "number" == typeof window.__z4bIslandDebugWalkTarget &&
+                    isFinite(window.__z4bIslandDebugWalkTarget) &&
+                    (("number" == typeof window.__z4bIslandDebugWalkBase &&
+                      isFinite(window.__z4bIslandDebugWalkBase)) ||
+                      (window.__z4bIslandDebugWalkBase = value),
+                    (value +=
+                      window.__z4bIslandDebugWalkTarget -
+                      window.__z4bIslandDebugWalkBase)),
+                  (escapeState.walk = value)),
+                "u_blink" === name &&
+                  (!0 === window.__z4bIslandActive ||
+                    z4bCurrentProgramIsIsland()))
+              ) {
+                var bv = islandBlinkValue(performance.now());
+                return (countIslandBlink(bv), base1f(loc, bv));
+              }
+              return (
+                "u_blink" === name && (escapeState.blink = value),
+                base1f(loc, value)
+              );
+            }),
+            (gl.uniform2f = function (loc, x, y) {
+              var name = null;
+              try {
+                name = locNames.get(loc);
+              } catch (e) {}
+              if (
+                "u_mouse" === name &&
+                (!0 === window.__z4bIslandActive || z4bCurrentProgramIsIsland())
+              ) {
+                var rel = (function () {
+                  islandLookReady ||
+                    ("number" == typeof window.__z4bIslandLookX &&
+                      (islandLookX = window.__z4bIslandLookX),
+                    "number" == typeof window.__z4bIslandLookY &&
+                      (islandLookY = window.__z4bIslandLookY),
+                    (islandTargetLookX = islandLookX),
+                    (islandTargetLookY = islandLookY),
+                    (islandLookReady = !0),
+                    (islandLookLastT = performance.now()));
+                  var now = performance.now(),
+                    dt = now - islandLookLastT;
+                  ((dt > 250 || dt <= 0) && (dt = 33.33),
+                    (islandLookLastT = now));
+                  var step =
+                      dt /
+                      ("undefined" != typeof IS_MOBILE && IS_MOBILE
+                        ? 50
+                        : 33.33),
+                    k = Math.min(1, 0.22 * step);
+                  return (
+                    (islandLookX += (islandTargetLookX - islandLookX) * k),
+                    (islandLookY += (islandTargetLookY - islandLookY) * k),
+                    (escapeState.mouseX = islandLookX),
+                    (escapeState.mouseY = islandLookY),
+                    (window.__z4bIslandLookX = islandLookX),
+                    (window.__z4bIslandLookY = islandLookY),
+                    [islandLookX, islandLookY]
+                  );
+                })();
+                return base2f(loc, rel[0], rel[1]);
+              }
+              return (
+                "u_mouse" === name &&
+                  ((escapeState.mouseX = x),
+                  (escapeState.mouseY = y),
+                  (window.__z4bIslandLookX = x),
+                  (window.__z4bIslandLookY = y)),
+                base2f(loc, x, y)
+              );
+            }),
+            (gl.drawArrays = function () {
+              return (
+                z4bCurrentProgramIsIsland() && bindIslandRuntime(),
+                baseDrawArrays.apply(gl, arguments)
+              );
+            }),
+            baseDrawElements &&
+              (gl.drawElements = function () {
+                return (
+                  z4bCurrentProgramIsIsland() && bindIslandRuntime(),
+                  baseDrawElements.apply(gl, arguments)
+                );
+              }));
+        }
+      } else requestAnimationFrame(install);
+    }
+    function z4bIslandLevelSpaceKey(e) {
+      return e && ("Space" === e.code || " " === e.key || "Spacebar" === e.key);
+    }
+    function z4bIslandLevelCompile(type, source) {
+      var sh = gl.createShader(type);
+      return (
+        gl.shaderSource(sh, source),
+        gl.compileShader(sh),
+        gl.getShaderParameter(sh, gl.COMPILE_STATUS)
+          ? sh
+          : (console.error(
+              "[Z4B Island] shader compile error:",
+              gl.getShaderInfoLog(sh),
+            ),
+            gl.deleteShader(sh),
+            null)
+      );
+    }
+  })(),
+  (GLSL.modules.z4b_island = `
 uniform float u_walk;
 uniform float u_z4bIslandEscape;
 uniform float u_z4bIslandEscapeFlash;
@@ -3676,121 +3737,100 @@ vec3 ro = vec3(cam2.x, mix(0.085, z4bStandY, z4bWakeT), cam2.y);
     col = col * mix(1.0, 1.12, z4bInsideCabin) + vec3(0.004, 0.005, 0.006) * z4bInsideCabin;
   }
   vec3 z4bFinalCol = (1.0 - exp(-col * 1.04)) * (1.0 - u_blink);
+  z4bFinalCol = applyHallucination(z4bFinalCol, uv, u_modeSeed, 8.0, u_trip, u_time);
   z4bFinalCol *= smoothstep(0.03, 0.76, z4bWakeT);
   z4bFinalCol = mix(z4bFinalCol, vec3(1.0), clamp(u_z4bIslandEscapeFlash, 0.0, 1.0));
   gl_FragColor = vec4(z4bFinalCol, 1.0);
   gl_FragColor.rgb = islandApplySelfMoaiActivationGuide(gl_FragColor.rgb, ro, rd);
 }
-`;
-
-
-
-(function () {
-  function installLogoTextureHook() {
-      window.__z4bInstallIslandLogoTextureHook = function () {
-        return true;
-      };
-      return true;
+`),
+  (function () {
+    function installLogoTextureHook() {
+      return (
+        (window.__z4bInstallIslandLogoTextureHook = function () {
+          return !0;
+        }),
+        !0
+      );
     }
-  function startWake(now) {
-      if (this.z4bIslandStarted) return;
-      this.z4bIslandStarted = true;
+    function startWake(now) {
+      if (!this.z4bIslandStarted) {
+        ((this.z4bIslandStarted = !0),
+          cleanupWakeBits(),
+          this._installZ4BIslandLogoTextureHook(),
+          makeBlackOverlay(),
+          (window.__z4bIslandActive = !0),
+          (window.__z4bIslandWakeStart = 0),
+          (window.__z4bIslandWakeDuration = 0),
+          (window.__z4bIslandLookX = 0),
+          (window.__z4bIslandLookY = 0));
+        try {
+          this._setFog && this._setFog(0, 0);
+        } catch (e) {}
+        (this.destroy(),
+          setTimeout(function () {
+            (cleanupWakeBits(),
+              window.__z4bInstallIslandLogoTextureHook &&
+                window.__z4bInstallIslandLogoTextureHook());
+            const ov = makeBlackOverlay(),
+              fadeStart = performance.now();
+            ((window.__z4bIslandWakeStart = fadeStart + 650),
+              (window.__z4bIslandWakeDuration = 3600),
+              "function" == typeof window.startZ4BIsland
+                ? (window.startZ4BIsland(),
+                  window.__z4bInstallIslandLogoTextureHook &&
+                    window.__z4bInstallIslandLogoTextureHook(),
+                  requestAnimationFrame(function frame() {
+                    const fadeT =
+                      ((t = (performance.now() - fadeStart - 650) / 2600),
+                      (t = Math.max(0, Math.min(1, t))) * t * (3 - 2 * t));
+                    var t;
+                    ((ov.style.opacity = String(1 - fadeT)),
+                      fadeT < 1
+                        ? requestAnimationFrame(frame)
+                        : ov && ov.parentNode && ov.parentNode.removeChild(ov));
+                  }))
+                : console.error("[Zone4] startZ4BIsland is missing"));
+          }, 120));
+      }
       function cleanupWakeBits() {
         const old = document.getElementById("z4b-island-wake-overlay");
-        if (old && old.parentNode) old.parentNode.removeChild(old);
-        const canvases = Array.prototype.slice.call(document.querySelectorAll("canvas"));
-        const c = document.getElementById("c");
-        if (c && canvases.indexOf(c) < 0) canvases.unshift(c);
-        canvases.forEach(function (el) {
-          if (el.dataset && el.dataset.z4bWakeTransforming) delete el.dataset.z4bWakeTransforming;
-          el.style.transition = "";
-          el.style.transformOrigin = "";
-          el.style.transform = "";
-          el.style.filter = "";
-          el.style.willChange = "";
-        });
-      }
-      function restoreIslandShaderIfNeeded() {
-        try {
-          if (
-            window.GLSL &&
-            window.GLSL.modules &&
-            window.__z4bIslandOriginalShader &&
-            typeof window.__z4bIslandOriginalShader === "string"
-          ) {
-            window.GLSL.modules.z4b_island = window.__z4bIslandOriginalShader;
-            window.GLSL.modules.island = window.GLSL.modules.z4b_island;
-            window.GLSL.modules.island = window.GLSL.modules.z4b_island;
-          }
-          if (typeof PROGRAM_CACHE !== "undefined") {
-            if (PROGRAM_CACHE.z4b_island) {
-              try { gl.deleteProgram(PROGRAM_CACHE.z4b_island); } catch (e) {}
-              delete PROGRAM_CACHE.z4b_island;
-            }
-            if (PROGRAM_CACHE.island) {
-              try { gl.deleteProgram(PROGRAM_CACHE.island); } catch (e) {}
-              delete PROGRAM_CACHE.island;
-            }
-          }
-        } catch (e) {}
+        old && old.parentNode && old.parentNode.removeChild(old);
+        const canvases = Array.prototype.slice.call(
+            document.querySelectorAll("canvas"),
+          ),
+          c = document.getElementById("c");
+        (c && canvases.indexOf(c) < 0 && canvases.unshift(c),
+          canvases.forEach(function (el) {
+            (el.dataset &&
+              el.dataset.z4bWakeTransforming &&
+              delete el.dataset.z4bWakeTransforming,
+              (el.style.transition = ""),
+              (el.style.transformOrigin = ""),
+              (el.style.transform = ""),
+              (el.style.filter = ""),
+              (el.style.willChange = ""));
+          }));
       }
       function makeBlackOverlay() {
         let ov = document.getElementById("z4b-island-wake-overlay");
-        if (!ov) {
-          ov = document.createElement("div");
-          ov.id = "z4b-island-wake-overlay";
-          document.body.appendChild(ov);
-        }
-        ov.style.cssText =
-          "position:fixed;inset:0;background:#000;opacity:1;" +
-          "z-index:2147483647;pointer-events:none;transition:none;";
-        return ov;
+        return (
+          ov ||
+            ((ov = document.createElement("div")),
+            (ov.id = "z4b-island-wake-overlay"),
+            document.body.appendChild(ov)),
+          (ov.style.cssText =
+            "position:fixed;inset:0;background:#000;opacity:1;z-index:2147483647;pointer-events:none;transition:none;"),
+          ov
+        );
       }
-      cleanupWakeBits();
-      this._installZ4BIslandLogoTextureHook();
-      makeBlackOverlay();
-      window.__z4bIslandActive = true;
-      window.__z4bIslandWakeStart = 0;
-      window.__z4bIslandWakeDuration = 0;
-      window.__z4bIslandLookX = 0.0;
-      window.__z4bIslandLookY = 0.0;
-      try {
-        this._setFog && this._setFog(0, 0);
-      } catch (e) {}
-      this.destroy();
-      setTimeout(function () {
-        cleanupWakeBits();
-        if (window.__z4bInstallIslandLogoTextureHook) window.__z4bInstallIslandLogoTextureHook();
-        const ov = makeBlackOverlay();
-        if (typeof window.startZ4BIsland === "function") {
-          window.startZ4BIsland();
-          if (window.__z4bInstallIslandLogoTextureHook) window.__z4bInstallIslandLogoTextureHook();
-        } else {
-          console.error("[Zone4] startZ4BIsland is missing");
-          return;
-        }
-        const fadeStart = performance.now();
-        const hold = 650;
-        const fadeDur = 2600;
-        function ease(t) {
-          t = Math.max(0, Math.min(1, t));
-          return t * t * (3 - 2 * t);
-        }
-        function frame() {
-          const age = performance.now() - fadeStart;
-          const fadeT = ease((age - hold) / fadeDur);
-          ov.style.opacity = String(1.0 - fadeT);
-          if (fadeT < 1.0) {
-            requestAnimationFrame(frame);
-          } else if (ov && ov.parentNode) {
-            ov.parentNode.removeChild(ov);
-          }
-        }
-        requestAnimationFrame(frame);
-      }, 120);
-  }
-  window.Zone4IslandBridge = {
-    installLogoTextureHook: function (engine) { return installLogoTextureHook.call(engine); },
-    startWake: function (engine, now) { return startWake.call(engine, now); }
-  };
-})();
+    }
+    window.Zone4IslandBridge = {
+      installLogoTextureHook: function (engine) {
+        return installLogoTextureHook.call(engine);
+      },
+      startWake: function (engine, now) {
+        return startWake.call(engine, now);
+      },
+    };
+  })());

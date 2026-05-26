@@ -1,317 +1,495 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>desktop</title>
-<style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  :root {
-    --icon-size: clamp(58px, 5.6vmin, 104px);
-    --icon-width: calc(var(--icon-size) + clamp(22px, 2.1vmin, 46px));
-    --icon-pad-x: clamp(4px, 0.45vmin, 10px);
-    --icon-pad-top: clamp(4px, 0.45vmin, 10px);
-    --icon-pad-bottom: clamp(6px, 0.7vmin, 16px);
-    --icon-gap: clamp(8px, 1.35vmin, 24px);
-    --icon-label-gap: clamp(4px, 0.45vmin, 9px);
-    --icon-font-size: clamp(10px, 0.95vmin, 17px);
-    --desktop-pad-y: clamp(12px, 2vh, 34px);
-    --desktop-pad-x: clamp(10px, 1.5vw, 34px);
-  }
-
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    font-family: "Courier New", monospace;
-    background: #3a3d4a;
-    user-select: none;
-    -webkit-user-select: none;
-    cursor: default;
-  }
-
-  body {
-    background-image: url('files/img/rooms/z1/laptop/wallpaper.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
-
-  .desktop {
-    position: absolute;
-    inset: 0;
-    padding: var(--desktop-pad-y) var(--desktop-pad-x);
-  }
-
-  .icon-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--icon-gap);
-    width: max-content;
-  }
-
-  .icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: var(--icon-width);
-    padding: var(--icon-pad-top) var(--icon-pad-x) var(--icon-pad-bottom);
-    cursor: pointer;
-    border: 1px dashed transparent;
-    border-radius: 2px;
-  }
-
-  .icon img {
-    width: var(--icon-size);
-    height: var(--icon-size);
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    pointer-events: none;
-  }
-
-  .icon span {
-    margin-top: var(--icon-label-gap);
-    font-size: var(--icon-font-size);
-    color: #fff;
-    text-shadow:
-      1px 1px 0 #000,
-      -1px 1px 0 #000,
-      1px -1px 0 #000,
-      -1px -1px 0 #000;
-    letter-spacing: 0.5px;
-    text-align: center;
-    pointer-events: none;
-  }
-
-  .icon.selected {
-    background: rgba(60, 100, 200, 0.35);
-    border-color: rgba(180, 200, 255, 0.6);
-  }
-
-  .icon:hover:not(.selected) {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  .icon-disabled {
-    opacity: 0.7;
-    cursor: default;
-  }
-
-  .window {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: min(88vw, 680px);
-    height: min(82vh, 470px);
-    transform: translate(-50%, -50%);
-    display: none;
-    flex-direction: column;
-    background: #101010;
-    border: 2px solid #c0c0c0;
-    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.55);
-    z-index: 20;
-  }
-
-  .window.open {
-    display: flex;
-  }
-
-  .window-titlebar {
-    height: 28px;
-    min-height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(90deg, #08086a, #2020a8);
-    color: #fff;
-    padding: 0 6px 0 10px;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-  }
-
-  .window-title {
-    pointer-events: none;
-  }
-
-  .window-close {
-    width: 22px;
-    height: 22px;
-    border: 2px outset #e0e0e0;
-    background: #c0c0c0;
-    color: #000;
-    font-family: "Courier New", monospace;
-    font-weight: bold;
-    line-height: 16px;
-    cursor: pointer;
-  }
-
-  .window-close:active {
-    border-style: inset;
-  }
-
-  .doom-frame-wrap {
-    position: relative;
-    flex: 1;
-    background: #000;
-    overflow: hidden;
-  }
-
-  .doom-frame {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: #000;
-  }
-
-  .doom-help {
-    position: absolute;
-    left: 8px;
-    bottom: 8px;
-    z-index: 3;
-    padding: 5px 7px;
-    background: rgba(0, 0, 0, 0.68);
-    color: #ddd;
-    font-size: 11px;
-    line-height: 1.35;
-    pointer-events: none;
-    text-shadow: 1px 1px 0 #000;
-  }
-</style>
-</head>
-
-<body>
-<div class="desktop" id="desktop">
-  <div class="icon-grid">
-    <div class="icon" data-href="index.html" data-name="web">
-      <img src="files/img/rooms/z1/laptop/icon1.png" alt="">
-      <span>WEB</span>
-    </div>
-
-    <div class="icon" data-href="terminal.html" data-name="terminal">
-      <img src="files/img/rooms/z1/laptop/icon2.png" alt="">
-      <span>TERMINAL</span>
-    </div>
-
-    <div class="icon" data-href="portfolio.html" data-name="portfolio">
-      <img src="files/img/rooms/z1/laptop/icon3.png" alt="">
-      <span>PORTFOLIO</span>
-    </div>
-
-    <div class="icon" data-app="doom" data-name="doom">
-      <img src="files/img/rooms/z1/laptop/doom.png" alt="">
-      <span>DOOM</span>
-    </div>
-
-    <div class="icon icon-disabled" data-name="solutions">
-      <img src="files/img/rooms/z1/laptop/icon4.png" alt="">
-      <span>solutions.zip</span>
-    </div>
-  </div>
-</div>
-
-<div class="window" id="doomWindow" aria-hidden="true">
-  <div class="window-titlebar">
-    <div class="window-title">xdoom</div>
-    <button class="window-close" id="doomClose" type="button">×</button>
-  </div>
-
-  <div class="doom-frame-wrap">
-    <iframe
-      id="doomFrame"
-      class="doom-frame"
-      title="Doom"
-      src="about:blank"
-      allow="fullscreen; autoplay; gamepad"
-    ></iframe>
-
-    <div class="doom-help">
-      click doom first · enter=start · arrows=move · ctrl=shoot · space=open
-    </div>
-  </div>
-</div>
-
-<script>
-(() => {
-  const icons = document.querySelectorAll('.icon');
-  const doomWindow = document.getElementById('doomWindow');
-  const doomFrame = document.getElementById('doomFrame');
-  const doomClose = document.getElementById('doomClose');
-  const doomURL = 'doom.html';
-
-  function clearSelection() {
-    icons.forEach(icon => icon.classList.remove('selected'));
-  }
-
-  function openDoom() {
-    doomWindow.classList.add('open');
-    doomWindow.setAttribute('aria-hidden', 'false');
-
-    if (doomFrame.getAttribute('src') === 'about:blank') {
-      doomFrame.setAttribute('src', doomURL);
-    }
-
-    setTimeout(() => {
-      doomFrame.focus();
-
-      try {
-        doomFrame.contentWindow.focus();
-      } catch (err) {}
-    }, 250);
-  }
-
-  function closeDoom() {
-    doomWindow.classList.remove('open');
-    doomWindow.setAttribute('aria-hidden', 'true');
-  }
-
-  icons.forEach(icon => {
-    icon.addEventListener('click', e => {
-      e.stopPropagation();
-
-      if (icon.classList.contains('icon-disabled')) return;
-
-      clearSelection();
-      icon.classList.add('selected');
-
-      if (icon.dataset.app === 'doom') {
-        openDoom();
-        return;
+  <head>
+    <meta charset="UTF-8" />
+    <title>desktop</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
 
-      const href = icon.dataset.href;
-
-      if (href && href !== '#') {
-        setTimeout(() => {
-          location.href = href;
-        }, 80);
+      :root {
+        --icon-size: clamp(58px, 5.6vmin, 104px);
+        --icon-width: calc(var(--icon-size) + clamp(22px, 2.1vmin, 46px));
+        --icon-pad-x: clamp(4px, 0.45vmin, 10px);
+        --icon-pad-top: clamp(4px, 0.45vmin, 10px);
+        --icon-pad-bottom: clamp(6px, 0.7vmin, 16px);
+        --icon-gap: clamp(8px, 1.35vmin, 24px);
+        --icon-label-gap: clamp(4px, 0.45vmin, 9px);
+        --icon-font-size: clamp(10px, 0.95vmin, 17px);
+        --desktop-pad-y: clamp(12px, 2vh, 34px);
+        --desktop-pad-x: clamp(10px, 1.5vw, 34px);
       }
-    });
-  });
 
-  doomClose.addEventListener('click', e => {
-    e.stopPropagation();
-    closeDoom();
-  });
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Courier New", monospace;
+        background: #3a3d4a;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+      }
 
-  doomWindow.addEventListener('mousedown', () => {
-    doomFrame.focus();
+      body {
+        background-image: url("files/img/rooms/z1/laptop/wallpaper.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
 
-    try {
-      doomFrame.contentWindow.focus();
-    } catch (err) {}
-  });
+      .desktop {
+        position: absolute;
+        inset: 0;
+        padding: var(--desktop-pad-y) var(--desktop-pad-x);
+      }
 
-  document.addEventListener('click', clearSelection);
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('dragstart', e => e.preventDefault());
-})();
-</script>
-</body>
+      .icon-grid {
+        display: flex;
+        flex-direction: column;
+        gap: var(--icon-gap);
+        width: max-content;
+      }
+
+      .icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: var(--icon-width);
+        padding: var(--icon-pad-top) var(--icon-pad-x) var(--icon-pad-bottom);
+        cursor: pointer;
+        border: 1px dashed transparent;
+        border-radius: 2px;
+      }
+
+      .icon img {
+        width: var(--icon-size);
+        height: var(--icon-size);
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        pointer-events: none;
+      }
+
+      .icon span {
+        margin-top: var(--icon-label-gap);
+        font-size: var(--icon-font-size);
+        color: #fff;
+        text-shadow:
+          1px 1px 0 #000,
+          -1px 1px 0 #000,
+          1px -1px 0 #000,
+          -1px -1px 0 #000;
+        letter-spacing: 0.5px;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .icon.selected {
+        background: rgba(60, 100, 200, 0.35);
+        border-color: rgba(180, 200, 255, 0.6);
+      }
+
+      .icon:hover:not(.selected) {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .icon-disabled {
+        opacity: 0.7;
+        cursor: default;
+      }
+
+      .window {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: min(88vw, 680px);
+        height: min(82vh, 470px);
+        transform: translate(-50%, -50%);
+        display: none;
+        flex-direction: column;
+        background: #101010;
+        border: 2px solid #c0c0c0;
+        box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.55);
+        z-index: 20;
+      }
+
+      .window.open {
+        display: flex;
+      }
+
+      .window-titlebar {
+        height: 28px;
+        min-height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(90deg, #08086a, #2020a8);
+        color: #fff;
+        padding: 0 6px 0 10px;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+      }
+
+      .window-title {
+        pointer-events: none;
+      }
+
+      .window-close {
+        width: 22px;
+        height: 22px;
+        border: 2px outset #e0e0e0;
+        background: #c0c0c0;
+        color: #000;
+        font-family: "Courier New", monospace;
+        font-weight: bold;
+        line-height: 16px;
+        cursor: pointer;
+      }
+
+      .window-close:active {
+        border-style: inset;
+      }
+
+      .browser-window {
+        z-index: 25;
+      }
+
+      .browser-toolbar {
+        height: 26px;
+        min-height: 26px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 9px;
+        background: #d6d6d6;
+        border-bottom: 2px solid #8a8a8a;
+      }
+
+      .browser-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #9a9a9a;
+        box-shadow: inset 0 0 0 1px #6f6f6f;
+      }
+
+      .browser-url {
+        flex: 1;
+        margin-left: 4px;
+        padding: 3px 7px;
+        background: #fff;
+        border: 1px solid #7a7a7a;
+        font-size: 11px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .browser-viewport {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        overflow: hidden;
+      }
+
+      .browser-media {
+        max-width: 100%;
+        max-height: 100%;
+        image-rendering: auto;
+        pointer-events: none;
+      }
+
+      .doom-frame-wrap {
+        position: relative;
+        flex: 1;
+        background: #000;
+        overflow: hidden;
+      }
+
+      .doom-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #000;
+      }
+
+      .doom-help {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        z-index: 3;
+        padding: 5px 7px;
+        background: rgba(0, 0, 0, 0.68);
+        color: #ddd;
+        font-size: 11px;
+        line-height: 1.35;
+        pointer-events: none;
+        text-shadow: 1px 1px 0 #000;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="desktop" id="desktop">
+      <div class="icon-grid">
+        <div class="icon" data-href="index.html" data-name="web">
+          <img src="files/img/rooms/z1/laptop/icon1.png" alt="" />
+          <span>WEB</span>
+        </div>
+
+        <div class="icon" data-href="terminal.html" data-name="terminal">
+          <img src="files/img/rooms/z1/laptop/icon2.png" alt="" />
+          <span>TERMINAL</span>
+        </div>
+
+        <div class="icon" data-href="portfolio.html" data-name="portfolio">
+          <img src="files/img/rooms/z1/laptop/icon3.png" alt="" />
+          <span>PORTFOLIO</span>
+        </div>
+
+        <div class="icon" data-app="doom" data-name="doom">
+          <img src="files/img/rooms/z1/laptop/doom.png" alt="" />
+          <span>DOOM</span>
+        </div>
+
+        <div class="icon icon-disabled" data-name="solutions">
+          <img src="files/img/rooms/z1/laptop/icon4.png" alt="" />
+          <span>solutions.zip</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="window browser-window" id="vidWindow" aria-hidden="true">
+      <div class="window-titlebar">
+        <div class="window-title">browser</div>
+        <button class="window-close" id="vidClose" type="button">×</button>
+      </div>
+
+      <div class="browser-toolbar">
+        <span class="browser-dot"></span>
+        <span class="browser-dot"></span>
+        <span class="browser-dot"></span>
+        <div class="browser-url">file:///z1/laptop/vid.gif</div>
+      </div>
+
+      <div class="browser-viewport">
+        <img
+          id="vidImg"
+          class="browser-media"
+          src="files/img/rooms/z1/laptop/vid.gif"
+          alt=""
+        />
+      </div>
+    </div>
+
+    <div class="window" id="doomWindow" aria-hidden="true">
+      <div class="window-titlebar">
+        <div class="window-title">xdoom</div>
+        <button class="window-close" id="doomClose" type="button">×</button>
+      </div>
+
+      <div class="doom-frame-wrap">
+        <iframe
+          id="doomFrame"
+          class="doom-frame"
+          title="Doom"
+          src="about:blank"
+          allow="fullscreen; autoplay; gamepad"
+        ></iframe>
+
+        <div class="doom-help">
+          click doom first · enter=start · arrows=move · ctrl=shoot · space=open
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const icons = document.querySelectorAll(".icon");
+        const doomWindow = document.getElementById("doomWindow");
+        const doomFrame = document.getElementById("doomFrame");
+        const doomClose = document.getElementById("doomClose");
+        const doomURL = "doom.html";
+
+        const vidWindow = document.getElementById("vidWindow");
+        const vidImg = document.getElementById("vidImg");
+        const vidClose = document.getElementById("vidClose");
+        let laptopSwipeStart = null;
+        let laptopSwipeSent = false;
+
+        function canSendLaptopSwipe() {
+          try {
+            return window.parent && window.parent !== window;
+          } catch (err) {
+            return false;
+          }
+        }
+
+        function sendLaptopSwipe() {
+          if (!canSendLaptopSwipe() || laptopSwipeSent) return;
+          laptopSwipeSent = true;
+          window.parent.postMessage({ type: "laptop-screen-swipe" }, "*");
+        }
+
+        document.addEventListener(
+          "pointerdown",
+          (e) => {
+            if (e.button !== 0) return;
+            laptopSwipeStart = {
+              x: e.clientX,
+              y: e.clientY,
+              target: e.target,
+            };
+            laptopSwipeSent = false;
+          },
+          true,
+        );
+
+        document.addEventListener(
+          "pointermove",
+          (e) => {
+            if (!laptopSwipeStart || laptopSwipeSent) return;
+            const dx = e.clientX - laptopSwipeStart.x;
+            const dy = e.clientY - laptopSwipeStart.y;
+            if (dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.45) {
+              sendLaptopSwipe();
+            }
+          },
+          true,
+        );
+
+        function resetLaptopSwipe() {
+          laptopSwipeStart = null;
+          laptopSwipeSent = false;
+        }
+
+        document.addEventListener("pointerup", resetLaptopSwipe, true);
+        document.addEventListener("pointercancel", resetLaptopSwipe, true);
+
+        // Forward drag deltas to parent so the laptop scene can pan/exit
+        let _dragLast = null;
+        function _inParent() {
+          try { return window.parent && window.parent !== window; } catch(e) { return false; }
+        }
+        document.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0 || !_inParent()) return;
+          _dragLast = { x: e.clientX, y: e.clientY };
+        }, true);
+        document.addEventListener("pointermove", (e) => {
+          if (!_dragLast || !_inParent()) return;
+          const dx = e.clientX - _dragLast.x;
+          const dy = e.clientY - _dragLast.y;
+          _dragLast = { x: e.clientX, y: e.clientY };
+          window.parent.postMessage({ type: "laptop-drag", dx, dy }, "*");
+        }, true);
+        document.addEventListener("pointerup", () => {
+          if (_dragLast && _inParent()) {
+            window.parent.postMessage({ type: "laptop-drag-end" }, "*");
+          }
+          _dragLast = null;
+        }, true);
+        document.addEventListener("pointercancel", () => { _dragLast = null; }, true);
+
+        function openVid() {
+          vidWindow.classList.add("open");
+          vidWindow.setAttribute("aria-hidden", "false");
+          // re-arm the gif so it plays from the first frame on open
+          const src = vidImg.getAttribute("src");
+          vidImg.setAttribute("src", "");
+          vidImg.setAttribute("src", src);
+        }
+
+        function closeVid() {
+          vidWindow.classList.remove("open");
+          vidWindow.setAttribute("aria-hidden", "true");
+        }
+
+        vidClose.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeVid();
+        });
+
+        // Only auto-open the video when we arrived here via the post-crash wake.
+        if (/[?&]wake=1\b/.test(location.search)) {
+          openVid();
+        }
+
+        function clearSelection() {
+          icons.forEach((icon) => icon.classList.remove("selected"));
+        }
+
+        function openDoom() {
+          doomWindow.classList.add("open");
+          doomWindow.setAttribute("aria-hidden", "false");
+
+          if (doomFrame.getAttribute("src") === "about:blank") {
+            doomFrame.setAttribute("src", doomURL);
+          }
+
+          setTimeout(() => {
+            doomFrame.focus();
+
+            try {
+              doomFrame.contentWindow.focus();
+            } catch (err) {}
+          }, 250);
+        }
+
+        function closeDoom() {
+          doomWindow.classList.remove("open");
+          doomWindow.setAttribute("aria-hidden", "true");
+        }
+
+        icons.forEach((icon) => {
+          icon.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            if (icon.classList.contains("icon-disabled")) return;
+
+            clearSelection();
+            icon.classList.add("selected");
+
+            if (icon.dataset.app === "doom") {
+              openDoom();
+              return;
+            }
+
+            const href = icon.dataset.href;
+
+            if (href && href !== "#") {
+              setTimeout(() => {
+                location.href = href;
+              }, 80);
+            }
+          });
+        });
+
+        doomClose.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeDoom();
+        });
+
+        doomWindow.addEventListener("mousedown", () => {
+          doomFrame.focus();
+
+          try {
+            doomFrame.contentWindow.focus();
+          } catch (err) {}
+        });
+
+        document.addEventListener("click", clearSelection);
+        document.addEventListener("contextmenu", (e) => e.preventDefault());
+        document.addEventListener("dragstart", (e) => e.preventDefault());
+      })();
+    </script>
+  </body>
 </html>

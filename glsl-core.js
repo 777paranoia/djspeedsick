@@ -1,9 +1,16 @@
-(function () {
-  window.GLSL = window.GLSL || {};
-  window.GLSL.modules = window.GLSL.modules || {};
+!(function () {
+  ((window.GLSL = window.GLSL || {}),
+    (window.GLSL.modules = window.GLSL.modules || {}),
+    (window.__hallucinationTripForLevel =
+      window.__hallucinationTripForLevel ||
+      function (level) {
+        return [0, 0.28, 0.58, 0.95, 1.35, 1.85][
+          Math.max(0, Math.min(5, Math.round(Number(level) || 0)))
+        ];
+      }));
   const GLSL = window.GLSL;
-  GLSL.vert = `attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }`;
-  GLSL.sim = `
+  ((GLSL.vert = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }"),
+    (GLSL.sim = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
   precision highp float;
 #else
@@ -35,8 +42,8 @@ void main(){
   h = clamp(h - smoothstep(0.18, 0.88, h) * (0.20 + 0.22 * depthRd), 0.0, 1.0) * isGlass;
   gl_FragColor = vec4(h, 0.0, depthRd, 1.0);
 }
-`;
-  GLSL.core = `
+`),
+    (GLSL.core = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
   precision highp float;
 #else
@@ -282,8 +289,8 @@ void setupCamera(out vec3 ro, out vec3 rd, out vec3 clean_rd, float intensity) {
       rd.xy *= rot(warp * (1.5 + u_shake * 0.5)); rd.xy -= normalize(rd.xy) * (warp * (0.4 + u_shake * 0.3)); rd = normalize(rd); 
   }
 }
-`;
-  GLSL.hallucinationFn = `
+`),
+    (GLSL.hallucinationFn = `
 float _hh2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float _hh1(float x){ return fract(sin(x*127.1)*43758.5453); }
 float burningShip(vec2 c){
@@ -382,5 +389,5 @@ vec3 applyHallucination(vec3 baseCol, vec2 screenUV, float fractalSeed, float bl
     result = mix(result, vec3(result.r * 1.10, result.g * 0.78, result.b * 0.88), boothTripHard * (0.055 + periph * 0.075));
     return result;
 }
-`;
-}());
+`));
+})();

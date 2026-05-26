@@ -1,7 +1,6 @@
 ((window.GLSL = window.GLSL || {}),
-        (window.GLSL.modules = window.GLSL.modules || {}),
-        (GLSL.modules.z3_bathroom =
-          `
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (GLSL.modules.z3_bathroom = `
 precision mediump float;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;

@@ -1,7 +1,6 @@
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-
-window.GLSL.modules["room_door"] = `
+((window.GLSL = window.GLSL || {}),
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (window.GLSL.modules.room_door = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -22,6 +21,7 @@ uniform float u_isOOB;
 uniform float u_modeTime;
 uniform float u_audio;
 uniform float u_flash;
+uniform float u_doorOpen;
 
 float hash2(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -286,7 +286,7 @@ vec4 getScreenCol(vec2 tuv) {
         isDoorway = mx < 0.025;
     }
 
-    if (isDoorway) {
+    if (isDoorway && u_doorOpen > 0.5) {
         vec2 pUV = tuv;
 
         float depthFactor = 0.04 * (1.0 - u_zoom);
@@ -397,4 +397,4 @@ void main() {
 
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
-`;
+`));

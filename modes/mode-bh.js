@@ -1,7 +1,6 @@
 ((window.GLSL = window.GLSL || {}),
-        (window.GLSL.modules = window.GLSL.modules || {}),
-        (GLSL.modules.bh =
-          `
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (GLSL.modules.bh = `
 void main() {
   vec3 ro, rd, clean_rd; setupCamera(ro, rd, clean_rd, 1.0);
   

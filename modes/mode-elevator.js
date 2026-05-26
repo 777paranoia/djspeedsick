@@ -1,14 +1,8 @@
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-
-GLSL.modules.elevator_vert = `
-attribute vec2 p;
-void main() {
-  gl_Position = vec4(p, 0.0, 1.0);
-}
-`;
-
-GLSL.modules.elevator = `
+((window.GLSL = window.GLSL || {}),
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (GLSL.modules.elevator_vert =
+    "\nattribute vec2 p;\nvoid main() {\n  gl_Position = vec4(p, 0.0, 1.0);\n}\n"),
+  (GLSL.modules.elevator = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -574,4 +568,4 @@ void main(){
 
   gl_FragColor = vec4(col, 1.0);
 }
-`;
+`));

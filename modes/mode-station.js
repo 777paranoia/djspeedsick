@@ -1,8 +1,7 @@
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-window.GLSL.engine4 = window.GLSL.engine4 || {};
-
-GLSL.engine4.vert_mesh = `
+((window.GLSL = window.GLSL || {}),
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (window.GLSL.engine4 = window.GLSL.engine4 || {}),
+  (GLSL.engine4.vert_mesh = `
 attribute vec3 a_pos;
 attribute vec3 a_nor;
 attribute vec2 a_uv;
@@ -32,16 +31,10 @@ void main(){
   v_wpos=pos;
   gl_Position=u_proj*u_view*vec4(pos,1.0);
 }
-`;
-
-GLSL.engine4.vert_screen = `
-attribute vec2 a_pos;
-void main(){
-  gl_Position=vec4(a_pos,0.0,1.0);
-}
-`;
-
-GLSL.engine4.station_bg_core = `
+`),
+  (GLSL.engine4.vert_screen =
+    "\nattribute vec2 a_pos;\nvoid main(){\n  gl_Position=vec4(a_pos,0.0,1.0);\n}\n"),
+  (GLSL.engine4.station_bg_core = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -140,9 +133,8 @@ vec2 mapScene(vec3 p){
   }
   return res;
 }
-`;
-
-GLSL.modules.station_bg = `
+`),
+  (GLSL.modules.station_bg = `
 void main(){
   vec2 uv=(gl_FragCoord.xy-0.5*u_res)/u_res.y;
   vec3 ro=u_eye;
@@ -202,9 +194,8 @@ void main(){
   col=1.0-exp(-col*1.10);
   gl_FragColor=vec4(col,1.0);
 }
-`;
-
-GLSL.modules.station_mesh = `
+`),
+  (GLSL.modules.station_mesh = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -220,6 +211,7 @@ uniform vec3 u_flatCol;
 uniform vec2 u_screen;
 uniform float u_screenSample;
 uniform float u_greenKey;
+uniform sampler2D u_vidTex;
 
 varying vec3 v_nor;
 varying vec2 v_uv;
@@ -245,7 +237,10 @@ void main(){
   vec4 sampled = texture2D(u_tex, v_uv);
   if(u_greenKey > 0.5){
     float greenDom = sampled.g - max(sampled.r, sampled.b);
-    if(sampled.g > 0.35 && greenDom > 0.18) discard;
+    float keyMask = smoothstep(0.12, 0.32, greenDom) * step(0.28, sampled.g);
+    if(keyMask > 0.99) discard;
+    vec3 vid = texture2D(u_vidTex, v_uv).rgb;
+    sampled.rgb = mix(sampled.rgb, vid, keyMask);
   }
   float alpha = mix(1.0, sampled.a, u_useTexAlpha);
   if(alpha < 0.01) discard;
@@ -265,9 +260,8 @@ void main(){
   col=mix(col, fogCol, fog * 0.32);
   gl_FragColor=vec4(col, alpha);
 }
-`;
-
-GLSL.modules.z4_fall = `
+`),
+  (GLSL.modules.z4_fall = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
   precision highp float;
 #else
@@ -459,35 +453,47 @@ void main() {
 
     gl_FragColor = vec4(col * (1.0 - u_blink), 1.0);
 }
-`;
-
-(function () {
-  function resolveSources() {
-    const out = {
-      elevatorVert: window.GLSL && window.GLSL.modules ? GLSL.modules.elevator_vert : "",
-      elevatorFrag: window.GLSL && window.GLSL.modules ? GLSL.modules.elevator : "",
-      stationVertMesh:
-        (window.GLSL && window.GLSL.engine4 && GLSL.engine4.vert_mesh) ||
-        (window.GLSL && window.GLSL.modules && GLSL.modules.station_vert_mesh) ||
-        "",
-      stationVertScreen:
-        (window.GLSL && window.GLSL.engine4 && GLSL.engine4.vert_screen) ||
-        (window.GLSL && window.GLSL.modules && GLSL.modules.station_vert_screen) ||
-        "",
-      stationBgCore:
-        (window.GLSL && window.GLSL.engine4 && GLSL.engine4.station_bg_core) ||
-        (window.GLSL && window.GLSL.modules && GLSL.modules.station_bg_core) ||
-        "",
-      stationBgFrag:
-        (window.GLSL && window.GLSL.modules && GLSL.modules.station_bg) || "",
-      stationMeshFrag:
-        (window.GLSL && window.GLSL.modules && GLSL.modules.station_mesh) || ""
-    };
-    out.stationBgCombined = out.stationBgCore + "\n" + out.stationBgFrag;
-    return out;
-  }
-  function buildPsychStationShader() {
-    return `
+`),
+  (window.Zone4StationSources = {
+    resolveSources: function () {
+      const out = {
+        elevatorVert:
+          window.GLSL && window.GLSL.modules ? GLSL.modules.elevator_vert : "",
+        elevatorFrag:
+          window.GLSL && window.GLSL.modules ? GLSL.modules.elevator : "",
+        stationVertMesh:
+          (window.GLSL && window.GLSL.engine4 && GLSL.engine4.vert_mesh) ||
+          (window.GLSL &&
+            window.GLSL.modules &&
+            GLSL.modules.station_vert_mesh) ||
+          "",
+        stationVertScreen:
+          (window.GLSL && window.GLSL.engine4 && GLSL.engine4.vert_screen) ||
+          (window.GLSL &&
+            window.GLSL.modules &&
+            GLSL.modules.station_vert_screen) ||
+          "",
+        stationBgCore:
+          (window.GLSL &&
+            window.GLSL.engine4 &&
+            GLSL.engine4.station_bg_core) ||
+          (window.GLSL &&
+            window.GLSL.modules &&
+            GLSL.modules.station_bg_core) ||
+          "",
+        stationBgFrag:
+          (window.GLSL && window.GLSL.modules && GLSL.modules.station_bg) || "",
+        stationMeshFrag:
+          (window.GLSL && window.GLSL.modules && GLSL.modules.station_mesh) ||
+          "",
+      };
+      return (
+        (out.stationBgCombined = out.stationBgCore + "\n" + out.stationBgFrag),
+        out
+      );
+    },
+    buildPsychStationShader: function () {
+      return `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -592,9 +598,9 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }
 `;
-  }
-  function buildPostProcessShader() {
-    return `
+    },
+    buildPostProcessShader: function () {
+      return `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -861,15 +867,10 @@ void main() {
   col *= (1.0 - u_blink);
   float vign = 1.0 - 0.22 * pow(length(screenUV * vec2(0.9, 1.0)), 2.0);
   col *= vign;
-  col = mix(col, vec3(1.0), clamp(u_altAnnexWhiteStrobe * 0.34, 0.0, 0.82));
+  // white strobe removed per user request
   col = 1.0 - exp(-col * 1.10);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
-  }
-  window.Zone4StationSources = {
-    resolveSources: resolveSources,
-    buildPsychStationShader: buildPsychStationShader,
-    buildPostProcessShader: buildPostProcessShader
-  };
-})();
+    },
+  }));

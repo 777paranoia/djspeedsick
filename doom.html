@@ -1,114 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<meta charset="utf-8">
-<base href="https://diekmann.github.io/wasm-fizzbuzz/doom/">
-<title>DooM</title>
-<style>
-  * {
-    box-sizing: border-box;
-  }
+  <head>
+    <meta charset="utf-8" />
+    <base href="https://diekmann.github.io/wasm-fizzbuzz/doom/" />
+    <title>DooM</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
 
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    background: #000;
-  }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
 
-  body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-  #screen {
-    display: block;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: #000;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    outline: none;
-  }
+      #screen {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #000;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        outline: none;
+      }
 
-  .container {
-    width: 100%;
-    height: 100%;
-    display: block;
-    overflow: hidden;
-    background: #000;
-  }
+      .container {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: hidden;
+        background: #000;
+      }
 
-  .doom-hidden-ui,
-  #output,
-  #focushint,
-  #getmsps_stats,
-  #getms_stats,
-  #fps_stats,
-  #drawframes_stats,
-  #animationfps_stats {
-    position: absolute !important;
-    left: -99999px !important;
-    top: -99999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    overflow: hidden !important;
-  }
-</style>
-</head>
+      .doom-hidden-ui,
+      #output,
+      #focushint,
+      #getmsps_stats,
+      #getms_stats,
+      #fps_stats,
+      #drawframes_stats,
+      #animationfps_stats {
+        position: absolute !important;
+        left: -99999px !important;
+        top: -99999px !important;
+        width: 1px !important;
+        height: 1px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+      }
+    </style>
+  </head>
 
-<body>
-<div class="doom-hidden-ui">
-  <h1>DooM</h1>
+  <body>
+    <div class="doom-hidden-ui">
+      <h1>DooM</h1>
 
-  <p>
-    A wasm32 port of 1997 linuxdoom-1.10 with minimal modifications to the
-    <a href="https://github.com/id-Software/DOOM">sources</a>.
-  </p>
+      <p>
+        A wasm32 port of 1997 linuxdoom-1.10 with minimal modifications to the
+        <a href="https://github.com/id-Software/DOOM">sources</a>.
+      </p>
 
-  <p id="focushint">Click on the canvas to capute input and start playing.</p>
+      <p id="focushint">
+        Click on the canvas to capute input and start playing.
+      </p>
 
-  <p>
-    Use <button id="enterButton">⏎</button> to start the game,
-    arrow keys
-    <button id="leftButton">←</button>
-    <button id="upButton">↑</button>
-    <button id="downButton">↓</button>
-    <button id="rightButton">→</button>
-    to move,
-    <button id="ctrlButton">ctrl</button> to shoot,
-    spacebar <button id="spaceButton">&nbsp;&nbsp;&nbsp;&nbsp;</button> to open gates,
-    <button id="altButton">alt</button> and arrow keys to strafe.
-  </p>
+      <p>
+        Use <button id="enterButton">⏎</button> to start the game, arrow keys
+        <button id="leftButton">←</button>
+        <button id="upButton">↑</button>
+        <button id="downButton">↓</button>
+        <button id="rightButton">→</button>
+        to move,
+        <button id="ctrlButton">ctrl</button> to shoot, spacebar
+        <button id="spaceButton">&nbsp;&nbsp;&nbsp;&nbsp;</button> to open
+        gates, <button id="altButton">alt</button> and arrow keys to strafe.
+      </p>
 
-  <div id="output"></div>
+      <div id="output"></div>
 
-  gettmilliseconds calls per second:
-  <span id="getmsps_stats">0</span>
-  Total getmilliseconds calls:
-  <span id="getms_stats">0</span><br>
+      gettmilliseconds calls per second:
+      <span id="getmsps_stats">0</span>
+      Total getmilliseconds calls:
+      <span id="getms_stats">0</span><br />
 
-  DooM FPS:
-  <span id="fps_stats">0</span>
-  Total Frames drawn:
-  <span id="drawframes_stats">0</span><br>
+      DooM FPS:
+      <span id="fps_stats">0</span>
+      Total Frames drawn:
+      <span id="drawframes_stats">0</span><br />
 
-  Browser Animation FPS:
-  <span id="animationfps_stats">0</span>
-</div>
+      Browser Animation FPS:
+      <span id="animationfps_stats">0</span>
+    </div>
 
-<div class="container">
-  <canvas id="screen" width="640" height="400" tabindex="0">
-    This is where the DooM screen should render.
-  </canvas>
-</div>
+    <div class="container">
+      <canvas id="screen" width="640" height="400" tabindex="0">
+        This is where the DooM screen should render.
+      </canvas>
+    </div>
 
-<script src="main.js" defer></script>
-</body>
+    <script src="main.js" defer></script>
+  </body>
 </html>

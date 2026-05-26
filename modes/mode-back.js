@@ -1,7 +1,6 @@
-window.GLSL = window.GLSL || {};
-window.GLSL.modules = window.GLSL.modules || {};
-
-GLSL.modules['room_back'] = `
+((window.GLSL = window.GLSL || {}),
+  (window.GLSL.modules = window.GLSL.modules || {}),
+  (GLSL.modules.room_back = `
 precision mediump float;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
@@ -140,4 +139,4 @@ void main() {
 
     gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), 1.0);
 }
-`;
+`));
