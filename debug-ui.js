@@ -34,7 +34,7 @@ window.makeUI = function () {
       "border:1px solid #0f0",
     ].join(";")),
     (box.innerHTML =
-      '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="10">10: Neighborhood</option>\n        <option value="96">96: Door</option>\n        <option value="97">97: Back</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button><br>\n      <button id="z4lap3">Z4 CW Lap3</button>\n      <button id="z4ccw">Z4 CCW Door</button>\n      <button id="z4annex">Z4 Annex</button><br>\n      <button id="z4altdoor">Z4 ALT Door</button>\n      <button id="z4altannex">Z4 ALT Annex</button>\n      <button id="z4altroom">Z4 ALT Room</button><br>\n      <button id="z4altbh">Z4 ALT BH</button>\n      <button id="z4bcabin">Z4B Cabin</button>\n      <button id="z4bisland">Z4B Island</button>\n      <button id="z4bmoai">Z4B Moai</button>\n      <button id="z4bdream">Z4B Dream</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#f6f;margin-bottom:3px;">THEATER:</div>\n      <button id="thtop">Top</button>\n      <button id="thfoot">Foot of Stage</button>\n      <button id="thstage">On Stage</button><br>\n      <button id="thwake">Impact &rarr; Laptop</button>\n    </div>\n  '),
+      '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="10">10: Neighborhood</option>\n        <option value="96">96: Door</option>\n        <option value="97">97: Back</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2blood">Z2 Post-Blink Blood</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button><br>\n      <button id="z4lap3">Z4 CW Lap3</button>\n      <button id="z4ccw">Z4 CCW Door</button>\n      <button id="z4annex">Z4 Annex</button><br>\n      <button id="z4altdoor">Z4 ALT Door</button>\n      <button id="z4altannex">Z4 ALT Annex</button>\n      <button id="z4altroom">Z4 ALT Room</button><br>\n      <button id="z4altbh">Z4 ALT BH</button>\n      <button id="z4bcabin">Z4B Cabin</button>\n      <button id="z4bisland">Z4B Island</button>\n      <button id="z4bmoai">Z4B Moai</button>\n      <button id="z4bdream">Z4B Dream</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#f6f;margin-bottom:3px;">THEATER:</div>\n      <button id="thtop">Top</button>\n      <button id="thfoot">Foot of Stage</button>\n      <button id="thstage">On Stage</button><br>\n      <button id="thwake">Impact &rarr; Laptop</button>\n    </div>\n  '),
     document.body.appendChild(box),
     box.querySelectorAll(".dbg-section").forEach((section) => {
       section.style.cssText =
@@ -155,6 +155,7 @@ window.makeUI = function () {
               : 99 === nextMode
                 ? "right"
                 : "center"),
+      (window.activePOV = activePOV),
       (currentEngine = new ActiveMode(mode)),
       "function" == typeof initSideEngines && initSideEngines(),
       "undefined" != typeof __lastFrameTime && (__lastFrameTime = 0),
@@ -195,6 +196,111 @@ window.makeUI = function () {
             })(z4),
             mutator && mutator(z4));
         })));
+  }
+  function clearDebugInput() {
+    ((window.mx = 0),
+      (window.my = 0),
+      (window.z2SpaceHeld = !1),
+      (window.z2TouchHeld = !1),
+      (window.__e1SpaceHeld = !1));
+    const canvas = document.getElementById("c");
+    canvas && (canvas.style.transform = "");
+    const fade = document.getElementById("zone-fade-overlay");
+    fade && ((fade.style.opacity = "0"), (fade.style.pointerEvents = "none"));
+    document.activeElement &&
+      "function" == typeof document.activeElement.blur &&
+      document.activeElement.blur();
+  }
+  function setZone2Facing(z2, facing, pov) {
+    const yaw =
+      "function" == typeof z2._yawForFacing
+        ? z2._yawForFacing(facing)
+        : "W" === facing
+          ? Math.PI / 2
+          : "E" === facing
+            ? -Math.PI / 2
+            : "S" === facing
+              ? Math.PI
+              : 0;
+    ((z2.facing = facing),
+      (z2.activePOV = pov || ("function" == typeof z2._povForFacing
+        ? z2._povForFacing(facing)
+        : "W" === facing
+          ? "left"
+          : "E" === facing
+            ? "right"
+            : "center")),
+      (z2.hallwayYaw = yaw),
+      (z2.hallwayYawTarget = yaw));
+  }
+  function resetZone2RouteState(z2) {
+    const now = performance.now();
+    ((z2.pendingPOV = null),
+      (z2.slideState = "idle"),
+      (z2.slideStart = 0),
+      (z2.slideDir = 0),
+      (z2.slideOffset = 0),
+      (z2.povSwitchTime = now - 1e3),
+      (z2.blinking = !1),
+      (z2.rBlink = 0),
+      (z2.modeSwapped = !1),
+      (z2.readyForZone3 = !1),
+      (z2.z3TransitionStarted = !1),
+      (z2.z2ExitStarted = !1),
+      (z2.z2ExitDone = !1),
+      (z2.z2ExitOverlay = null),
+      (z2.z2ExitTime = 0),
+      (z2.zone3Route = "z3"),
+      (z2.z4RouteActive = !1),
+      (z2.z4RouteStep = 0),
+      (z2.z4LeftBlinkCount = 0),
+      (z2.z4TransitionStarted = !1),
+      (z2.z4RouteTriggered = !1),
+      (z2.cabinTunnelRouteActive = !1),
+      (z2.cabinTunnelRouteStep = 0),
+      (z2.cabinTunnelTransitionStarted = !1),
+      (z2.route3Active = !1),
+      (z2.route3Step = 0),
+      (z2.theaterBedroomHandoffStarted = !1),
+      (z2.rightBlinkCount = 0),
+      (z2.z3bTurbulenceStart = -1),
+      (z2.redStartTime = -1),
+      (z2.__framedKitchenForwardWall = !1),
+      (z2.__z4AltBathroomSlide = !1),
+      (z2.__z4AltBathroomTurnLanding = !1),
+      (z2.__z4AltBathroomTurnMotionDone = !1),
+      (z2.__z4AltBathroomBlinkConsumed = !1));
+    (delete z2.__fromAltAnnexDoor, delete z2.__z4RouteDisabledUntil);
+    ((window.__z4Route = !1),
+      (window.__z4RouteActive = !1),
+      (window.__z2CabinTunnelRoute = !1));
+  }
+  function setZone2PostBlinkBlood(z2) {
+    const now = performance.now();
+    (resetZone2RouteState(z2),
+      setZone2Facing(z2, "W", "left"),
+      (z2.intersectionReached = !0),
+      (z2.camZ =
+        "number" == typeof z2.INTERSECTION_Z ? z2.INTERSECTION_Z : z2.camZ),
+      (z2.cx = 0),
+      (z2.cy = 0),
+      (z2.seqState = "blood"),
+      (z2.leftBlinkCount = 2),
+      (z2.z4AltBathroomTurnBlinkCount = 0),
+      (z2.z4AltBathroomTurnEnterStart = 0),
+      (z2.blinking = !1),
+      (z2.rBlink = 0),
+      (z2.modeSwapped = !1),
+      (z2.lastBlinkTime = now),
+      (z2.nextBlinkInterval = 9e3),
+      (z2.povSwitchTime = now - 1e3),
+      z2.setLeftRoomTexture
+        ? z2.setLeftRoomTexture("blood")
+        : z2.leftRoom &&
+          z2.texBathroomBlood &&
+          (z2.leftRoom.tex = z2.texBathroomBlood),
+      z2._resetZone2BlackholePath && z2._resetZone2BlackholePath(),
+      clearDebugInput());
   }
   function armZ4AltAnnexDebug(z4) {
     ((z4.altAnnexClockwiseReady = !0),
@@ -285,8 +391,6 @@ window.makeUI = function () {
       (window.__z4bIslandLookX = lookX),
       (window.__z4bIslandLookY = lookY),
       (window.__z4bIslandActive = !0),
-      (window.__z4bIslandActive = !0),
-      (window.__z4bIslandActive = !0),
       (window.__z4bIslandEscapeActive = !1),
       (window.__z4bIslandEscapeWalk0 = 0),
       (window.__z4bIslandEscapeFlashStart = -1),
@@ -294,11 +398,6 @@ window.makeUI = function () {
       (window.__z4bIslandEscapeState.walk = useWalk ? walk : 0),
       (window.__z4bIslandWalk = useWalk ? walk : 0),
       (window.__z4bIslandLastWalkT = performance.now()),
-      (window.__z4bIslandWalk = useWalk ? walk : 0),
-      (window.__z4bIslandLastWalkT = performance.now()),
-      (window.__z4bIslandWalk = useWalk ? walk : 0),
-      (window.__z4bIslandLastWalkT = performance.now()),
-      (window.__z4bIslandActive = !0),
       (window.__z4bIslandEscapeState.mouseX = lookX),
       (window.__z4bIslandEscapeState.mouseY = lookY),
       (window.__z4bIslandEscapeState.blink = 0),
@@ -324,25 +423,50 @@ window.makeUI = function () {
       startEngine1Mode(mode >= 10 || mode > 10 ? 1 : mode + 1)),
     ($("z2hall").onclick = () =>
       startZone2((z2) => {
-        ((z2.activePOV = "center"),
+        (resetZone2RouteState(z2),
+          setZone2Facing(z2, "N", "center"),
           (z2.intersectionReached = !1),
           (z2.camZ = z2.START_Z),
-          (z2.seqState = "initial"));
+          (z2.seqState = "initial"),
+          (z2.leftBlinkCount = 0),
+          z2.setLeftRoomTexture
+            ? z2.setLeftRoomTexture("normal")
+            : z2.leftRoom &&
+              z2.texBathroomNormal &&
+              (z2.leftRoom.tex = z2.texBathroomNormal),
+          clearDebugInput());
       })),
     ($("z2bath").onclick = () =>
       startZone2((z2) => {
-        ((z2.activePOV = "left"),
-          (z2.seqState = "blood"),
-          z2.leftRoom && (z2.leftRoom.tex = z2.texBathroomBlood));
+        (resetZone2RouteState(z2),
+          setZone2Facing(z2, "W", "left"),
+          (z2.intersectionReached = !0),
+          (z2.camZ = z2.INTERSECTION_Z),
+          (z2.seqState = "initial"),
+          (z2.leftBlinkCount = 0),
+          (z2.povSwitchTime = performance.now() - 1e3),
+          z2.setLeftRoomTexture
+            ? z2.setLeftRoomTexture("normal")
+            : z2.leftRoom &&
+              z2.texBathroomNormal &&
+              (z2.leftRoom.tex = z2.texBathroomNormal),
+          clearDebugInput());
       })),
+    ($("z2blood").onclick = () => startZone2(setZone2PostBlinkBlood)),
     ($("z2bed").onclick = () =>
       startZone2((z2) => {
-        ((z2.activePOV = "right"), (z2.seqState = "bedroom_visited"));
+        (resetZone2RouteState(z2),
+          setZone2Facing(z2, "E", "right"),
+          (z2.intersectionReached = !0),
+          (z2.camZ = z2.INTERSECTION_Z),
+          (z2.seqState = "bedroom_visited"),
+          (z2.povSwitchTime = performance.now() - 1e3),
+          clearDebugInput());
       })),
     ($("z2r3").onclick = () =>
       startZone2((z2) => {
-        ((z2.activePOV = "left"),
-          (z2.facing = "W"),
+        (resetZone2RouteState(z2),
+          setZone2Facing(z2, "W", "left"),
           (z2.intersectionReached = !0),
           (z2.camZ = z2.INTERSECTION_Z),
           (z2.seqState = "z4_bathroom"),
@@ -350,7 +474,12 @@ window.makeUI = function () {
           (z2.z4RouteStep = 4),
           (z2.z4LeftBlinkCount = 0),
           (z2.zone3Route = "z4"),
-          z2.leftRoom && (z2.leftRoom.tex = z2.texBathroomBlood));
+          z2.setLeftRoomTexture
+            ? z2.setLeftRoomTexture("blood")
+            : z2.leftRoom &&
+              z2.texBathroomBlood &&
+              (z2.leftRoom.tex = z2.texBathroomBlood),
+          clearDebugInput());
       })),
     ($("z3bath").onclick = () =>
       startZone3("z3", (z3) => {
@@ -783,10 +912,25 @@ window.makeUI = function () {
                   ")")
               : z3.bhEscapeArmed && (info += " ARM:" + z3.bhEscapeBlinkCount),
             (seqEl.innerText = info));
-        } else
-          seqEl.innerText = z2
-            ? "z2 " + (z2.seqState || "?") + " pov:" + z2.activePOV
-            : "engine1";
+        } else if (z2) {
+          let info =
+            "z2 " +
+            (z2.seqState || "?") +
+            " pov:" +
+            z2.activePOV +
+            " face:" +
+            (z2.facing || "?");
+          ("blood" === z2.seqState &&
+            z2.leftBlinkCount >= 2 &&
+            !z2.z4RouteActive &&
+            !(z2.cabinTunnelRouteStep > 0)) &&
+            (info += " routes:5");
+          z2.z4RouteStep > 0 && (info += " z4:" + z2.z4RouteStep);
+          z2.cabinTunnelRouteStep > 0 &&
+            (info += " tunnel:" + z2.cabinTunnelRouteStep);
+          "theater" === z2.zone3Route && (info += " theater");
+          seqEl.innerText = info;
+        } else seqEl.innerText = "engine1";
       } catch (e) {}
     }, 500));
 };

@@ -100,7 +100,7 @@ void traceHall(
       hallTex = texture2D(u_texFront, tileUV);
       wallID = 2.0;
     } else {
-      tileUV = vec2(-nPos.x, -nPos.y) * 0.5 + 0.5;
+      tileUV = vec2(nPos.x, -nPos.y) * 0.5 + 0.5;
       hallTex = texture2D(u_texBack, tileUV);
       wallID = 3.0;
     }
@@ -743,9 +743,6 @@ class Zone2Engine {
         "files/img/rooms/z2/hallway/FORWARD-alt.png",
       )),
       (this.texBack = loadStaticTex("files/img/rooms/z2/hallway/BACK.png")),
-      (this.texBackAlt = loadStaticTex(
-        "files/img/rooms/z2/hallway/BACK-ALT.png",
-      )),
       (this.texBackDoor = loadStaticTex(
         "files/img/rooms/z2/hallway/BACK-DOOR.png",
       )),
@@ -948,9 +945,10 @@ class Zone2Engine {
       (this.zone3Route = "z3"),
       (this.z4RouteStep = 0),
       (this.z4RouteActive = !1),
-      (this.theaterRouteActive = !1),
-      (this.theaterTunnelStart = 0),
-      (this.theaterTransitionStarted = !1),
+      (this.cabinTunnelRouteActive = !1),
+      (this.cabinTunnelRouteStep = 0),
+      (this.cabinTunnelTransitionStarted = !1),
+      (this.theaterBedroomHandoffStarted = !1),
       (this.z4LeftBlinkCount = 0),
       (this.z4AltBathroomTurnBlinkCount = 0),
       (this.z4AltBathroomTurnEnterStart = 0),
@@ -1012,8 +1010,12 @@ class Zone2Engine {
   _updateZone2BlackholePath(e, t) {
     this.__z2BlackholePathActive || this._resetZone2BlackholePath();
     const i = Math.max(0.2, Math.min(4, t / 33.33)),
-      o = "z3b_red" === this.seqState,
-      n = "z3b_turbulence" === this.seqState,
+      o =
+        "z3b_red" === this.seqState ||
+        "theater_bedroom_red" === this.seqState,
+      n =
+        "z3b_turbulence" === this.seqState ||
+        "theater_bedroom_turbulence" === this.seqState,
       l = o ? 46 : n ? 24 : 7,
       r = o ? 1.35 : n ? 0.95 : 0.45;
     ((this.bhCamPos.z = Math.max(-3050, this.bhCamPos.z - i * l)),
@@ -1058,9 +1060,11 @@ class Zone2Engine {
         gl.getUniformLocation(e, "u_trip"),
         Math.max(
           this.z2Trip || 0,
-          "z3b_red" === this.seqState
+          "z3b_red" === this.seqState ||
+            "theater_bedroom_red" === this.seqState
             ? 2.2
-            : "z3b_turbulence" === this.seqState
+            : "z3b_turbulence" === this.seqState ||
+                "theater_bedroom_turbulence" === this.seqState
               ? 1.65
               : 1.1,
         ),
@@ -1181,7 +1185,10 @@ class Zone2Engine {
           window.dispatchEvent(new Event("touchend")),
           (this.cx = 0),
           (this.cy = 0),
-          (this.povSwitchTime = e)));
+          (this.povSwitchTime = e),
+          "S" === this.facing &&
+            "theater_ready" === this.seqState &&
+            this._beginTheaterHandoffSeamless(this.slideDir)));
     } else if ("black" === this.slideState)
       t >= __blackHold &&
         ((this.slideOffset = -window.innerWidth * this.slideDir),
@@ -1209,6 +1216,69 @@ class Zone2Engine {
   }
   enableFramedKitchenForwardWall() {
     return ((this.__framedKitchenForwardWall = !0), !0);
+  }
+  _beginTheaterHandoffSeamless(dir) {
+    if (this.theaterBedroomHandoffStarted) return !1;
+    (this.theaterBedroomHandoffStarted = !0),
+      (window.z2SpaceHeld = !1),
+      (window.z2TouchHeld = !1);
+    try {
+      this.destroy();
+    } catch (e) {}
+    (window.currentZone2 = null),
+      (window.__zone2Governor = null),
+      (window.isEngine1Dead = !0);
+    if ("function" == typeof window.startModeTheater) {
+      window.startModeTheater({
+        fromZone2: !0,
+        progress: 0,
+        walkHeld: !1,
+        touchHeld: !1,
+        slideDir: dir,
+      });
+    } else {
+      console.error("[TheaterRoute] mode-theater is not loaded");
+    }
+    return !0;
+  }
+  _beginTheaterBedroomHandoff(now) {
+    if (this.theaterBedroomHandoffStarted) return !1;
+    const theaterTouchHeld = !!window.z2TouchHeld,
+      theaterWalkHeld = !!(window.z2SpaceHeld || theaterTouchHeld);
+    ("number" != typeof now && (now = performance.now()),
+      (this.theaterBedroomHandoffStarted = !0),
+      (window.z2SpaceHeld = !1),
+      (window.z2TouchHeld = !1));
+    let fadeEl = document.getElementById("zone-fade-overlay");
+    return (
+      fadeEl ||
+        ((fadeEl = document.createElement("div")),
+        (fadeEl.id = "zone-fade-overlay"),
+        document.body.appendChild(fadeEl)),
+      (fadeEl.style.cssText =
+        "position:fixed;inset:0;background:#d90000;pointer-events:none;transition:opacity 0.24s ease-in-out;z-index:99999;opacity:1;"),
+      setTimeout(() => {
+        try {
+          this.destroy();
+        } catch (e) {}
+        (window.currentZone2 = null),
+          (window.__zone2Governor = null),
+          (window.isEngine1Dead = !0),
+          "function" == typeof window.startModeTheater
+            ? window.startModeTheater({
+                fromZone2: !0,
+                fromZone2Bedroom: !0,
+                progress: 0,
+                walkHeld: !1,
+                touchHeld: !1,
+              })
+            : console.error("[TheaterRoute] mode-theater is not loaded"),
+          setTimeout(function () {
+            fadeEl.style.opacity = "0";
+          }, 90);
+      }, 90),
+      !0
+    );
   }
   releaseAltAnnexNffHandoff() {
     const handoff = window.__z4NffZone2Handoff;
@@ -1317,19 +1387,85 @@ class Zone2Engine {
             "E" === newFacing ||
               this.z4RouteActive ||
               ("N" === newFacing && "bedroom_2" === this.seqState) ||
+              ("theater_ready" === this.seqState && "S" === newFacing) ||
               ("bedroom_2" !== this.seqState &&
+                "theater_ready" !== this.seqState &&
                 "z3b_turbulence" !== this.seqState &&
-                "z3b_red" !== this.seqState) ||
+                "z3b_red" !== this.seqState &&
+                "theater_bedroom_turbulence" !== this.seqState &&
+                "theater_bedroom_red" !== this.seqState) ||
               ((this.seqState = "bedroom_visited"),
               (this.rightBlinkCount = 0),
               (this.z3bTurbulenceStart = -1),
               (this.__z2BlackholePathActive = !1)));
-          var z4Consumed = !1;
+          var z4Consumed = !1,
+            cabinTunnelConsumed = !1;
           if (
             "blood" === this.seqState ||
             this.z4RouteActive ||
-            this.theaterRouteActive
+            this.cabinTunnelRouteActive
           ) {
+            var tunnelStep = this.cabinTunnelRouteStep || 0,
+              tunnelExpect = [
+                {
+                  dir: "L",
+                  to: "S",
+                },
+                {
+                  dir: "L",
+                  to: "E",
+                },
+                {
+                  dir: "L",
+                  to: "N",
+                },
+                {
+                  dir: "L",
+                  to: "W",
+                },
+                {
+                  dir: "R",
+                  to: "N",
+                },
+              ][tunnelStep];
+            tunnelExpect &&
+            newFacing === tunnelExpect.to &&
+            dir === tunnelExpect.dir
+              ? tunnelStep >= 4
+                ? ((this.seqState = "cabin_tunnel"),
+                  (this.zone3Route = "cabin_tunnel"),
+                  (this.cabinTunnelRouteStep = 5),
+                  (this.cabinTunnelRouteActive = !1),
+                  (this.z4RouteStep = 0),
+                  (this.z4RouteActive = !1),
+                  (cabinTunnelConsumed = !0),
+                  console.log("[CabinTunnelRoute] COMPLETE -> cabin tunnel"),
+                  this.beginCabinTunnelTransition &&
+                    this.beginCabinTunnelTransition())
+                : tunnelStep >= 3
+                  ? ((this.seqState = "blood"),
+                    (this.zone3Route = "z3"),
+                    (this.cabinTunnelRouteStep = 4),
+                    (this.cabinTunnelRouteActive = !0),
+                    (this.cabinTunnelTransitionStarted = !1),
+                    (this.z4RouteStep = 0),
+                    (this.z4RouteActive = !1),
+                    this.setLeftRoomTexture && this.setLeftRoomTexture("blood"),
+                    (cabinTunnelConsumed = !0),
+                    console.log(
+                      "[CabinTunnelRoute] ARMED -> bathroom blood; R/N starts tunnel",
+                    ))
+                : ((this.cabinTunnelRouteStep = tunnelStep + 1),
+                  (this.cabinTunnelRouteActive = !0),
+                  (cabinTunnelConsumed = !0),
+                  console.log(
+                    "[CabinTunnelRoute] MATCH -> step now " +
+                      this.cabinTunnelRouteStep,
+                  ))
+              : this.cabinTunnelRouteStep > 0 &&
+                (console.log("[CabinTunnelRoute] RESET — wrong turn"),
+                (this.cabinTunnelRouteStep = 0),
+                (this.cabinTunnelRouteActive = !1));
             var step = this.z4RouteStep;
             if (step < 3) {
               var expect = [
@@ -1363,7 +1499,6 @@ class Zone2Engine {
                 expect && newFacing === expect.to && dir === expect.dir
                   ? ((this.z4RouteStep = step + 1),
                     (this.z4RouteActive = !0),
-                    (this.theaterRouteActive = !0),
                     (z4Consumed = !0),
                     console.log(
                       "[Z4Route] MATCH -> step now " + this.z4RouteStep,
@@ -1371,58 +1506,73 @@ class Zone2Engine {
                   : this.z4RouteStep > 0 &&
                     (console.log("[Z4Route] RESET — wrong turn"),
                     (this.z4RouteStep = 0),
-                    (this.z4RouteActive = !1),
-                    (this.theaterRouteActive = !1)));
+                    (this.z4RouteActive = !1)));
             } else
               3 === step &&
                 ("R" === dir && "W" === newFacing
                   ? ((this.seqState = "z4_bathroom"),
                     (this.z4LeftBlinkCount = 0),
+                    (this.cabinTunnelRouteStep = 0),
+                    (this.cabinTunnelRouteActive = !1),
                     (this.z4RouteStep = 4),
-                    (this.theaterRouteActive = !1),
                     (z4Consumed = !0),
                     console.log("[Z4Route] COMPLETE -> z4_bathroom"))
                   : "L" === dir && "E" === newFacing
-                    ? ((this.seqState = "theater_armed"),
+                    ? ((this.seqState = "bedroom_2"),
                       (this.zone3Route = "theater"),
+                      (this.rightBlinkCount = 0),
+                      (this.z3bTurbulenceStart = -1),
+                      (this.redStartTime = -1),
+                      (this.cabinTunnelRouteStep = 0),
+                      (this.cabinTunnelRouteActive = !1),
                       (this.z4RouteStep = 0),
                       (this.z4RouteActive = !1),
-                      (this.theaterRouteActive = !1),
+                      (this.theaterBedroomHandoffStarted = !1),
+                      this._resetZone2BlackholePath &&
+                        this._resetZone2BlackholePath(),
                       (z4Consumed = !0),
-                      console.log("[TheaterRoute] COMPLETE -> theater_armed (portal live)"))
-                    : (console.log("[Z4Route] RESET — wrong final turn"),
-                      (this.z4RouteStep = 0),
-                      (this.z4RouteActive = !1),
-                      (this.theaterRouteActive = !1)));
+                      console.log(
+                        "[TheaterRoute] COMPLETE -> bedroom two-blink sequence",
+                      ))
+                  : (console.log("[Z4Route] RESET — wrong final turn"),
+                    (this.z4RouteStep = 0),
+                    (this.z4RouteActive = !1)));
           } else
             console.log(
               "[Z4Route] SKIPPED — seqState=" +
                 this.seqState +
-                " z4Active=" +
+              " z4Active=" +
                 this.z4RouteActive,
             );
-          z4Consumed ||
+          (z4Consumed || cabinTunnelConsumed) ||
             ("E" === newFacing && "blood" === this.seqState
-              ? ((this.seqState = "bedroom_visited"), (this.zone3Route = "z3"))
+              ? ((this.seqState = "bedroom_visited"),
+                (this.zone3Route = "z3"),
+                (this.cabinTunnelRouteStep = 0),
+                (this.cabinTunnelRouteActive = !1))
               : "W" === newFacing && "bedroom_visited" === this.seqState
                 ? ((this.seqState = "hole"),
                   (this.zone3Route = "z3"),
+                  (this.cabinTunnelRouteStep = 0),
+                  (this.cabinTunnelRouteActive = !1),
                   this.leftRoom && (this.leftRoom.tex = this.texBathroomHole),
                   (this.mode9_T_hole = performance.now()))
                 : "E" === newFacing &&
                   "bedroom_visited" === this.seqState
                   ? ((this.seqState = "bedroom_2"),
                     (this.zone3Route = "z3b"),
+                    (this.cabinTunnelRouteStep = 0),
+                    (this.cabinTunnelRouteActive = !1),
                     (this.rightBlinkCount = 0),
                     (this.z3bTurbulenceStart = -1),
                     (this.redStartTime = -1),
                     (this.z4RouteActive = !1),
-                    (this.theaterRouteActive = !1),
                     (this.z4RouteStep = 0),
                     this._resetZone2BlackholePath &&
                       this._resetZone2BlackholePath())
                   : "N" === newFacing &&
                     "bedroom_2" === this.seqState &&
+                    "theater" !== this.zone3Route &&
                     ((this.readyForZone3 = !0), (this.zone3Route = "z3b")));
         }
       }
@@ -1430,12 +1580,10 @@ class Zone2Engine {
   }
   render(e, t, i, o, n, l, r) {
     if (this.isDead) return;
-    if (
-      ((this.z2Trip = this._hallucinationTripForLevel(
-        this._hallucinationLevelForScene(),
-      )),
-      this.readyForZone3 && !this.z3TransitionStarted)
-    ) {
+    this.z2Trip = this._hallucinationTripForLevel(
+      this._hallucinationLevelForScene(),
+    );
+    if (this.readyForZone3 && !this.z3TransitionStarted) {
       this.z3TransitionStarted = !0;
       const e =
         "bedroom_2" === this.seqState ||
@@ -1493,10 +1641,11 @@ class Zone2Engine {
       "bedroom_2" === this.seqState && (d = 0.8),
       "z3b_turbulence" === this.seqState && (d = 1.3),
       "z3b_red" === this.seqState && (d = 1.8),
+      "theater_bedroom_turbulence" === this.seqState && (d = 1.3),
+      "theater_bedroom_red" === this.seqState && (d = 1.8),
+      "theater_ready" === this.seqState && (d = 0.2),
       "z4_bathroom" === this.seqState && (d = 0.6),
       "z4_ready" === this.seqState && (d = 0.3),
-      "theater_armed" === this.seqState && (d = 0.55),
-      "theater_tunnel" === this.seqState && (d = 1.2),
       (this.seqIntensity = d));
     var g = Math.min(1, 0.15 * this.leftBlinkCount);
     this.neuralIntensity = this.z2Trip + d + g + 0.3 * a;
@@ -1504,19 +1653,24 @@ class Zone2Engine {
       u = c ? c.width : window.innerWidth,
       f = c ? c.height : window.innerHeight;
     if (
-      (this.modeBH &&
-        this.rightHoleFBO &&
-        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHoleFBO.fbo),
-        gl.viewport(0, 0, u, f),
-        gl.clearColor(0, 0, 0, 1),
-        gl.clear(gl.COLOR_BUFFER_BIT),
-        (window.__tripAmount = this.z2Trip),
-        this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed),
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null),
-        gl.viewport(0, 0, u, f)),
-      this.checkPOVThreshold(e, t),
-      this.tickSlide(e),
-      e - this.lastBlinkTime > this.nextBlinkInterval &&
+      this.modeBH &&
+      this.rightHoleFBO
+    ) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.rightHoleFBO.fbo);
+      gl.viewport(0, 0, u, f);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      window.__tripAmount = this.z2Trip;
+      this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, u, f);
+    }
+    this.checkPOVThreshold(e, t);
+    this.tickSlide(e);
+    if (this.isDead) return;
+
+    if (
+      (e - this.lastBlinkTime > this.nextBlinkInterval &&
         ((this.blinking = !0),
         (this.blinkStart = e),
         (this.lastBlinkTime = e),
@@ -1575,7 +1729,9 @@ class Zone2Engine {
                   (this.__z4AltBathroomTurnLanding = !1),
                   (this.__z4AltBathroomTurnMotionDone = !1),
                   (this.z4RouteActive = !1),
-                  (this.theaterRouteActive = !1),
+                  (this.cabinTunnelRouteActive = !1),
+                  (this.cabinTunnelRouteStep = 0),
+                  (this.theaterBedroomHandoffStarted = !1),
                   (this.z4RouteStep = 0),
                   (this.z4LeftBlinkCount = 0),
                   (this.zone3Route = "z3"),
@@ -1586,12 +1742,17 @@ class Zone2Engine {
                 (this.leftBlinkCount++,
                 this.leftBlinkCount >= 2 &&
                   (this.leftRoom && (this.leftRoom.tex = this.texBathroomBlood),
-                  (this.seqState = "blood"))),
+                  (this.seqState = "blood"),
+                  (this.cabinTunnelRouteStep = 0),
+                  (this.cabinTunnelRouteActive = !1))),
               "right" === this.activePOV &&
                 "bedroom_2" === this.seqState &&
                 (this.rightBlinkCount++,
                 this.rightBlinkCount >= 2 &&
-                  ((this.seqState = "z3b_turbulence"),
+                  ((this.seqState =
+                    "theater" === this.zone3Route
+                      ? "theater_bedroom_turbulence"
+                      : "z3b_turbulence"),
                   (this.z3bTurbulenceStart = e))),
               "left" === this.activePOV &&
                 "z4_bathroom" === this.seqState &&
@@ -1600,6 +1761,8 @@ class Zone2Engine {
                   (this.leftRoom &&
                     (this.leftRoom.tex = this.texBathroomNormal),
                   (this.seqState = "z4_ready"),
+                  (this.cabinTunnelRouteStep = 0),
+                  (this.cabinTunnelRouteActive = !1),
                   (this.zone3Route = "z4"))));
     }
     ((this.lastCvsW === u && this.lastCvsH === f) ||
@@ -1641,7 +1804,8 @@ class Zone2Engine {
       "bedroom_2" === this.seqState ||
       "z3b_turbulence" === this.seqState ||
       "z3b_red" === this.seqState ||
-      "theater_tunnel" === this.seqState;
+      "theater_bedroom_turbulence" === this.seqState ||
+      "theater_bedroom_red" === this.seqState;
     if (
       (this.rightRoom && (this.rightRoom.bcSourceTex = null),
       m && this.rightHoleFBO && (this.modeBH || this.blackHoleProg))
@@ -1649,7 +1813,9 @@ class Zone2Engine {
       const z2BlackholePathActive =
           "bedroom_2" === this.seqState ||
           "z3b_turbulence" === this.seqState ||
-          "z3b_red" === this.seqState,
+          "z3b_red" === this.seqState ||
+          "theater_bedroom_turbulence" === this.seqState ||
+          "theater_bedroom_red" === this.seqState,
         z2UseBlackholePath =
           z2BlackholePathActive && this.blackHoleProg && this.rightHolePostFBO;
       if (z2UseBlackholePath) {
@@ -1840,8 +2006,12 @@ class Zone2Engine {
       }
       this.rBlink > 0.001 && this.drawOverlay(0, 0, 0, this.rBlink);
     } else if ("right" === this.activePOV && this.rightRoom) {
-      const t = "z3b_turbulence" === this.seqState,
-        i = "z3b_red" === this.seqState,
+      const t =
+          "z3b_turbulence" === this.seqState ||
+          "theater_bedroom_turbulence" === this.seqState,
+        i =
+          "z3b_red" === this.seqState ||
+          "theater_bedroom_red" === this.seqState,
         o = h + (t ? 0.12 + 0.06 * Math.sin(0.03 * e) : 0),
         n = t ? 0.15 + 0.1 * Math.abs(Math.sin(0.021 * e)) : 0;
       if (
@@ -1860,42 +2030,48 @@ class Zone2Engine {
         ("blood" !== this.seqState &&
           "bedroom_visited" !== this.seqState &&
           "hole" !== this.seqState &&
-          "red" !== this.seqState &&
-          "theater_armed" !== this.seqState &&
-          "theater_tunnel" !== this.seqState) ||
+          "red" !== this.seqState) ||
           this.drawOverlay(0, 0, 0.05, 0.65),
-        "theater_tunnel" === this.seqState &&
-          this.drawOverlay(
-            0,
-            0,
-            0,
-            Math.min(0.72, 0.18 + 38e-5 * (e - (this.theaterTunnelStart || e))),
-          ),
         "bedroom_2" === this.seqState && this.drawOverlay(0, 0, 0.03, 0.45),
         t && this.z3bTurbulenceStart > 0)
       ) {
         const t = e - this.z3bTurbulenceStart,
           i = 0.28 + 0.18 * Math.abs(Math.sin(0.035 * e));
         (this.drawOverlay(0.16, 0, 0, i),
-          t >= 2600 && ((this.seqState = "z3b_red"), (this.redStartTime = e)));
+          t >= 2600 &&
+            ((this.seqState =
+              "theater" === this.zone3Route
+                ? "theater_bedroom_red"
+                : "z3b_red"),
+            (this.redStartTime = e)));
       }
+      i && this.redStartTime <= 0 && (this.redStartTime = e);
       if (i && this.redStartTime > 0) {
         const t = e - this.redStartTime;
         let i = 0;
-        (t < 450
-          ? (i = t / 450)
-          : t < 2100
-            ? (i = 1)
-            : t < 3100
-              ? (i = 1 - (t - 2100) / 1e3)
-              : ((this.readyForZone3 = !0), (this.zone3Route = "z3b")),
-          i > 0.001 && this.drawOverlay(0.85, 0, 0, i));
+        if ("theater_bedroom_red" === this.seqState) {
+          t < 450
+            ? (i = t / 450)
+            : t < 700
+              ? (i = 1)
+              : t < 1700
+                ? (i = 1 - (t - 700) / 1000)
+                : ((this.seqState = "theater_ready"),
+                  (this.redStartTime = 0));
+                  // Player stays in the Z2 hallway facing the bedroom (E).
+                  // A right-slide (E→S) fires _beginTheaterHandoffSeamless
+                  // once facing south, connecting to the theater tunnel.
+        } else
+          t < 450
+            ? (i = t / 450)
+            : t < 2100
+              ? (i = 1)
+              : t < 3100
+                ? (i = 1 - (t - 2100) / 1e3)
+                : ((this.readyForZone3 = !0), (this.zone3Route = "z3b"));
+        i > 0.001 && this.drawOverlay(0.85, 0, 0, i);
       }
-      ("theater_tunnel" === this.seqState &&
-        !this.theaterTransitionStarted &&
-        e - (this.theaterTunnelStart || e) > 1600 &&
-        ((this.theaterTransitionStarted = !0), this.beginTheaterTransition()),
-        "function" == typeof drawHallucinationOverlay &&
+      ("function" == typeof drawHallucinationOverlay &&
           drawHallucinationOverlay(
             e,
             this.z2Trip,
@@ -1909,6 +2085,7 @@ class Zone2Engine {
       let t = 0;
       var _f = this.facing,
         _seqActive = "initial" !== this.seqState;
+      const southLimit = this.START_Z;
       (("N" === _f && !this.intersectionReached) || "S" === _f) &&
         (window.z2SpaceHeld || window.z2TouchHeld) &&
         ((this.camZ += "S" === _f ? -0.04 : 0.04),
@@ -1917,23 +2094,14 @@ class Zone2Engine {
           ((this.camZ = this.INTERSECTION_Z),
           (this.intersectionReached = !0),
           (t = 0)),
-        this.camZ <= this.START_Z && ((this.camZ = this.START_Z), (t = 0)),
+        this.camZ <= southLimit && ((this.camZ = southLimit), (t = 0)),
         "S" === _f &&
           this.camZ < this.INTERSECTION_Z &&
           this.intersectionReached &&
           (this.intersectionReached = !1),
         !("S" === _f && this.camZ <= -1.9) ||
-          (_seqActive && "z4_ready" !== this.seqState) ||
           this.z2ExitStarted ||
-          ((this.z2ExitStarted = !0), (this.z2ExitTime = performance.now())),
-        "S" === _f &&
-          this.camZ <= -1.9 &&
-          "theater_armed" === this.seqState &&
-          !this.theaterTransitionStarted &&
-          ((this.seqState = "theater_tunnel"),
-          (this.theaterTunnelStart = e),
-          (this.theaterTransitionStarted = !0),
-          this.beginTheaterTransition()));
+          ((this.z2ExitStarted = !0), (this.z2ExitTime = performance.now())));
       let i = Math.max(
         0,
         Math.min(
@@ -1945,11 +2113,12 @@ class Zone2Engine {
         (window.__audioWetGain.gain.value = 0.7 * (1 - 0.9 * i)),
         window.__audioDryGain &&
           (window.__audioDryGain.gain.value = 0.3 + 0.7 * i));
+      const framedForwardWall = this.__framedKitchenForwardWall;
       let forwardPortalTex = this.__framedKitchenForwardWall
         ? this.texKitchen
         : this.texVoidVid;
       if (
-        !this.__framedKitchenForwardWall &&
+        !framedForwardWall &&
         this.forwardPortalActiveMode &&
         this.forwardPortalFBO
       ) {
@@ -2009,17 +2178,13 @@ class Zone2Engine {
       (this._blitTex(n, u, f),
         gl.enable(gl.BLEND),
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA));
-      const l = this.__framedKitchenForwardWall
+      const l = framedForwardWall
           ? this.texFrontFrame
           : this.texFront,
         backTex =
-          "theater_armed" === this.seqState
-            ? this.texBackAlt
-            : "initial" === this.seqState
-              ? this.texBack
-              : "z4_ready" === this.seqState || "z4" === this.zone3Route
-                ? this.texBackDoor
-                : this.texBackAlt;
+          "z4_ready" === this.seqState || "z4" === this.zone3Route
+            ? this.texBackDoor
+            : this.texBack;
       (gl.useProgram(this.prog),
         gl.activeTexture(gl.TEXTURE0),
         gl.bindTexture(gl.TEXTURE_2D, l),
@@ -2054,10 +2219,7 @@ class Zone2Engine {
         gl.uniform1f(this.U.isWalking, t),
         gl.uniform1f(this.U.trip, this.z2Trip),
         gl.uniform1f(this.U.yawOffset, this.hallwayYaw),
-        gl.uniform1f(
-          this.U.framedKitchen,
-          this.__framedKitchenForwardWall ? 1 : 0,
-        ),
+        gl.uniform1f(this.U.framedKitchen, framedForwardWall ? 1 : 0),
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
       const r = gl.getAttribLocation(this.prog, "p");
       (gl.enableVertexAttribArray(r),
@@ -2088,54 +2250,60 @@ class Zone2Engine {
         }, 20));
       var self = this;
       setTimeout(function () {
-        (self.destroy(),
-          (window.currentZone2 = null),
-          (window.__zone2Governor = null),
-          "z4" === self.zone3Route && (window.__z4Route = !0),
-          (window.isEngine1Dead = !1),
-          "undefined" != typeof phase && (phase = "open"),
-          "undefined" != typeof blink && (blink = 0),
-          "undefined" != typeof timer && (timer = performance.now()),
-          "undefined" != typeof mode &&
-            "undefined" != typeof ActiveMode &&
-            ((activePOV = "center"),
-            (mx = 0),
-            (my = 0),
-            (cx = 0),
-            (cy = 0),
-            (currentEngine = new ActiveMode(mode)),
-            "function" == typeof initSideEngines && initSideEngines(),
-            "undefined" != typeof __lastFrameTime && (__lastFrameTime = 0),
-            "function" == typeof __frameGovernor &&
-              requestAnimationFrame(__frameGovernor)),
-          setTimeout(function () {
-            fadeEl.style.opacity = "0";
-          }, 100));
+        self.destroy();
+        window.currentZone2 = null;
+        window.__zone2Governor = null;
+        if ("z4" === self.zone3Route) window.__z4Route = !0;
+        if ("function" == typeof window.__returnFromZ2) {
+          window.__returnFromZ2();
+        }
+        setTimeout(function () {
+          fadeEl.style.opacity = "0";
+        }, 100);
       }, 700);
     }
   }
-  beginTheaterTransition() {
+  beginCabinTunnelTransition() {
+    if (this.cabinTunnelTransitionStarted) return;
+    this.cabinTunnelTransitionStarted = !0;
     let fadeEl = document.getElementById("zone-fade-overlay");
     (fadeEl ||
       ((fadeEl = document.createElement("div")),
       (fadeEl.id = "zone-fade-overlay"),
-      (fadeEl.style.cssText =
-        "position:fixed;inset:0;background:black;pointer-events:none;transition:opacity 0.6s ease-in-out;z-index:99999;opacity:0;"),
       document.body.appendChild(fadeEl)),
+      (fadeEl.style.cssText =
+        "position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity 0.18s ease-out;z-index:99999;"),
       (window.z2SpaceHeld = !1),
       (window.z2TouchHeld = !1),
       setTimeout(function () {
         fadeEl.style.opacity = "1";
       }, 20),
-      setTimeout(function () {
-        "function" == typeof window.startModeTheater
-          ? (window.startModeTheater(),
-            setTimeout(function () {
-              fadeEl.style.opacity = "0";
-            }, 250))
-          : (console.error("[TheaterRoute] mode-theater is not loaded"),
-            (fadeEl.style.opacity = "0"));
-      }, 700));
+      setTimeout(() => {
+        (this.destroy(),
+          (window.currentZone2 = null),
+          (window.__zone2Governor = null),
+          (window.isEngine1Dead = !0),
+          (window.__z2CabinTunnelRoute = !0),
+          (window.__z4Route = !1),
+          (window.__z4RouteActive = !1));
+        "function" == typeof window.startModeDesertRoad
+          ? window.startModeDesertRoad({
+              fromZone2: !0,
+              startWithCabinTunnel: !0,
+              roadsideIntro: !0,
+              startZ: 168,
+              speed: 22,
+              boost: 3,
+              autopilot: !0,
+            })
+          : console.error("[CabinTunnelRoute] mode-desert-road is not loaded");
+        setTimeout(function () {
+          fadeEl.style.opacity = "0";
+          setTimeout(function () {
+            fadeEl && fadeEl.parentNode && fadeEl.parentNode.removeChild(fadeEl);
+          }, 280);
+        }, 180);
+      }, 220));
   }
   _enterAltAnnexBathroomTurnLanding(now) {
     return (
@@ -2159,7 +2327,9 @@ class Zone2Engine {
       (this.seqState = "z4_alt_bathroom_turn"),
       (this.zone3Route = "z3"),
       (this.z4RouteActive = !1),
-      (this.theaterRouteActive = !1),
+      (this.cabinTunnelRouteActive = !1),
+      (this.cabinTunnelRouteStep = 0),
+      (this.theaterBedroomHandoffStarted = !1),
       (this.z4RouteStep = 0),
       (this.z4LeftBlinkCount = 0),
       (this.leftBlinkCount = 0),
@@ -2193,7 +2363,7 @@ class Zone2Engine {
     this.isDead = !0;
     const e = document.getElementById("c");
     if (
-      (e && (e.style.transform = ""),
+      (e && !this.theaterBedroomHandoffStarted && (e.style.transform = ""),
       this.leftRoom && this.leftRoom.destroy(),
       this.rightRoom && this.rightRoom.destroy(),
       this.windowActiveMode && this.windowActiveMode.destroy(),
@@ -2281,7 +2451,10 @@ window.startZone2 = function (opts) {
         (z2.seqState = "initial"),
         (z2.zone3Route = "z3"),
         (z2.z4RouteActive = !1),
-        (z2.theaterRouteActive = !1),
+        (z2.cabinTunnelRouteActive = !1),
+        (z2.cabinTunnelRouteStep = 0),
+        (z2.cabinTunnelTransitionStarted = !1),
+        (z2.theaterBedroomHandoffStarted = !1),
         (z2.z4RouteStep = 0),
         (z2.z4LeftBlinkCount = 0),
         (z2.z4TransitionStarted = !1),
@@ -2298,11 +2471,11 @@ window.startZone2 = function (opts) {
         (window.my = 0),
         (window.z2SpaceHeld = !1),
         (window.z2TouchHeld = !1));
-  } else
-    opts &&
-      opts.fromZ4BathroomReturn &&
-      window.currentZone2 &&
-      (((z2 = window.currentZone2).activePOV = "left"),
+		  } else
+		    opts &&
+		      opts.fromZ4BathroomReturn &&
+		      window.currentZone2 &&
+	      (((z2 = window.currentZone2).activePOV = "left"),
       (z2.facing = "W"),
       (z2.hallwayYaw = z2._yawForFacing ? z2._yawForFacing("W") : Math.PI / 2),
       (z2.hallwayYawTarget = z2.hallwayYaw),
@@ -2311,7 +2484,10 @@ window.startZone2 = function (opts) {
       (z2.seqState = "z4_ready"),
       (z2.zone3Route = "z4"),
       (z2.z4RouteActive = !1),
-      (z2.theaterRouteActive = !1),
+      (z2.cabinTunnelRouteActive = !1),
+      (z2.cabinTunnelRouteStep = 0),
+      (z2.cabinTunnelTransitionStarted = !1),
+      (z2.theaterBedroomHandoffStarted = !1),
       (z2.z4RouteStep = 4),
       (z2.z4LeftBlinkCount = 2),
       z2.setLeftRoomTexture && z2.setLeftRoomTexture("normal"));

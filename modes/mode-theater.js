@@ -183,6 +183,73 @@
             preserveDrawingBuffer: !1,
           }) || canvas.getContext("experimental-webgl");
       if (!gl) return (fail("WebGL is not available."), null);
+      let theaterEntryCameraZ = 552.1,
+        theaterTunnelInnerZ = 286.1,
+        theaterTunnelMouthZ = 512.1,
+        theaterHallBackZ = 560.1,
+        theaterTunnelFloorY = 0,
+        theaterTunnelCeilY = 5,
+        theaterTunnelHalfFloor = 1.65,
+        theaterTunnelHalfWall = 1.95;
+      function makeStaticTexture(src) {
+        const tex = gl.createTexture();
+        (gl.bindTexture(gl.TEXTURE_2D, tex),
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            1,
+            1,
+            0,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            new Uint8Array([3, 4, 5, 255]),
+          ),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR));
+        const img = new Image();
+        return (
+          (img.crossOrigin = "anonymous"),
+          (img.onload = function () {
+            try {
+              (gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, !1),
+                gl.activeTexture(gl.TEXTURE0),
+                gl.bindTexture(gl.TEXTURE_2D, tex),
+                gl.texImage2D(
+                  gl.TEXTURE_2D,
+                  0,
+                  gl.RGBA,
+                  gl.RGBA,
+                  gl.UNSIGNED_BYTE,
+                  img,
+                ));
+            } catch (e) {}
+          }),
+          (img.src = src),
+          tex
+        );
+      }
+      function texturedBuffer(vertices, tex, tint) {
+        const buf = gl.createBuffer();
+        return (
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf),
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW),
+          {
+            buffer: buf,
+            count: vertices.length / 5,
+            tex: tex,
+            tint: tint,
+          }
+        );
+      }
+      function texturedQuad(out, a, b, c, d, ua, ub, uc, ud) {
+        function push(p, uv) {
+          out.push(p[0], p[1], p[2], uv[0], uv[1]);
+        }
+        (push(a, ua), push(b, ub), push(c, uc), push(a, ua), push(c, uc), push(d, ud));
+      }
       const program = makeProgram(
           gl,
           "\nattribute vec3 a_position;\nattribute vec3 a_normal;\nattribute vec3 a_color;\nuniform mat4 u_viewProj;\nuniform vec3 u_camera;\nuniform float u_houseLights;\nvarying vec3 v_color;\nvarying float v_fog;\nvarying float v_light;\nvoid main() {\n  vec4 world = vec4(a_position, 1.0);\n  gl_Position = u_viewProj * world;\n  vec3 N = normalize(a_normal);\n  float key = max(dot(N, normalize(vec3(-0.22, 0.66, -0.54))), 0.0);\n  float fill = max(dot(N, normalize(vec3(0.18, 0.10, 0.95))), 0.0);\n  float hemi = 0.5 + 0.5 * N.y;\n  float rim = pow(max(1.0 - abs(dot(N, normalize(u_camera - a_position))), 0.0), 2.0);\n  float night = 0.105 + hemi * 0.105 + key * 0.46 + fill * 0.095 + rim * 0.17;\n  float show = 0.25 + hemi * 0.22 + key * 0.78 + fill * 0.20 + rim * 0.24;\n  v_light = mix(night, show, u_houseLights);\n  v_color = a_color;\n  v_fog = clamp(length(u_camera - a_position) / 330.0, 0.0, 1.0);\n}\n",
@@ -192,6 +259,11 @@
           gl,
           "\nattribute vec3 a_position;\nattribute vec2 a_uv;\nuniform mat4 u_viewProj;\nvarying vec2 v_uv;\nvoid main() {\n  v_uv = a_uv;\n  gl_Position = u_viewProj * vec4(a_position, 1.0);\n}\n",
           "\nprecision highp float;\nuniform sampler2D u_tex;\nuniform float u_exposure;\nvarying vec2 v_uv;\nvoid main() {\n  vec3 col = texture2D(u_tex, v_uv).rgb;\n  col = pow(col, vec3(0.85)) * 1.25;\n  gl_FragColor = vec4(col * u_exposure, 1.0);\n}\n",
+        ),
+        bedroomOverlayProgram = makeProgram(
+          gl,
+          "\nattribute vec2 a_position;\nvarying vec2 v_uv;\nvoid main() {\n  v_uv = a_position * 0.5 + 0.5;\n  gl_Position = vec4(a_position, 0.0, 1.0);\n}\n",
+          "\nprecision mediump float;\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform sampler2D u_texEnv1;\nuniform float u_blink;\nuniform float u_wake;\nuniform float u_alpha;\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution;\n  uv.y = 1.0 - uv.y;\n  float screenAspect = u_resolution.x / u_resolution.y;\n  float imgAspect = 1080.0 / 1920.0;\n  float visibleAspect = mix(imgAspect, 0.62, smoothstep(0.7, 2.0, screenAspect));\n  float panRangeX = mix(0.06, 0.10, smoothstep(0.7, 1.4, screenAspect));\n  float panRangeY = mix(0.06, 0.28, smoothstep(0.7, 1.4, screenAspect));\n  vec2 tuv;\n  if (screenAspect > visibleAspect) {\n    float scale = visibleAspect / screenAspect;\n    tuv = vec2(uv.x, (uv.y - 0.5) * scale + 0.5);\n  } else {\n    float scale = screenAspect / visibleAspect;\n    tuv = vec2((uv.x - 0.5) * scale + 0.5, uv.y);\n  }\n  tuv.x = tuv.x * (1.0 - 2.0 * panRangeX) + panRangeX - u_mouse.x * panRangeX;\n  tuv.y = tuv.y * (1.0 - 2.0 * panRangeY) + panRangeY - u_mouse.y * panRangeY;\n  tuv = clamp(tuv, 0.0, 1.0);\n  vec4 room = texture2D(u_texEnv1, tuv);\n  vec3 col = room.rgb;\n  gl_FragColor = vec4(col * (1.0 - u_blink) * smoothstep(0.0, 0.8, u_wake), u_alpha);\n}\n",
         ),
         hallucinationProgram = makeProgram(
           gl,
@@ -621,62 +693,182 @@
               [sx + 5, roofY - 4, 66],
               [0.006, 0.007, 0.01],
             );
-          const tunnelStartZ = backZ + 150,
-            tunnelEndZ = backZ + 24,
+          const tunnelEndZ = backZ + 24,
+            tunnelStartZ = backZ + 150,
+            // hallway proper: ~12 units long, just enough to read as a
+            // hall and present the bedroom-POV moment + turn-right.
+            // entry-cam sits inside it; far end opens out (camera never
+            // walks past tunnelStartZ headed away from the stage).
+            hallBackZ = tunnelStartZ + 12,
+            tunnelEntryZ = tunnelStartZ + 6,
             tunnelFloorY = backY + 0.02,
-            tunnelCeilY = tunnelFloorY + 13;
-          (b.box(
-            [-3.35, tunnelFloorY - 0.04, backZ],
-            [3.35, tunnelFloorY + 0.1, tunnelEndZ + 0.8],
-            centerLandingCol,
-          ),
-            b.box(
-              [-3.35, tunnelFloorY + 0.11, backZ + 0.2],
-              [3.35, tunnelFloorY + 0.16, backZ + 0.38],
-              centerEdgeCol,
-            ),
-            b.box(
-              [-6.8, tunnelFloorY - 0.28, tunnelEndZ],
-              [6.8, tunnelFloorY, tunnelStartZ],
-              [0.046, 0.048, 0.052],
-            ),
-            b.box(
-              [-7.35, tunnelFloorY, tunnelEndZ],
-              [-6.8, tunnelCeilY, tunnelStartZ],
-              [0.02, 0.022, 0.027],
-            ),
-            b.box(
-              [6.8, tunnelFloorY, tunnelEndZ],
-              [7.35, tunnelCeilY, tunnelStartZ],
-              [0.02, 0.022, 0.027],
-            ),
-            b.box(
-              [-7.35, tunnelCeilY, tunnelEndZ],
-              [7.35, tunnelCeilY + 0.42, tunnelStartZ],
-              [0.015, 0.017, 0.021],
-            ));
-          for (let z = tunnelEndZ + 6; z < tunnelStartZ - 8; z += 13.5)
+            tunnelCeilY = tunnelFloorY + 5,
+            bowlHalfFloor = 3.35,
+            bowlHalfWall = 3.9,
+            tunnelHalfFloor = 1.65,
+            tunnelHalfWall = 1.95,
+            throatFloorY = tunnelFloorY + 0.1,
+            floorSlabCol = centerLandingCol,
+            floorUnderCol = [0.046, 0.048, 0.052],
+            wallInnerCol = [0.02, 0.022, 0.027],
+            wallOuterCol = [0.014, 0.016, 0.02],
+            ceilCol = [0.015, 0.017, 0.021],
+            N_THROAT = 10;
+          (theaterEntryCameraZ = tunnelStartZ),
+            (theaterTunnelInnerZ = tunnelEndZ + 10),
+            (theaterTunnelMouthZ = tunnelStartZ),
+            (theaterTunnelFloorY = tunnelFloorY),
+            (theaterTunnelCeilY = tunnelCeilY),
+            (theaterTunnelHalfFloor = tunnelHalfFloor),
+            (theaterTunnelHalfWall = tunnelHalfWall);
+          // threshold curb at the theater rim — keeps the centerEdge accent
+          b.box(
+            [-bowlHalfFloor, throatFloorY + 0.01, backZ + 0.2],
+            [bowlHalfFloor, throatFloorY + 0.06, backZ + 0.38],
+            centerEdgeCol,
+          );
+          // flared throat: trapezoidal segments easing center landing out to
+          // the full-width tunnel cross-section so floor, walls, and ceiling
+          // meet the theater rim without a step or gap
+          for (let i = 0; i < N_THROAT; i++) {
+            const t0 = i / N_THROAT,
+              t1 = (i + 1) / N_THROAT,
+              s0 = smoothstep(0, 1, t0),
+              s1 = smoothstep(0, 1, t1),
+              z0 = mix(backZ, tunnelEndZ, t0),
+              z1 = mix(backZ, tunnelEndZ, t1),
+              fhw0 = mix(bowlHalfFloor, tunnelHalfFloor, s0),
+              fhw1 = mix(bowlHalfFloor, tunnelHalfFloor, s1),
+              whw0 = mix(bowlHalfWall, tunnelHalfWall, s0),
+              whw1 = mix(bowlHalfWall, tunnelHalfWall, s1),
+              fy0 = mix(throatFloorY, tunnelFloorY, s0),
+              fy1 = mix(throatFloorY, tunnelFloorY, s1),
+              fb0 = fy0 - 0.28,
+              fb1 = fy1 - 0.28;
+            // floor top (normal up)
+            b.quad(
+              [-fhw0, fy0, z0],
+              [fhw0, fy0, z0],
+              [fhw1, fy1, z1],
+              [-fhw1, fy1, z1],
+              floorSlabCol,
+            );
+            // floor underside (normal down)
+            b.quad(
+              [-fhw1, fb1, z1],
+              [fhw1, fb1, z1],
+              [fhw0, fb0, z0],
+              [-fhw0, fb0, z0],
+              floorUnderCol,
+            );
+            // floor sloped sides
+            b.quad(
+              [-fhw0, fy0, z0],
+              [-fhw1, fy1, z1],
+              [-fhw1, fb1, z1],
+              [-fhw0, fb0, z0],
+              floorUnderCol,
+            );
+            b.quad(
+              [fhw0, fb0, z0],
+              [fhw1, fb1, z1],
+              [fhw1, fy1, z1],
+              [fhw0, fy0, z0],
+              floorUnderCol,
+            );
+            // left wall — inner face (normal +x)
+            b.quad(
+              [-fhw0, fy0, z0],
+              [-fhw1, fy1, z1],
+              [-fhw1, tunnelCeilY, z1],
+              [-fhw0, tunnelCeilY, z0],
+              wallInnerCol,
+            );
+            // left wall — outer face (normal -x)
+            b.quad(
+              [-whw0, tunnelCeilY, z0],
+              [-whw1, tunnelCeilY, z1],
+              [-whw1, fb1, z1],
+              [-whw0, fb0, z0],
+              wallOuterCol,
+            );
+            // left wall — top cap (closes seam under ceiling)
+            b.quad(
+              [-whw0, tunnelCeilY, z0],
+              [-fhw0, tunnelCeilY, z0],
+              [-fhw1, tunnelCeilY, z1],
+              [-whw1, tunnelCeilY, z1],
+              wallInnerCol,
+            );
+            // right wall — inner face (normal -x)
+            b.quad(
+              [fhw0, tunnelCeilY, z0],
+              [fhw1, tunnelCeilY, z1],
+              [fhw1, fy1, z1],
+              [fhw0, fy0, z0],
+              wallInnerCol,
+            );
+            // right wall — outer face (normal +x)
+            b.quad(
+              [whw0, fb0, z0],
+              [whw1, fb1, z1],
+              [whw1, tunnelCeilY, z1],
+              [whw0, tunnelCeilY, z0],
+              wallOuterCol,
+            );
+            // right wall — top cap
+            b.quad(
+              [fhw0, tunnelCeilY, z0],
+              [whw0, tunnelCeilY, z0],
+              [whw1, tunnelCeilY, z1],
+              [fhw1, tunnelCeilY, z1],
+              wallInnerCol,
+            );
+          }
+          b.box(
+            [-tunnelHalfFloor, tunnelFloorY - 0.28, tunnelEndZ],
+            [tunnelHalfFloor, tunnelFloorY, tunnelStartZ],
+            floorUnderCol,
+          );
+          b.box(
+            [-tunnelHalfWall, tunnelFloorY, tunnelEndZ],
+            [-tunnelHalfFloor, tunnelCeilY, tunnelStartZ],
+            wallInnerCol,
+          );
+          b.box(
+            [tunnelHalfFloor, tunnelFloorY, tunnelEndZ],
+            [tunnelHalfWall, tunnelCeilY, tunnelStartZ],
+            wallInnerCol,
+          );
+          b.box(
+            [-tunnelHalfWall, tunnelCeilY, tunnelEndZ],
+            [tunnelHalfWall, tunnelCeilY + 0.42, tunnelStartZ],
+            ceilCol,
+          );
+          // Hallway phase is rendered via zone2_hallway GLSL shader (see hallway
+          // phase logic in the render loop). No 3-D geometry hall needed here.
+          for (let z = backZ + 6; z < tunnelStartZ - 8; z += 13.5)
             (b.beam(
-              [-7.22, tunnelCeilY - 0.2, z],
-              [7.22, tunnelCeilY - 0.2, z],
+              [-(tunnelHalfWall - 0.12), tunnelCeilY - 0.2, z],
+              [tunnelHalfWall - 0.12, tunnelCeilY - 0.2, z],
               0.08,
               [0.22, 0.2, 0.14],
             ),
               b.box(
-                [-0.8, tunnelCeilY - 0.36, z - 0.18],
-                [0.8, tunnelCeilY - 0.18, z + 0.18],
+                [-0.45, tunnelCeilY - 0.34, z - 0.14],
+                [0.45, tunnelCeilY - 0.18, z + 0.14],
                 [0.8, 0.66, 0.34],
               ));
           return (
             b.beam(
-              [-6.1, tunnelFloorY + 1, tunnelEndZ + 4],
-              [-6.1, tunnelFloorY + 1, tunnelStartZ - 4],
+              [-(tunnelHalfFloor - 0.7), tunnelFloorY + 1, tunnelEndZ + 4],
+              [-(tunnelHalfFloor - 0.7), tunnelFloorY + 1, tunnelStartZ - 4],
               0.055,
               [0.19, 0.17, 0.12],
             ),
             b.beam(
-              [6.1, tunnelFloorY + 1, tunnelEndZ + 4],
-              [6.1, tunnelFloorY + 1, tunnelStartZ - 4],
+              [tunnelHalfFloor - 0.7, tunnelFloorY + 1, tunnelEndZ + 4],
+              [tunnelHalfFloor - 0.7, tunnelFloorY + 1, tunnelStartZ - 4],
               0.055,
               [0.19, 0.17, 0.12],
             ),
@@ -702,6 +894,10 @@
         screenBuffer = gl.createBuffer();
       (gl.bindBuffer(gl.ARRAY_BUFFER, screenBuffer),
         gl.bufferData(gl.ARRAY_BUFFER, screenData, gl.STATIC_DRAW));
+      // Hall entry surfaces are intentionally omitted: the Z2 tunnel is an
+      // open portal (walls/floor/ceiling only) with green screen plates at
+      // each end. mode-theater's 3D tunnel geometry takes over at the entry
+      // point; no duplicate textured surfaces are needed here.
       const hallucinationBuffer = gl.createBuffer();
       (gl.bindBuffer(gl.ARRAY_BUFFER, hallucinationBuffer),
         gl.bufferData(
@@ -709,6 +905,80 @@
           new Float32Array([-1, -1, 3, -1, -1, 3]),
           gl.STATIC_DRAW,
         ));
+      // ─── Z2 Hallway Phase (theater route entry) ──────────────────────────
+      // Walk camZ from HALL_PHASE_START_Z (north end) southward; exit when
+      // camZ drops below HALL_PHASE_EXIT_Z, then fall into theater geometry.
+      const HALL_PHASE_START_Z = 2.5,
+        HALL_PHASE_EXIT_Z = -2.8,
+        HALL_PHASE_YAW = Math.PI, // facing south
+        HALL_PHASE_SPEED = 1.02; // units/s  ≈ engine3's 0.034 × 30fps
+      const hallwayProgram = (function () {
+        if (!window.GLSL || !window.GLSL.modules || !window.GLSL.modules.zone2_hallway)
+          return null;
+        try {
+          // South face is transparent — the 3D theater tunnel renders behind the
+          // hallway overlay. Hallway walls/floor/ceiling stay opaque (alpha=1).
+          let src = window.GLSL.modules.zone2_hallway;
+          src = src.replace(
+            '  vec3 finalCol = hallTex.rgb;',
+            `  // South-face: transparent — 3D theater shows through.
+  if (wallID == 3.0) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    return;
+  }
+  vec3 finalCol = hallTex.rgb;`
+          );
+          return makeProgram(
+            gl,
+            "attribute vec2 a_position;\nvoid main(){gl_Position=vec4(a_position,0.0,1.0);}",
+            src,
+          );
+        } catch (e) {
+          console.error("[mode-theater] hallway shader compile failed:", e);
+          return null;
+        }
+      })();
+      const texHallFront = makeStaticTexture("files/img/rooms/z2/hallway/FORWARD-MASK.png"),
+        texHallBack  = makeStaticTexture("files/img/rooms/z2/hallway/BACK.png"),
+        texHallLeft  = makeStaticTexture("files/img/rooms/z2/hallway/LEFTWALL.png"),
+        texHallRight = makeStaticTexture("files/img/rooms/z2/hallway/RIGHTWALL.png"),
+        texHallTop   = makeStaticTexture("files/img/rooms/z2/hallway/TOP.png"),
+        texHallFloor = makeStaticTexture("files/img/rooms/z2/hallway/GROUND.png"),
+        texHallBlank = (function () {
+          const t = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, t);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          return t;
+        })();
+      if (hallwayProgram) {
+        gl.useProgram(hallwayProgram);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texFront"), 0);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texBack"), 1);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texLeft"), 2);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texRight"), 3);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texTop"), 4);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texBottom"), 5);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_voidVid"), 6);
+        gl.uniform1i(gl.getUniformLocation(hallwayProgram, "u_texDoorLeft"), 7);
+        const _rLoc = gl.getUniformLocation(hallwayProgram, "u_texDoorRight");
+        if (_rLoc !== null) gl.uniform1i(_rLoc, 7);
+      }
+      const hallLoc = hallwayProgram ? {
+        pos:          gl.getAttribLocation(hallwayProgram, "a_position"),
+        res:          gl.getUniformLocation(hallwayProgram, "u_resolution"),
+        time:         gl.getUniformLocation(hallwayProgram, "u_time"),
+        mouse:        gl.getUniformLocation(hallwayProgram, "u_mouse"),
+        camZ:         gl.getUniformLocation(hallwayProgram, "u_camZ"),
+        yawOffset:    gl.getUniformLocation(hallwayProgram, "u_yawOffset"),
+        blink:        gl.getUniformLocation(hallwayProgram, "u_blink"),
+        shake:        gl.getUniformLocation(hallwayProgram, "u_shake"),
+        isWalking:    gl.getUniformLocation(hallwayProgram, "u_isWalking"),
+        trip:         gl.getUniformLocation(hallwayProgram, "u_trip"),
+        framedKitchen: gl.getUniformLocation(hallwayProgram, "u_framedKitchen"),
+      } : null;
+      // ─────────────────────────────────────────────────────────────────────
       const locHallucinationPos = gl.getAttribLocation(
           hallucinationProgram,
           "a_position",
@@ -733,7 +1003,14 @@
         locScreenUv = gl.getAttribLocation(screenProgram, "a_uv"),
         locScreenViewProj = gl.getUniformLocation(screenProgram, "u_viewProj"),
         locScreenTex = gl.getUniformLocation(screenProgram, "u_tex"),
-        locScreenExposure = gl.getUniformLocation(screenProgram, "u_exposure");
+        locScreenExposure = gl.getUniformLocation(screenProgram, "u_exposure"),
+        locBedroomPos = gl.getAttribLocation(bedroomOverlayProgram, "a_position"),
+        locBedroomRes = gl.getUniformLocation(bedroomOverlayProgram, "u_resolution"),
+        locBedroomMouse = gl.getUniformLocation(bedroomOverlayProgram, "u_mouse"),
+        locBedroomTex = gl.getUniformLocation(bedroomOverlayProgram, "u_texEnv1"),
+        locBedroomBlink = gl.getUniformLocation(bedroomOverlayProgram, "u_blink"),
+        locBedroomWake = gl.getUniformLocation(bedroomOverlayProgram, "u_wake"),
+        locBedroomAlpha = gl.getUniformLocation(bedroomOverlayProgram, "u_alpha");
       function makeMappedVideo(src) {
         let video = null;
         src
@@ -816,12 +1093,14 @@
         gl.vertexAttribPointer(locColor, 3, gl.FLOAT, !1, 36, 24));
       const state = {
         progress: 0,
-        space: !1,
+        space: !!(options && options.walkHeld),
         lookX: 0,
         lookY: 0,
         targetLookX: 0,
         targetLookY: 0,
         dragging: !1,
+        walkPointerId: null,
+        carryWalk: !!(options && options.touchHeld),
         startX: 0,
         startY: 0,
         startLookX: 0,
@@ -832,9 +1111,25 @@
         stageBeat: 0,
         handoffDone: !1,
         last: performance.now(),
+        // hallway phase (theater route from Z2)
+        hallPhase: !!(options && options.fromZone2),
+        hallCamZ: HALL_PHASE_START_Z,
+        hallWakeIn: 0,
       };
-      function release() {
+      function release(event) {
+        if (
+          "number" == typeof state.walkPointerId &&
+          (!event || event.pointerId === state.walkPointerId)
+        )
+          ((state.walkPointerId = null), (state.space = !1));
+        state.carryWalk && ((state.carryWalk = !1), (state.space = !1));
         state.dragging = !1;
+      }
+      function isWalkPointer(event) {
+        return (
+          "function" == typeof window.__mobileWalkZoneContains &&
+          window.__mobileWalkZoneContains(event.clientX, event.clientY)
+        );
       }
       (window.addEventListener(
         "keydown",
@@ -859,11 +1154,13 @@
           (event) => {
             if (disposed) return;
             (event.preventDefault(),
-              (state.dragging = !0),
-              (state.startX = event.clientX),
-              (state.startY = event.clientY),
-              (state.startLookX = state.targetLookX),
-              (state.startLookY = state.targetLookY),
+              isWalkPointer(event)
+                ? ((state.space = !0), (state.walkPointerId = event.pointerId))
+                : ((state.dragging = !0),
+                  (state.startX = event.clientX),
+                  (state.startY = event.clientY),
+                  (state.startLookX = state.targetLookX),
+                  (state.startLookY = state.targetLookY)),
               canvas.setPointerCapture(event.pointerId));
           },
           { passive: !1 },
@@ -871,29 +1168,26 @@
         canvas.addEventListener(
           "pointermove",
           (event) => {
-            if (disposed || !state.dragging) return;
+            if (disposed) return;
+            if (event.pointerId === state.walkPointerId)
+              return void (
+                event.preventDefault(),
+                (state.space = isWalkPointer(event))
+              );
             event.preventDefault();
-            const size = Math.max(
-              1,
-              Math.min(window.innerWidth, window.innerHeight),
-            );
-            ((state.targetLookX = clamp(
-              state.startLookX + ((event.clientX - state.startX) / size) * 1.6,
-              -1,
-              1,
-            )),
-              (state.targetLookY = clamp(
-                state.startLookY -
-                  ((event.clientY - state.startY) / size) * 1.1,
-                -1,
-                1,
-              )));
+            // continuous mouseview: camera follows absolute pointer position
+            const nx = (event.clientX / window.innerWidth) * 2 - 1;
+            const ny = (event.clientY / window.innerHeight) * 2 - 1;
+            ((state.targetLookX = clamp(nx * 0.8, -1, 1)),
+              (state.targetLookY = clamp(-ny * 0.55, -1, 1)));
           },
           { passive: !1 },
         ),
         canvas.addEventListener("pointerup", release),
         canvas.addEventListener("pointercancel", release),
-        canvas.addEventListener("lostpointercapture", release));
+        canvas.addEventListener("lostpointercapture", release),
+        window.addEventListener("pointerup", release),
+        window.addEventListener("pointercancel", release));
       const aisleProfile = [
         [16, 0.3],
         [44.7, 4.2],
@@ -941,10 +1235,21 @@
               gl.viewport(0, 0, canvas.width, canvas.height));
           })();
           const dt = Math.min(0.05, Math.max(0, 0.001 * (now - state.last)));
+          (state.last = now), (state.blinkClock += dt);
+          // ─── Hallway phase state update (render happens below with hallway overlay)
+          if (state.hallPhase) {
+            state.hallWakeIn = Math.min(1, state.hallWakeIn + dt * 2.5);
+            if (state.space) state.hallCamZ -= HALL_PHASE_SPEED * dt;
+            if (state.hallCamZ <= HALL_PHASE_EXIT_Z || !hallwayProgram || !hallLoc) {
+              state.hallPhase = false;
+              state.progress = 0;
+            }
+            // Fall through: 3D theater renders at progress=0 (tunnel entry camera),
+            // then hallway overlay draws on top with transparent south face.
+          }
+          // ─────────────────────────────────────────────────────────────────
           if (
-            ((state.last = now),
-            (state.blinkClock += dt),
-            state.space &&
+            (state.space && !state.hallPhase &&
               (state.progress = clamp(state.progress + 0.026 * dt, 0, 1.2)),
             !state.dragging)
           ) {
@@ -961,7 +1266,7 @@
             function seg(a, b) {
               return clamp((routeProgress - a) / (b - a), 0, 1);
             }
-            let x = -1.45,
+            let x = 0,
               z = -22,
               y = aisleYAtZ(-22) + 2.25,
               yaw = 0,
@@ -969,17 +1274,19 @@
               routeProgress = progress;
             if (progress < 0.2) {
               const t = smoothstep(0, 1, clamp(progress / 0.2, 0, 1));
-              ((x = mix(0, -1.45, t)),
-                (z = mix(392, 286.1, t)),
-                (y = topLandingY),
+              ((x = 0),
+                (z = mix(theaterEntryCameraZ, theaterTunnelInnerZ, t)),
+                (y = mix(theaterTunnelFloorY + 2.25, topLandingY, t)),
                 (yaw = 0));
             } else routeProgress = clamp(progress - 0.2, 0, 1);
             if (progress >= 0.2 && routeProgress < 0.08)
-              ((z = mix(286.1, 262.1, seg(0, 0.08))),
+              ((x = 0),
+                (z = mix(theaterTunnelInnerZ, 262.1, seg(0, 0.08))),
                 (y = topLandingY),
                 (yaw = 0));
             else if (progress >= 0.2 && routeProgress < 0.62)
-              ((z = mix(262.1, -22, seg(0.08, 0.62))),
+              ((x = mix(0, -1.45, smoothstep(0, 1, seg(0.08, 0.18)))),
+                (z = mix(262.1, -22, seg(0.08, 0.62))),
                 (y = aisleYAtZ(z) + 2.25),
                 (yaw = 0));
             else if (progress >= 0.2 && routeProgress < 0.635) {
@@ -1038,6 +1345,16 @@
               finalLook: finalLook,
             };
           })(state.progress);
+          // During hallPhase the 3D camera tracks the player through the tunnel:
+          // hallCamZ goes 2.5→-2.8, south face is at -3.5, so offset = hallCamZ+3.5
+          // maps 2.5 → tunnelStartZ+6 (entry cam), -3.5 → tunnelStartZ (portal).
+          if (state.hallPhase) {
+            const hallEyeZ = theaterEntryCameraZ + (state.hallCamZ + 3.5);
+            const eyeY = theaterTunnelFloorY + 2.25;
+            cam.eye    = [0, eyeY, hallEyeZ];
+            cam.target = [state.lookX * 18, eyeY - 1 + 8 * state.lookY, hallEyeZ - 34];
+            cam.finalLook = 0;
+          }
           cam.finalLook >= 0.999 && state.progress >= 1.2
             ? (state.stageActive ||
                 ((state.stageActive = !0),
@@ -1396,7 +1713,7 @@
               ? window.__hallucinationTripForLevel(level)
               : 0.32 * level;
           })(state.progress);
-          (theaterTrip > 0.01 &&
+          (!state.hallPhase && theaterTrip > 0.01 &&
             (gl.disable(gl.DEPTH_TEST),
             gl.enable(gl.BLEND),
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA),
@@ -1412,8 +1729,39 @@
               17.13 * Math.floor(state.blinkClock / 3.35) + 3.7,
             ),
             gl.drawArrays(gl.TRIANGLES, 0, 3),
-            gl.disable(gl.BLEND)),
-            (rafId = requestAnimationFrame(frame)));
+            gl.disable(gl.BLEND)));
+          // ─── Hallway overlay: Z2 hallway framing the 3D theater tunnel entry
+          if (state.hallPhase && hallwayProgram && hallLoc) {
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.disable(gl.DEPTH_TEST);
+            gl.useProgram(hallwayProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, hallucinationBuffer);
+            gl.enableVertexAttribArray(hallLoc.pos);
+            gl.vertexAttribPointer(hallLoc.pos, 2, gl.FLOAT, false, 0, 0);
+            gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texHallFront);
+            gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texHallBack);
+            gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, texHallLeft);
+            gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, texHallRight);
+            gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, texHallTop);
+            gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, texHallFloor);
+            gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, texHallBlank);
+            gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, texHallBlank);
+            gl.uniform2f(hallLoc.res, canvas.width, canvas.height);
+            gl.uniform1f(hallLoc.time, 0.001 * now);
+            gl.uniform2f(hallLoc.mouse, state.lookX, state.lookY);
+            gl.uniform1f(hallLoc.camZ, state.hallCamZ);
+            gl.uniform1f(hallLoc.yawOffset, HALL_PHASE_YAW);
+            gl.uniform1f(hallLoc.blink, state.hallWakeIn < 1 ? 1 - state.hallWakeIn : normalBlink());
+            gl.uniform1f(hallLoc.shake, 0);
+            gl.uniform1f(hallLoc.isWalking, state.space ? 1 : 0);
+            gl.uniform1f(hallLoc.trip, 0);
+            gl.uniform1f(hallLoc.framedKitchen, 0);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            gl.disable(gl.BLEND);
+            gl.enable(gl.DEPTH_TEST);
+          }
+          rafId = requestAnimationFrame(frame);
         })),
         {
           gl: gl,
@@ -1423,6 +1771,9 @@
               (state.handoffDone = !1),
               (state.stageActive = !1),
               (state.stageBeat = 0));
+          },
+          setWalkHeld(held, carriedByPointer) {
+            ((state.space = !!held), (state.carryWalk = !!carriedByPointer));
           },
           destroy() {
             ((disposed = !0), rafId && cancelAnimationFrame(rafId));
@@ -1449,6 +1800,9 @@
               gl.deleteProgram(screenProgram);
             } catch (e) {}
             try {
+              gl.deleteProgram(bedroomOverlayProgram);
+            } catch (e) {}
+            try {
               gl.deleteProgram(hallucinationProgram);
             } catch (e) {}
             for (const tex of screenTextures)
@@ -1459,9 +1813,15 @@
         }
       );
     }),
-    (window.startModeTheater = function () {
+    (window.startModeTheater = function (options) {
       if (window.__modeTheaterScene && window.__modeTheaterActive)
-        return window.__modeTheaterScene;
+        return (
+          options &&
+            options.walkHeld &&
+            "function" == typeof window.__modeTheaterScene.setWalkHeld &&
+            window.__modeTheaterScene.setWalkHeld(!0, !!options.touchHeld),
+          window.__modeTheaterScene
+        );
       const canvas = document.getElementById("c");
       if (!canvas || "function" != typeof window.createTheaterGeometryScene)
         return null;
@@ -1491,12 +1851,34 @@
         try {
           window.__modeTheaterScene.destroy();
         } catch (e) {}
+      if (options && typeof options.slideDir === "number") {
+        canvas.style.transition = "none";
+        canvas.style.transform = "translateX(" + (-window.innerWidth * options.slideDir) + "px)";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            canvas.style.transition = "transform 0.34s ease-out";
+            canvas.style.transform = "";
+            setTimeout(() => {
+              canvas.style.transition = "";
+            }, 350);
+          });
+        });
+      }
       return (
         (window.__modeTheaterScene = window.createTheaterGeometryScene(canvas, {
+          walkHeld: !!(options && options.walkHeld),
+          touchHeld: !!(options && options.touchHeld),
+          fromZone2Bedroom: !!(options && options.fromZone2Bedroom),
+          fromZone2: !!(options && options.fromZone2),
           fail(msg) {
             console.error("[mode-theater]", msg);
           },
         })),
+        window.__modeTheaterScene &&
+          "function" == typeof window.__modeTheaterScene.seek &&
+          options &&
+          "number" == typeof options.progress &&
+          window.__modeTheaterScene.seek(options.progress),
         window.__modeTheaterScene
       );
     }),

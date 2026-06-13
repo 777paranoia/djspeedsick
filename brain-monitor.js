@@ -471,14 +471,26 @@
     }
   }
   ((window.initBrainMonitor = function () {
+    if (!document.getElementById("brain-dir-bar-style")) {
+      var __dbStyle = document.createElement("style");
+      ((__dbStyle.id = "brain-dir-bar-style"),
+        (__dbStyle.textContent =
+          ".brain-dir-bar{position:absolute;background:transparent;pointer-events:none;transition:background 160ms ease,box-shadow 160ms ease;z-index:2;}" +
+          ".brain-dir-bar.lit{background:#6b1313;box-shadow:0 0 10px rgba(220,30,30,0.55),inset 0 0 8px rgba(255,60,60,0.35);}" +
+          ".brain-dir-top{top:0;left:0;right:0;height:10px;}" +
+          ".brain-dir-bottom{bottom:0;left:0;right:0;height:10px;}" +
+          ".brain-dir-left{top:0;bottom:0;left:0;width:10px;}" +
+          ".brain-dir-right{top:0;bottom:0;right:0;width:10px;}"),
+        document.head.appendChild(__dbStyle));
+    }
     var m = document.getElementById("brain-monitor-wrap");
     if (
       (m ||
         (((m = document.createElement("div")).id = "brain-monitor-wrap"),
         (m.style.cssText =
-          'position:fixed;bottom:clamp(30px, 4vh, 60px);right:clamp(20px, 2vw, 50px);width:clamp(280px, 28vw, 440px);z-index:700;pointer-events:auto;cursor:crosshair;font-family:"Courier New",monospace;color:#ff00ff;text-shadow:0 0 5px rgba(255,0,255,0.6);font-size:clamp(8px, 0.7vw, 11px);border:1px solid rgba(255,0,255,0.15);padding:6px;'),
+          'position:fixed;bottom:clamp(30px, 4vh, 60px);right:clamp(20px, 2vw, 50px);width:clamp(280px, 28vw, 440px);z-index:700;pointer-events:auto;cursor:crosshair;font-family:"Courier New",monospace;color:#ff00ff;text-shadow:0 0 5px rgba(255,0,255,0.6);font-size:clamp(8px, 0.7vw, 11px);border:1px solid rgba(255,0,255,0.15);padding:14px;'),
         (m.innerHTML =
-          '<div id="brain-header" style="margin-bottom:3px;line-height:1.3;"></div><canvas id="brain-canvas" style="width:100%;display:block;"></canvas><div id="brain-readout" style="line-height:1.3;margin-top:3px;max-height:7em;overflow:hidden;"></div>'),
+          '<div class="brain-dir-bar brain-dir-top"></div><div class="brain-dir-bar brain-dir-bottom"></div><div class="brain-dir-bar brain-dir-left"></div><div class="brain-dir-bar brain-dir-right"></div><div id="brain-header" style="margin-bottom:3px;line-height:1.3;position:relative;z-index:1;"></div><canvas id="brain-canvas" style="width:100%;display:block;position:relative;z-index:1;"></canvas><div id="brain-readout" style="line-height:1.3;margin-top:3px;max-height:7em;overflow:hidden;position:relative;z-index:1;"></div>'),
         document.body.appendChild(m)),
       (m.style.display = "block"),
       (t = document.getElementById("brain-canvas")))
@@ -504,8 +516,159 @@
     }
   }),
     (window.stopBrainMonitor = function () {
-      a = !1;
-      var t = document.getElementById("brain-monitor-wrap");
-      t && (t.style.display = "none");
+      /* Detached from HUD toggle: brain scanner persists once initialized. */
     }));
+
+  // Movement-options API: paints the four directional bars around the scanner.
+  // Side mapping: forward→top, back→bottom (180°), left→left, right→right.
+  // Engines call this directly OR the per-frame poller below derives it from
+  // active engine state.
+  var __dirBarSides = {
+    forward: "top",
+    back: "bottom",
+    left: "left",
+    right: "right",
+  };
+  window.setMovementOptions = function (opts) {
+    opts = opts || {};
+    for (var k in __dirBarSides) {
+      var el = document.querySelector(".brain-dir-" + __dirBarSides[k]);
+      el && el.classList.toggle("lit", !!opts[k]);
+    }
+  };
+  function __movementNone() {
+    return { forward: !1, back: !1, left: !1, right: !1 };
+  }
+
+  function __computeMovementOptions() {
+    var opts = __movementNone();
+    // Zone3 — per-phase mapping mirroring engine3 checkPOVThreshold gates:
+    //   hallway: forward (z3SpaceHeld walks); arrow only goes where the ring
+    //     allows. Normal route is a center↔left ring; alt route is center↔right.
+    //   cabin at exit row: L+R toggle door_look (and exit it). Otherwise forward.
+    //   void / falling / bh escape: no input.
+    if (window.currentZone3 && !window.currentZone3.isDead) {
+      var z3 = window.currentZone3,
+        z3phase = z3.centerPhase,
+        z3pov = z3.activePOV,
+        z3alt = !!z3.isAltRoute,
+        z3b = !!z3.isZ4BRoute;
+      if ("hallway" === z3phase) {
+        opts.forward = !0;
+        if (z3alt) {
+          "center" === z3pov && (opts.right = !0);
+          "right" === z3pov && (opts.left = !0);
+        } else if (!z3b) {
+          "center" === z3pov && (opts.left = !0);
+          "left" === z3pov && (opts.right = !0);
+        }
+      } else if ("cabin" === z3phase) {
+        opts.forward = !0;
+        var atExit =
+          "number" == typeof z3.camZ &&
+          "number" == typeof z3.EXIT_ROW_Z &&
+          Math.abs(z3.camZ - z3.EXIT_ROW_Z) < 1.5;
+        if (atExit) {
+          var cs = z3.cabinState;
+          ("suction" !== cs && (opts.left = !0), (opts.right = !0));
+        }
+      }
+      return opts;
+    }
+    // Zone2 (hallway / station ring): use facing + intersectionReached.
+    // Pre-intersection N/S has L and R both producing a 180° turn → bottom only.
+    // Forward only walks while we're not pinned to the end of the hallway —
+    // mirror engine2's own gate: (N && !reached && camZ<INTERSECTION_Z) or
+    // (S && camZ>START_Z). Standing at the bathroom/bedroom intersection
+    // (N_A, camZ==INTERSECTION_Z) is a turn-only state.
+    if (window.currentZone2 && !window.currentZone2.isDead) {
+      var z2 = window.currentZone2,
+        f = z2.facing,
+        reached = !!z2.intersectionReached,
+        camZ = "number" == typeof z2.camZ ? z2.camZ : 0,
+        iZ = "number" == typeof z2.INTERSECTION_Z ? z2.INTERSECTION_Z : 0,
+        sZ = "number" == typeof z2.START_Z ? z2.START_Z : 0;
+      ("N" === f && !reached && camZ < iZ - 0.01) ||
+      ("S" === f && camZ > sZ + 0.01)
+        ? (opts.forward = !0)
+        : 0;
+      !reached && ("N" === f || "S" === f)
+        ? (opts.back = !0)
+        : ((opts.left = !0), (opts.right = !0));
+      return opts;
+    }
+    // Zone4 — per-phase mapping mirroring engine4 phase walkers + turn gates:
+    //   ascent / docking_shake / fog_in / fog_in_descent / descent /
+    //     descent_shake / fall / impact: automatic motion, no input.
+    //   bay / hallway / annex_hallway / annex_turn_in / annex_exit_door /
+    //     entering_ring / reverse_entering_ring / reverse_hallway /
+    //     reverse_bay: walk-forward only.
+    //   ring: forward (walks ringU) + L/R (turn).
+    //   annex_room: forward; L/R only in the center zone of the room
+    //     (annexRoomT in [0.34, 0.72]) and unlocked.
+    //   z4b_cabin: forward + L/R.
+    if (window.currentZone4 && !window.currentZone4.isDead) {
+      var z4 = window.currentZone4,
+        z4phase = z4.phase;
+      if ("ring" === z4phase) {
+        ((opts.forward = !0), (opts.left = !0), (opts.right = !0));
+      } else if ("annex_room" === z4phase) {
+        opts.forward = !0;
+        var aT = "number" == typeof z4.annexRoomT ? z4.annexRoomT : 0,
+          locked =
+            "function" == typeof z4._isAltAnnexLocked && z4._isAltAnnexLocked();
+        !locked && aT >= 0.34 && aT <= 0.72 &&
+          ((opts.left = !0), (opts.right = !0));
+      } else if ("z4b_cabin" === z4phase) {
+        ((opts.forward = !0), (opts.left = !0), (opts.right = !0));
+      } else if (
+        "bay" === z4phase ||
+        "hallway" === z4phase ||
+        "annex_hallway" === z4phase ||
+        "annex_turn_in" === z4phase ||
+        "annex_exit_door" === z4phase
+      ) {
+        opts.forward = !0;
+      }
+      // entering_ring / reverse_entering_ring / reverse_hallway / reverse_bay
+      // and fog_in_descent are AUTOMATIC motion (engine4 sets moveAmp=0.55
+      // independent of input). Showing the forward indicator during them
+      // reads as a stuck "hold space" prompt — leave all bars dark.
+      // automatic phases (ascent / descent / fog / shake / fall / impact)
+      // leave all bars dark — no user input is meaningful.
+      return opts;
+    }
+    // Standalone modes kill engine1 but can leave window.activePOV stale.
+    // Do not let stale Zone1 POV light the red L/R scanner bars.
+    if (
+      window.__modeTheaterActive ||
+      window.__cabinTunnelActive ||
+      window.__modeDesertRoadActive
+    )
+      return opts;
+    if (window.isEngine1Dead) return opts;
+    // Zone1 — engine.js POV ring. activePOV mirrored to window from engine.js.
+    var pov = window.activePOV;
+    if ("laptop" === pov) {
+      opts.right = !0;
+      return opts;
+    }
+    ((opts.left = !0), (opts.right = !0));
+    // Forward = Space/Up/W does something useful from this POV.
+    //   "back" / "left" — always walk-forward (engine.js render gates).
+    //   "door" — only when __z4Route is armed (entry into the space elevator).
+    ("back" === pov ||
+      "left" === pov ||
+      ("door" === pov && window.__z4Route)) &&
+      (opts.forward = !0);
+    return opts;
+  }
+
+  // Poll every animation frame — cheap, and avoids invasive edits to engines.
+  (function __pollMovementOptions() {
+    try {
+      window.setMovementOptions(__computeMovementOptions());
+    } catch (e) {}
+    requestAnimationFrame(__pollMovementOptions);
+  })();
 })();

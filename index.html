@@ -522,32 +522,6 @@
       <div class="conky-line" id="cig-link"></div>
       <br />
       <div class="separator">-----------------------</div>
-      <div class="conky-line">UPCOMING SHOWS</div>
-      <div class="separator">-----------------------</div>
-      <br />
-      05/29/2026
-      <br />
-      LOS ANGELES, CA @ NOTHING USUAL
-      <br />
-      2347 E OLYMPIC BLVD
-      <br />
-      <br />
-      with
-      <br />
-      PRESSER
-      <br />
-      TRUE COMMANDO
-      <br />
-      xTIEDxTOxAxTREEx
-      <br />
-      CREMATION9
-      <br />
-      <br />
-      TICKETS: WERENICEKIDS.BIGCARTEL.COM
-      <br />
-      <div style="height: 0.6em"></div>
-      <div style="height: 0.6em"></div>
-      <div class="separator">-----------------------</div>
       <div class="conky-line">CONTACT</div>
       <div class="separator">-----------------------</div>
       <div class="conky-line">
@@ -660,10 +634,16 @@
         <div style="height: 0.6em"></div>
         <span style="font-size: 0.75rem">b. 1992</span><br /><span
           style="font-size: 0.75rem"
-          >d. ????</span
-        >
+          >d. ????<br></span>
         <div style="height: 0.6em"></div>
-        <span style="font-size: 0.65rem">current location: Chicago, IL</span>
+        <span style="font-size: 0.65rem">current location: Chicago, IL<br><br></span>
+                <span style="font-size: 0.5rem">   BATHROOM MIRROR:<br>
+RIGHT RIGHT LEFT LEFT<br>RIGHT RIGHT LEFT RIGHT<br>LEFT LEFT RIGHT RIGHT<br>LEFT LEFT RIGHT LEFT<br>LEFT LEFT LEFT LEFT<br><br>
+STATION:<br>
+CW x2<br>
+CCW x2<br>
+CW x1 + CCW x1<br>
+
         <p></p>
         <div id="legalNotice">
           <p><b>LEGAL NOTICE</b></p>
@@ -726,6 +706,7 @@
     <script src="modes/mode-annex.js"></script>
     <script src="modes/mode-laptop.js"></script>
     <script src="modes/mode-island.js"></script>
+    <script src="modes/mode-desert-road.js"></script>
     <script src="modes/mode-theater.js"></script>
     <script src="engine.js"></script>
     <script src="engine2.js"></script>
@@ -800,12 +781,8 @@
           if (on) {
             if (typeof updateSystemParams === "function") updateSystemParams();
             if (typeof updateIntelligence === "function") updateIntelligence();
-            setTimeout(function () {
-              if (typeof initBrainMonitor === "function") initBrainMonitor();
-            }, 100);
-          } else if (typeof stopBrainMonitor === "function") {
-            stopBrainMonitor();
           }
+          // Brain scanner is now detached from HUD toggle; it stays on screen.
         };
         const setDebugUI = (on) => {
           if (on && !debug() && typeof window.makeUI === "function") {

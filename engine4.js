@@ -45,13 +45,11 @@
         )
           return;
         const w = Math.max(1, window.innerWidth || 1),
-          h = Math.max(1, window.innerHeight || 1);
-        ((window.mx = z4ClampMouse(0.72 * (ev.clientX / w - 0.5), -0.24, 0.24)),
-          (window.my = z4ClampMouse(
-            0.48 * (ev.clientY / h - 0.5),
-            -0.15,
-            0.15,
-          )));
+          h = Math.max(1, window.innerHeight || 1),
+          nx = (w / 2 - ev.clientX) / (w / 2),
+          ny = (h / 2 - ev.clientY) / (h / 2);
+        ((window.mx = z4ClampMouse(nx * 0.24, -0.24, 0.24)),
+          (window.my = z4ClampMouse(ny * 0.15, -0.15, 0.15)));
       },
       { passive: !0 },
     ),
@@ -2212,50 +2210,15 @@
       );
     }
     _checkStationTurnThreshold(now) {
-      const inAnnexRoom = "annex_room" === this.phase,
-        inRing = "ring" === this.phase;
-      if (inAnnexRoom && this._isAltAnnexLocked())
-        return (
-          (this.turnInputLatch = 0),
-          (this.annexTurnInputLatch = 0),
-          void (window.__z4AnnexTurnRequested = 0)
-        );
-      if (!inRing && !inAnnexRoom)
-        return void (
-          Math.abs(this.cx) < 0.34 &&
-          ((this.turnInputLatch = 0),
-          (this.annexTurnInputLatch = 0),
-          (window.__z4TurnRequested = 0),
-          (window.__z4AnnexTurnRequested = 0))
-        );
+      // Drag/mouselook no longer drives station or annex-room turns — those
+      // are arrow-key only now (engine4 keydown handler sets
+      // window.__z4TurnRequested / __z4AnnexTurnRequested directly, and the
+      // ring/annex phase code in _updatePhase consumes them). We only clear
+      // the latch fields when a turn animation completes; do NOT clear the
+      // pending request from cx position or fresh arrow presses get clobbered.
       if (this.turnAnimating) return;
-      let dir = 0;
-      if (
-        (this.cx >= 0.76
-          ? (dir = 1)
-          : this.cx <= -0.76
-            ? (dir = -1)
-            : Math.abs(this.cx) < 0.3 &&
-              ((this.turnInputLatch = 0),
-              (this.annexTurnInputLatch = 0),
-              inRing && (window.__z4TurnRequested = 0),
-              inAnnexRoom && (window.__z4AnnexTurnRequested = 0)),
-        dir)
-      ) {
-        if (inAnnexRoom) {
-          if (
-            this.annexTurnInputLatch === dir &&
-            window.__z4AnnexTurnRequested === dir
-          )
-            return;
-          return (
-            (this.annexTurnInputLatch = dir),
-            void (window.__z4AnnexTurnRequested = dir)
-          );
-        }
-        (this.turnInputLatch === dir && window.__z4TurnRequested === dir) ||
-          ((this.turnInputLatch = dir), (window.__z4TurnRequested = dir));
-      }
+      if (!window.__z4TurnRequested) this.turnInputLatch = 0;
+      if (!window.__z4AnnexTurnRequested) this.annexTurnInputLatch = 0;
     }
     _ensureAnnexTripOverlay() {
       if (this.annexTripOverlay) return;
@@ -2541,10 +2504,31 @@
           lookFade = 1 - rawT * rawT * (3 - 2 * rawT);
         ((lookX *= lookFade), (lookY *= lookFade));
       }
+      // In bay/hallway and the auto-motion transition phases between hallway
+      // and ring, any residual lookX/lookY from a prior mouse position reads
+      // as a "stuck drag-turn" — the camera path is on rails, so leftover
+      // mouselook just rotates the view weirdly. Force zero for these phases.
+      if (
+        "bay" === this.phase ||
+        "hallway" === this.phase ||
+        "entering_ring" === this.phase ||
+        "reverse_entering_ring" === this.phase ||
+        "reverse_hallway" === this.phase ||
+        "reverse_bay" === this.phase ||
+        "fog_in_descent" === this.phase ||
+        "ascent" === this.phase ||
+        "descent" === this.phase ||
+        "docking_shake" === this.phase ||
+        "descent_shake" === this.phase ||
+        "fog_in" === this.phase ||
+        "fall" === this.phase
+      ) {
+        ((lookX = 0), (lookY = 0));
+      }
       fwd = this._rotateAroundAxis(fwd, [0, 1, 0], 1 * -lookX);
       let right = this._normalize(this._cross(fwd, [0, 1, 0]));
       const pitchReach = "ring" === this.phase ? 0.95 : 0.6;
-      ((fwd = this._rotateAroundAxis(fwd, right, -lookY * pitchReach)),
+      ((fwd = this._rotateAroundAxis(fwd, right, lookY * pitchReach)),
         (right = this._normalize(this._cross(fwd, [0, 1, 0]))));
       let up = this._normalize(this._cross(right, fwd));
       const moveHeld = z4SpaceHeld || z4TouchHeld;
@@ -3081,6 +3065,10 @@
           999,
         ),
         gl.uniform1f(gl.getUniformLocation(this.z4bCabinProg, "u_altRoute"), 0),
+        gl.uniform1f(
+          gl.getUniformLocation(this.z4bCabinProg, "u_oceanOutside"),
+          1,
+        ),
         gl.activeTexture(gl.TEXTURE0),
         gl.bindTexture(
           gl.TEXTURE_2D,
@@ -3278,6 +3266,10 @@
           0.001 * (now - (this.z4BlinkPeakTime || now)),
         ),
         gl.uniform1f(gl.getUniformLocation(this.z4bCabinProg, "u_altRoute"), 0),
+        gl.uniform1f(
+          gl.getUniformLocation(this.z4bCabinProg, "u_oceanOutside"),
+          1,
+        ),
         gl.activeTexture(gl.TEXTURE0),
         gl.bindTexture(
           gl.TEXTURE_2D,

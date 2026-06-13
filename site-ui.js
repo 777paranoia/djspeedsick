@@ -56,18 +56,14 @@ function toggleConky() {
         updateSystemParams(),
         updateIntelligence(),
         setTimeout(function () {
-          "function" == typeof initBrainMonitor && initBrainMonitor();
-        }, 100),
-        setTimeout(function () {
           e.style.transformOrigin = "top left";
-          var t = 0.9 * window.innerHeight,
+          var t = 0.5 * window.innerHeight,
             n = e.scrollHeight;
           e.style.transform = n > t ? "scale(" + (t / n).toFixed(3) + ")" : "";
         }, 150))
       : ((e.style.display = "none"),
         (e.style.transform = ""),
-        t.forEach((e) => (e.style.display = "none")),
-        "function" == typeof stopBrainMonitor && stopBrainMonitor()));
+        t.forEach((e) => (e.style.display = "none"))));
 }
 function toggleAbout() {
   const e = document.getElementById("aboutOverlay");
@@ -269,8 +265,8 @@ var __dHeld = !1,
       "transform:translate(-50%,-50%)",
       "width:auto",
       "height:auto",
-      "max-width:98vw",
-      "max-height:90vh",
+      "max-width:47vw",
+      "max-height:45vh",
       "object-fit:contain",
       "opacity:0",
       "display:none",
@@ -293,8 +289,8 @@ var __dHeld = !1,
         s = Math.min(maxW / w, maxH / h);
       ((o.style.width = Math.floor(w * s) + "px"),
         (o.style.height = Math.floor(h * s) + "px"),
-        (o.style.maxWidth = "98vw"),
-        (o.style.maxHeight = "90vh"));
+        (o.style.maxWidth = "47vw"),
+        (o.style.maxHeight = "45vh"));
     }),
     (o.src = e),
     o.complete && o.onload(),
@@ -460,6 +456,9 @@ function startMainSiteAudio() {
     startMainSiteAudio(),
     window.startTestSequence || (window.startWakeSequence = !0),
     setTimeout(function () {
+      "function" == typeof initBrainMonitor && initBrainMonitor();
+    }, 120),
+    setTimeout(function () {
       var e = document.getElementById("conky-sidebar");
       !e ||
         ("none" !== e.style.display && "" !== e.style.display) ||
@@ -487,6 +486,9 @@ function startMainSiteAudio() {
       bg && (bg.style.display = "none"),
       engineCanvas && (engineCanvas.style.display = "none"),
       startMainSiteAudio(),
+      setTimeout(function () {
+        "function" == typeof initBrainMonitor && initBrainMonitor();
+      }, 120),
       setTimeout(function () {
         var e = document.getElementById("conky-sidebar");
         !e ||

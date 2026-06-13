@@ -77,6 +77,7 @@ uniform float u_fractalActive;
 uniform float u_fractalSeed;
 uniform float u_blinkAge;
 uniform float u_altRoute;
+uniform float u_oceanOutside;
 
 float _mHash(float x){ return fract(sin(x*127.1)*43758.5453); }
 #ifdef MOBILE
@@ -325,8 +326,8 @@ void main() {
     vec3 ro = vec3(bobX + u_camX, bobY + snap * 0.08, u_camZ); 
     vec3 rd = normalize(vec3(uv.x, uv.y, 1.6));
     
-    float yaw   = u_yawOffset - (u_mouse.x * 0.42);
-    float pitch = u_mouse.y * 0.26;
+    float yaw   = u_yawOffset + (u_mouse.x * 0.42);
+    float pitch = -u_mouse.y * 0.26;
     rd.yz *= rot(pitch);
     rd.xz *= rot(yaw);   
 
@@ -730,24 +731,23 @@ float fbm(vec2 p){
 }
 
 vec3 cabinCloudTier(vec2 uv){
-  uv.x = fract(uv.x + u_time * 0.085);
+  uv.x = fract(uv.x + u_time * 0.026);
   float h = clamp(uv.y,0.0,1.0);
-  vec3 sky = mix(vec3(0.045,0.060,0.080),vec3(0.46,0.59,0.78),pow(h,0.82));
-  vec2 flow = vec2(uv.x * 3.6 + u_time * 0.20, uv.y * 2.2);
-  float base = fbm(flow * 1.30 + vec2(0.0,u_time*0.020));
-  float detail = fbm(flow * 4.80 + vec2(-u_time*0.26,3.1));
-  float shelves = 1.0 - smoothstep(0.02,0.20,abs(sin((uv.y + detail*0.055) * 18.0 + base * 3.2)));
-  float billow = smoothstep(0.42,0.72,base*0.66 + detail*0.24 + shelves*0.13);
-  float storm = smoothstep(0.08,0.62,1.0-uv.y) * smoothstep(0.54,0.78,base*0.58 + shelves*0.42);
-  float breakout = smoothstep(0.58,0.95,uv.y) * smoothstep(0.48,0.78,base);
-  vec3 lowCloud = mix(vec3(0.10,0.11,0.13),vec3(0.28,0.30,0.34),detail);
-  vec3 highCloud = mix(vec3(0.72,0.78,0.86),vec3(0.98,1.0,1.04),billow);
-  vec3 col = sky;
-  col = mix(col,lowCloud,storm*0.76);
-  col = mix(col,highCloud,billow*(0.45+0.30*h));
-  col += vec3(0.18,0.22,0.28)*breakout*0.24;
-  float streak = smoothstep(0.55,0.88,fbm(vec2(uv.x*22.0+u_time*1.9,uv.y*5.5)));
-  col += vec3(0.08,0.10,0.13)*streak*billow*0.18;
+  vec3 skyLow = vec3(0.018,0.022,0.038);
+  vec3 skyHigh = vec3(0.105,0.112,0.160);
+  vec3 col = mix(skyLow,skyHigh,pow(h,0.72));
+  float horizon = smoothstep(0.54,0.12,h);
+  col += vec3(0.115,0.070,0.050)*horizon*0.42;
+  vec2 flow = vec2(uv.x * 2.35 + u_time * 0.055, uv.y * 2.05);
+  float base = fbm(flow * 1.08 + vec2(0.0,u_time*0.010));
+  float detail = fbm(flow * 3.65 + vec2(-u_time*0.075,3.1));
+  float broad = smoothstep(0.50,0.78,base*0.62 + detail*0.25);
+  float veil = smoothstep(0.52,0.76,fbm(vec2(uv.x*1.65-u_time*0.030,uv.y*3.1+1.7)));
+  float cloud = (broad*0.42 + veil*0.24) * smoothstep(0.08,0.38,h) * (1.0-smoothstep(0.92,1.0,h));
+  vec3 cloudCol = mix(vec3(0.070,0.074,0.092),vec3(0.215,0.218,0.238),detail);
+  col = mix(col,cloudCol,clamp(cloud,0.0,0.54));
+  float fine = smoothstep(0.62,0.88,fbm(vec2(uv.x*8.5+u_time*0.19,uv.y*4.0)));
+  col += vec3(0.045,0.048,0.060)*fine*cloud*0.18;
   return max(col,vec3(0.0));
 }
 
@@ -768,36 +768,38 @@ void main(){
       mainNeedle,
       `
 vec3 cabinCloudTier(vec2 wuv, vec3 rd){
-    vec2 uv = fract(wuv + vec2(u_time * 0.075, 0.0));
+    vec2 uv = fract(wuv + vec2(u_time * 0.026, 0.0));
     float h = clamp(uv.y, 0.0, 1.0);
-    vec3 skyLow = vec3(0.045, 0.060, 0.080);
-    vec3 skyHigh = vec3(0.44, 0.58, 0.78);
-    vec3 topSky = mix(skyLow, skyHigh, pow(h, 0.82));
+    vec3 skyLow = vec3(0.018, 0.022, 0.038);
+    vec3 skyHigh = vec3(0.105, 0.112, 0.160);
+    vec3 col = mix(skyLow, skyHigh, pow(h, 0.72));
+    float horizon = smoothstep(0.54, 0.12, h);
+    col += vec3(0.115, 0.070, 0.050) * horizon * 0.42;
 
-    vec2 flow = vec2(uv.x * 3.4 + u_time * 0.18, uv.y * 2.15);
-    float base = fbm(flow * 1.35 + vec2(0.0, u_time * 0.020));
-    float detail = fbm(flow * 4.70 + vec2(-u_time * 0.26, 3.10));
-    float shelves = 1.0 - smoothstep(0.02, 0.20, abs(sin((uv.y + detail * 0.055) * 18.0 + base * 3.2)));
+    vec2 flow = vec2(uv.x * 2.35 + u_time * 0.055, uv.y * 2.05);
+    float base = fbm(flow * 1.08 + vec2(0.0, u_time * 0.010));
+    float detail = fbm(flow * 3.65 + vec2(-u_time * 0.075, 3.10));
+    float broad = smoothstep(0.50, 0.78, base * 0.62 + detail * 0.25);
+    float veil = smoothstep(0.52, 0.76, fbm(vec2(uv.x * 1.65 - u_time * 0.030, uv.y * 3.1 + 1.7)));
+    float cloud = (broad * 0.42 + veil * 0.24) * smoothstep(0.08, 0.38, h) * (1.0 - smoothstep(0.92, 1.0, h));
 
-    float billow = smoothstep(0.42, 0.72, base * 0.66 + detail * 0.24 + shelves * 0.13);
-    float storm = smoothstep(0.08, 0.60, 1.0 - uv.y) * smoothstep(0.54, 0.78, base * 0.58 + shelves * 0.42);
-    float breakout = smoothstep(0.58, 0.95, uv.y) * smoothstep(0.48, 0.78, base);
+    vec3 cloudCol = mix(vec3(0.070, 0.074, 0.092), vec3(0.215, 0.218, 0.238), detail);
+    col = mix(col, cloudCol, clamp(cloud, 0.0, 0.54));
 
-    vec3 lowCloud = mix(vec3(0.10, 0.11, 0.13), vec3(0.28, 0.30, 0.34), detail);
-    vec3 highCloud = mix(vec3(0.72, 0.78, 0.86), vec3(0.98, 1.00, 1.04), billow);
-    vec3 col = topSky;
-    col = mix(col, lowCloud, storm * 0.76);
-    col = mix(col, highCloud, billow * (0.45 + 0.30 * h));
-    col += vec3(0.18, 0.22, 0.28) * breakout * 0.24;
+    float fine = smoothstep(0.62, 0.88, fbm(vec2(uv.x * 8.5 + u_time * 0.19, uv.y * 4.0)));
+    col += vec3(0.045, 0.048, 0.060) * fine * cloud * 0.18;
 
-    float speedLine = smoothstep(0.55, 0.88, fbm(vec2(uv.x * 20.0 + u_time * 1.8, uv.y * 5.5)));
-    col += vec3(0.08, 0.10, 0.13) * speedLine * billow * 0.16;
-
-    float rail = smoothstep(0.010, 0.0, abs(fract(uv.x * 4.0 + u_time * 0.11) - 0.5) - 0.006);
-    rail *= smoothstep(0.15, 0.92, uv.y) * (1.0 - smoothstep(0.55, 0.95, abs(rd.y)));
-    col -= vec3(0.035, 0.045, 0.055) * rail * 0.20;
+    float rail = smoothstep(0.010, 0.0, abs(fract(uv.x * 4.0 + u_time * 0.045) - 0.5) - 0.006);
+    rail *= smoothstep(0.18, 0.88, uv.y) * (1.0 - smoothstep(0.55, 0.95, abs(rd.y)));
+    col -= vec3(0.022, 0.026, 0.033) * rail * 0.16;
 
     return max(col, vec3(0.0));
+}
+
+vec3 cabinOutsideColor(vec2 uv, vec3 rd){
+    vec3 evening = cabinCloudTier(uv, rd);
+    vec3 ocean = texture2D(u_voidTex, clamp(uv, 0.0, 1.0)).rgb;
+    return mix(evening, ocean, step(0.5, u_oceanOutside));
 }
 
 vec2 cabinWindowUV(vec3 p, vec3 rd){
@@ -810,19 +812,19 @@ vec2 cabinWindowUV(vec3 p, vec3 rd){
     )
     .replace(
       "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n            col = mix(texture2D(u_voidTex, vuv).rgb * 0.3, fogCol, 0.85);",
-      "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n            col = mix(cabinCloudTier(vuv, rd) * 0.48, fogCol, 0.62);",
+      "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n            col = mix(cabinOutsideColor(vuv, rd) * 0.48, fogCol, 0.62);",
     )
     .replace(
       "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                col = texture2D(u_voidTex, vuv).rgb * mix(1.0, 1.5, fogAmt);",
-      "vec2 vuv = cabinWindowUV(p, rd);\n                col = cabinCloudTier(vuv, rd) * mix(1.0, 1.18, fogAmt);",
+      "vec2 vuv = cabinWindowUV(p, rd);\n                col = cabinOutsideColor(vuv, rd) * mix(1.0, 1.18, fogAmt);",
     )
     .replace(
       "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                    col = texture2D(u_voidTex, vuv).rgb * 1.2;",
-      "vec2 vuv = vec2(clamp((p.x + FUSE_R) / (FUSE_R * 2.0), 0.0, 1.0), clamp((p.y - FLOOR_Y) / 1.9 + 0.18, 0.0, 1.0)); // z4bCockpitVoidOffset\n                    col = cabinCloudTier(vuv, rd) * 1.2;",
+      "vec2 vuv = vec2(clamp((p.x + FUSE_R) / (FUSE_R * 2.0), 0.0, 1.0), clamp((p.y - FLOOR_Y) / 1.9 + 0.18, 0.0, 1.0)); // z4bCockpitVoidOffset\n                    col = cabinOutsideColor(vuv, rd) * 1.2;",
     )
     .replace(
       "vec2 vuv = gl_FragCoord.xy / u_resolution.xy;\n                            col = texture2D(u_voidTex, vuv).rgb * 1.2;",
-      "vec2 vuv = cabinWindowUV(p, rd);\n                            col = cabinCloudTier(vuv, rd) * 1.2;",
+      "vec2 vuv = cabinWindowUV(p, rd);\n                            col = cabinOutsideColor(vuv, rd) * 1.2;",
     );
 }
 
@@ -1450,7 +1452,19 @@ class Zone3Engine {
           ? `translateX(${this.slideOffset.toFixed(1)}px)`
           : "");
   }
-  checkPOVThreshold(t, e) {
+  arrowSlide(synthMx) {
+    // Called by the global arrow-key handler in engine.js. Drives the same
+    // POV/door_look transitions that drag used to, but only on arrow press.
+    this.checkPOVThreshold(
+      window.lastNow || performance.now(),
+      synthMx,
+      !0,
+    );
+  }
+  checkPOVThreshold(t, e, fromArrow) {
+    // Drag/mouselook can no longer drive zone3 POV slides or door_look.
+    // Only arrow-key triggers (via arrowSlide → fromArrow=true) advance state.
+    if (!fromArrow) return;
     this.isZ4BRoute ||
       "idle" !== this.slideState ||
       t - this.povSwitchTime < 600 ||
@@ -1871,7 +1885,7 @@ class Zone3Engine {
         gl.viewport(0, 0, a, r),
         gl.clearColor(0, 0, 0, 1),
         gl.clear(gl.COLOR_BUFFER_BIT),
-        "cabin" === this.centerPhase && this.cloudProg
+        "cabin" === this.centerPhase && this.cloudProg && !this.isZ4BRoute
           ? (gl.useProgram(this.cloudProg),
             gl.uniform2f(
               gl.getUniformLocation(this.cloudProg, "u_resolution"),
@@ -2152,6 +2166,10 @@ class Zone3Engine {
           gl.uniform1f(
             gl.getUniformLocation(this.centerProg, "u_altRoute"),
             this.isAltRoute ? 1 : 0,
+          ),
+          gl.uniform1f(
+            gl.getUniformLocation(this.centerProg, "u_oceanOutside"),
+            this.isZ4BRoute ? 1 : 0,
           ),
           this._drawQuad(this.centerProg));
     if (!this.z3RedDone) {

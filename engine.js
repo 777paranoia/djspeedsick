@@ -975,7 +975,7 @@ var currentEngine = null,
   backEngine = null,
   doorEngine = null,
   laptopEngine = null,
-  activePOV = "center",
+  activePOV = ((window.activePOV = "center"), "center"),
   backZoom = 0,
   backZoomTarget = 0,
   doorZoom = 0,
@@ -1449,6 +1449,7 @@ function tickSlide(e) {
         (slideState = "black"),
         (slideStart = e),
         (activePOV = pendingPOV),
+        (window.activePOV = activePOV),
         (mx = 0),
         (my = 0),
         (cx = 0),
@@ -1474,33 +1475,36 @@ function tickSlide(e) {
       0 !== slideOffset ? `translateX(${slideOffset.toFixed(1)}px)` : "");
 }
 
-function checkPOVThreshold() {
-  "idle" === slideState &&
-    (lastNow - povSwitchTime < 600 ||
-      (isDragging &&
-        ("center" === activePOV
-          ? mx >= 1.24
-            ? beginSlide("left", 1)
-            : mx <= -1.24 && beginSlide("right", -1)
-          : "left" === activePOV
-            ? mx >= 1.14
-              ? beginSlide("door", 1)
-              : mx <= -1.14 && beginSlide("center", -1)
-            : "right" === activePOV
-              ? mx >= 1.14
-                ? beginSlide("center", 1)
-                : mx <= -1.24 && beginSlide("back", -1)
-              : "back" === activePOV
-                ? mx >= 1.14
-                  ? beginSlide("right", 1)
-                  : mx <= -1.24 && beginSlide("door", -1)
-                : "door" === activePOV
-                  ? mx >= 1.14
-                    ? beginSlide("back", 1)
-                    : mx <= -1.14 && beginSlide("left", -1)
-                  : "laptop" === activePOV &&
-                    mx <= -1.14 &&
-                    beginSlide("left", -1))));
+function checkPOVThreshold(synthMx) {
+  if ("idle" !== slideState) return;
+  if (lastNow - povSwitchTime < 600) return;
+  var m = typeof synthMx === "number" ? synthMx : null;
+  // Drag-driven POV threshold is disabled — only synthetic mx (from arrow keys)
+  // can trigger slides now. Free mouselook is capped well inside these thresholds.
+  if (null === m) return;
+  "center" === activePOV
+    ? m >= 1.24
+      ? beginSlide("left", 1)
+      : m <= -1.24 && beginSlide("right", -1)
+    : "left" === activePOV
+      ? m >= 1.14
+        ? beginSlide("door", 1)
+        : m <= -1.14 && beginSlide("center", -1)
+      : "right" === activePOV
+        ? m >= 1.14
+          ? beginSlide("center", 1)
+          : m <= -1.24 && beginSlide("back", -1)
+        : "back" === activePOV
+          ? m >= 1.14
+            ? beginSlide("right", 1)
+            : m <= -1.24 && beginSlide("door", -1)
+          : "door" === activePOV
+            ? m >= 1.14
+              ? beginSlide("back", 1)
+              : m <= -1.14 && beginSlide("left", -1)
+            : "laptop" === activePOV &&
+              m <= -1.14 &&
+              beginSlide("left", -1);
 }
 
 (window.addEventListener("message", function (e) {
@@ -1536,39 +1540,36 @@ function checkPOVThreshold() {
 }),
   (window.isEngine1Dead = !1));
 
+// Free-mouselook bounds: kept well inside every POV's slide threshold
+// (engine.js 1.14/1.24, engine2 1.24, engine3 my 0.5) so the camera can roam
+// the directional frame without ever triggering an unwanted POV transition.
+// POV slides are now driven exclusively by arrow keys (see keydown handler).
+const FREE_LOOK_MX = 1.1,
+  FREE_LOOK_MY = 0.45;
+
 const startDrag = (e, t, i) => {
-    (window.audioCtx &&
+    // Preserve audio unlock on first user gesture; no drag state to set anymore.
+    window.audioCtx &&
       "suspended" === window.audioCtx.state &&
-      window.audioCtx.resume(),
-      (e &&
-        ("secret-button" === e.target.id ||
-          e.target.closest("#conky-sidebar") ||
-          e.target.closest("#aboutOverlay"))) ||
-        ((isDragging = !0), (lastDragX = t), (lastDragY = i)));
+      window.audioCtx.resume();
   },
   doDrag = (e, t) => {
-    isDragging &&
-      ((mx -= ((e - lastDragX) / innerWidth) * 3),
-      (my -= ((t - lastDragY) / innerHeight) * 3),
-      (lastDragX = e),
-      (lastDragY = t),
-      (mx = Math.max(-1.35, Math.min(1.35, mx))),
-      (my = Math.max(-0.5, Math.min(0.5, my))),
+    // Free mouselook: cursor position drives mx/my directly, no click required.
+    // Both axes inverted — cursor-right pushes mx negative, cursor-down pushes
+    // my negative — matching the original drag direction (drag-right looked left).
+    // Skip when the laptop iframe owns the camera (it uses its own delta messages).
+    if ("laptop" === activePOV) return;
+    var w = window.innerWidth || 1,
+      h = window.innerHeight || 1,
+      nx = (w / 2 - e) / (w / 2),
+      ny = (h / 2 - t) / (h / 2);
+    ((mx = Math.max(-FREE_LOOK_MX, Math.min(FREE_LOOK_MX, nx * FREE_LOOK_MX))),
+      (my = Math.max(-FREE_LOOK_MY, Math.min(FREE_LOOK_MY, ny * FREE_LOOK_MY))),
       (window.mx = mx),
       (window.my = my));
   },
   endDrag = () => {
-    isDragging = !1;
-    const z4 = window.currentZone4;
-    (z4 &&
-      !z4.isDead &&
-      ("ascent" === z4.phase ||
-        "docking_shake" === z4.phase ||
-        "fog_in" === z4.phase ||
-        "fog_in_descent" === z4.phase ||
-        "descent" === z4.phase ||
-        "descent_shake" === z4.phase)) ||
-      ((mx = 0), (my = 0), (window.mx = 0), (window.my = 0));
+    // No-op: free mouselook never "ends", so don't snap the camera back to center.
   };
 
 function simStep(e) {
@@ -1720,6 +1721,7 @@ function render(e) {
           laptopEngine && (laptopEngine.destroy(), (laptopEngine = null)),
           destroyLaptopIframe(),
           (activePOV = "center"),
+          (window.activePOV = activePOV),
           (mx = 0),
           (my = 0),
           (cx = 0),
@@ -1752,6 +1754,7 @@ function render(e) {
       "idle" === slideState &&
       laptopZoom > 0.92 &&
       ((activePOV = "laptop"),
+      (window.activePOV = activePOV),
       (laptopZoom = 1),
       (laptopZoomTarget = 1),
       (mx = 0),
@@ -1900,6 +1903,7 @@ function render(e) {
             doorEngine && (doorEngine.destroy(), (doorEngine = null)),
             laptopEngine && (laptopEngine.destroy(), (laptopEngine = null)),
             (activePOV = "center"),
+            (window.activePOV = activePOV),
             (mx = 0),
             (my = 0),
             (cx = 0),
@@ -1953,6 +1957,7 @@ window.__wakeToLaptopFromTheater = function () {
       (cx = 0),
       (cy = 0),
       (activePOV = "laptop"),
+      (window.activePOV = activePOV),
       (slideState = "idle"),
       (slideOffset = 0),
       (pendingPOV = null),
@@ -2005,6 +2010,91 @@ var __e1SpaceHeld = !1;
   window.addEventListener("keyup", function (ev) {
     "Space" === ev.code && (ev.preventDefault(), (__e1SpaceHeld = !1));
   }),
+  // Up arrow and W mirror Space: dispatch a synthetic Space keyboard event
+  // so every engine's existing Space handler (engine.js __e1SpaceHeld,
+  // engine2 z2SpaceHeld, engine3 z3SpaceHeld, engine4 z4SpaceHeld) reacts.
+  // Per-key tracking so holding W + Up only fires one synthetic keyup once both
+  // are released.
+  (function () {
+    var __aliasHeld = { ArrowUp: !1, KeyW: !1 };
+    function __aliasAnyHeld() {
+      return __aliasHeld.ArrowUp || __aliasHeld.KeyW;
+    }
+    function __fireSpace(type) {
+      try {
+        var ev = new KeyboardEvent(type, {
+          code: "Space",
+          key: " ",
+          keyCode: 32,
+          which: 32,
+          bubbles: !0,
+          cancelable: !0,
+        });
+        window.dispatchEvent(ev);
+      } catch (e) {}
+    }
+    window.addEventListener(
+      "keydown",
+      function (ev) {
+        if (!(ev.code in __aliasHeld) || ev.repeat) return;
+        ev.preventDefault();
+        var wasHeld = __aliasAnyHeld();
+        __aliasHeld[ev.code] = !0;
+        wasHeld || __fireSpace("keydown");
+      },
+      !0,
+    );
+    window.addEventListener(
+      "keyup",
+      function (ev) {
+        if (!(ev.code in __aliasHeld)) return;
+        ev.preventDefault();
+        __aliasHeld[ev.code] = !1;
+        __aliasAnyHeld() || __fireSpace("keyup");
+      },
+      !0,
+    );
+  })(),
+  // Arrow-key POV sliding (replaces drag-sliding).
+  // ArrowLeft  → simulate mx>=+1.3 path (slide toward "left" neighbor).
+  // ArrowRight → simulate mx<=-1.3 path (slide toward "right" neighbor).
+  window.addEventListener("keydown", function (ev) {
+    if ("ArrowLeft" !== ev.code && "ArrowRight" !== ev.code) return;
+    ev.preventDefault();
+    var synth = "ArrowLeft" === ev.code ? 1.3 : -1.3,
+      now = performance.now();
+    if (
+      window.currentZone3 &&
+      !window.currentZone3.isDead &&
+      "function" == typeof window.currentZone3.arrowSlide
+    ) {
+      // Zone3 owns the input while alive (post-plane hallway, cabin door_look,
+      // alt-route center↔right etc.). arrowSlide forwards the synthetic mx into
+      // its checkPOVThreshold with the fromArrow gate set, so drag/mouselook
+      // no longer fires these — only arrow keys do.
+      try {
+        window.currentZone3.arrowSlide(synth);
+      } catch (e) {}
+      return;
+    }
+    if (
+      window.currentZone2 &&
+      !window.currentZone2.isDead &&
+      "function" == typeof window.currentZone2.checkPOVThreshold
+    ) {
+      try {
+        window.currentZone2.checkPOVThreshold(now, synth);
+      } catch (e) {}
+      return;
+    }
+    // Zone4 has its own keydown handler that sets window.__z4TurnRequested.
+    // Don't let the engine.js POV ring fire when zone4 is the active engine,
+    // or arrows would also trigger stray zone1 slides underneath.
+    if (window.currentZone4 && !window.currentZone4.isDead) return;
+    try {
+      checkPOVThreshold(synth);
+    } catch (e) {}
+  }),
   window.addEventListener("mousedown", (e) =>
     startDrag(e, e.clientX, e.clientY),
   ),
@@ -2051,3 +2141,37 @@ function __frameGovernor(e) {
 }
 
 requestAnimationFrame(__frameGovernor);
+
+window.__returnFromZ2 = function () {
+  try {
+    window.isEngine1Dead = !1;
+    phase = "open";
+    blink = 0;
+    flash = 0;
+    shake = 0;
+    timer = performance.now();
+    start = timer;
+    mx = 0; my = 0; cx = 0; cy = 0;
+    // Land in Z1 facing back (room_back view), center stays on current city mode
+    activePOV = "back";
+    window.activePOV = activePOV;
+    backZoom = 0;
+    backZoomTarget = 0;
+    // Rebuild center engine at whatever mode was active before Z2
+    if (!currentEngine) currentEngine = new ActiveMode(mode);
+    // Rebuild all side engines fresh
+    leftEngine && (leftEngine.destroy(), (leftEngine = null));
+    rightEngine && (rightEngine.destroy(), (rightEngine = null));
+    backEngine && (backEngine.destroy(), (backEngine = null));
+    laptopEngine && (laptopEngine.destroy(), (laptopEngine = null));
+    doorEngine && (doorEngine.destroy(), (doorEngine = null));
+    initSideEngines();
+    __lastFrameTime = 0;
+    requestAnimationFrame(__frameGovernor);
+  } catch (e) {
+    console.error("[__returnFromZ2] error:", e);
+    window.isEngine1Dead = !1;
+    __lastFrameTime = 0;
+    requestAnimationFrame(__frameGovernor);
+  }
+};
