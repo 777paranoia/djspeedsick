@@ -32,11 +32,10 @@
       },
       camera: { x: 0, y: 1.62, z: 0, fov: 72 },
       look: {
-        dragScaleX: 3,
-        dragScaleY: 3,
         mxClamp: 1.35,
         myClamp: 0.5,
-        turnThreshold: 1.14,
+        freeMouseX: 1.1,
+        freeMouseY: 0.45,
         pitchAmount: 0.28,
       },
       turn: { cooldownMs: 600, durationMs: 420 },
@@ -47,7 +46,7 @@
         stepPerFrameAt30: 0.045,
         exitHoldMs: 700,
       },
-      overlays: { opacity: 0.42, holdMs: 2200, fadeMs: 700 },
+      overlays: { opacity: 0.42, holdMs: 2200, fadeMs: 700, scale: 0.72 },
       clearColor: [0.005, 0.005, 0.007, 1],
     },
     TEXTURES_frontWall = ["wall2.png"],
@@ -756,9 +755,6 @@
         (this.my = 0),
         (this.cx = 0),
         (this.cy = 0),
-        (this.isDragging = !1),
-        (this.lastDragX = 0),
-        (this.lastDragY = 0),
         (this.facing = "N"),
         (this.yaw = YAW_FOR_FACING[this.facing]),
         (this.turnAnimating = !1),
@@ -777,6 +773,12 @@
         (this.lastNow = performance.now()),
         (this.startTime = performance.now()),
         (this.running = !0),
+        (this.forwardKeys = {
+          Space: !1,
+          ArrowUp: !1,
+          KeyW: !1,
+          KeyK: !1,
+        }),
         (window.z2SpaceHeld = !1),
         (window.z2TouchHeld = !1),
         (window.mx = 0),
@@ -790,7 +792,6 @@
           keyup: this.onKeyUp.bind(this),
           mousedown: this.onMouseDown.bind(this),
           mousemove: this.onMouseMove.bind(this),
-          mouseup: this.onMouseUp.bind(this),
           touchstart: this.onTouchStart.bind(this),
           touchmove: this.onTouchMove.bind(this),
           touchend: this.onTouchEnd.bind(this),
@@ -839,7 +840,7 @@
         program = createProgram(
           gl,
           MODE_VS,
-          "\n    precision mediump float;\n\n    uniform sampler2D u_tex;\n    uniform vec2 u_resolution;\n    uniform vec2 u_texSize;\n    uniform float u_opacity;\n\n    void main() {\n      vec2 uv = gl_FragCoord.xy / max(u_resolution, vec2(1.0));\n      float screenAspect = u_resolution.x / max(1.0, u_resolution.y);\n      float texAspect = u_texSize.x / max(1.0, u_texSize.y);\n      vec2 sampleUv = uv;\n\n      if (screenAspect > texAspect) {\n        float scale = screenAspect / texAspect;\n        sampleUv.x = (uv.x - 0.5) * scale + 0.5;\n      } else {\n        float scale = texAspect / screenAspect;\n        sampleUv.y = (uv.y - 0.5) * scale + 0.5;\n      }\n\n      if (\n        sampleUv.x < 0.0 ||\n        sampleUv.x > 1.0 ||\n        sampleUv.y < 0.0 ||\n        sampleUv.y > 1.0\n      ) {\n        discard;\n      }\n\n      vec4 tex = texture2D(u_tex, sampleUv);\n      gl_FragColor = vec4(tex.rgb, tex.a * u_opacity);\n    }\n  ",
+          "\n    precision mediump float;\n\n    uniform sampler2D u_tex;\n    uniform vec2 u_resolution;\n    uniform vec2 u_texSize;\n    uniform float u_opacity;\n    uniform float u_scale;\n\n    void main() {\n      vec2 uv = gl_FragCoord.xy / max(u_resolution, vec2(1.0));\n      float screenAspect = u_resolution.x / max(1.0, u_resolution.y);\n      float texAspect = u_texSize.x / max(1.0, u_texSize.y);\n      float overlayScale = clamp(u_scale, 0.05, 1.0);\n      vec2 frame = vec2(overlayScale);\n\n      if (screenAspect > texAspect) {\n        frame.x *= texAspect / screenAspect;\n      } else {\n        frame.y *= screenAspect / texAspect;\n      }\n\n      vec2 sampleUv = (uv - 0.5) / frame + 0.5;\n\n      if (\n        sampleUv.x < 0.0 ||\n        sampleUv.x > 1.0 ||\n        sampleUv.y < 0.0 ||\n        sampleUv.y > 1.0\n      ) {\n        discard;\n      }\n\n      vec4 tex = texture2D(u_tex, sampleUv);\n      gl_FragColor = vec4(tex.rgb, tex.a * u_opacity);\n    }\n  ",
           "tutorial overlays",
         ),
         buffer = gl.createBuffer();
@@ -857,23 +858,28 @@
             loadTexture(gl, ["overlay1.png"], [0, 0, 0, 0]),
             loadTexture(gl, ["overlay2.png"], [0, 0, 0, 0]),
             loadTexture(gl, ["overlay3.png"], [0, 0, 0, 0]),
-            loadTexture(gl, ["overlay4.png"], [0, 0, 0, 0]),
           ],
           aPos: gl.getAttribLocation(program, "p"),
           uTex: gl.getUniformLocation(program, "u_tex"),
           uResolution: gl.getUniformLocation(program, "u_resolution"),
           uTexSize: gl.getUniformLocation(program, "u_texSize"),
           uOpacity: gl.getUniformLocation(program, "u_opacity"),
+          uScale: gl.getUniformLocation(program, "u_scale"),
         }
       );
     }
     bindEvents() {
       (window.addEventListener("resize", this.bound.resize, { passive: !0 }),
-        window.addEventListener("keydown", this.bound.keydown, { passive: !1 }),
-        window.addEventListener("keyup", this.bound.keyup, { passive: !1 }),
+        window.addEventListener("keydown", this.bound.keydown, {
+          capture: !0,
+          passive: !1,
+        }),
+        window.addEventListener("keyup", this.bound.keyup, {
+          capture: !0,
+          passive: !1,
+        }),
         window.addEventListener("mousedown", this.bound.mousedown),
         window.addEventListener("mousemove", this.bound.mousemove),
-        window.addEventListener("mouseup", this.bound.mouseup),
         window.addEventListener("touchstart", this.bound.touchstart, {
           passive: !1,
         }),
@@ -889,11 +895,10 @@
     }
     unbindEvents() {
       (window.removeEventListener("resize", this.bound.resize),
-        window.removeEventListener("keydown", this.bound.keydown),
-        window.removeEventListener("keyup", this.bound.keyup),
+        window.removeEventListener("keydown", this.bound.keydown, !0),
+        window.removeEventListener("keyup", this.bound.keyup, !0),
         window.removeEventListener("mousedown", this.bound.mousedown),
         window.removeEventListener("mousemove", this.bound.mousemove),
-        window.removeEventListener("mouseup", this.bound.mouseup),
         window.removeEventListener("touchstart", this.bound.touchstart),
         window.removeEventListener("touchmove", this.bound.touchmove),
         window.removeEventListener("touchend", this.bound.touchend),
@@ -909,11 +914,58 @@
         ((this.canvas.width = w), (this.canvas.height = h)),
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height));
     }
+    consumeControlEvent(e) {
+      (e.preventDefault(),
+        e.stopImmediatePropagation && e.stopImmediatePropagation());
+    }
+    setForwardKey(code, held) {
+      code in this.forwardKeys &&
+        ((this.forwardKeys[code] = held),
+        (window.z2SpaceHeld =
+          this.forwardKeys.Space ||
+          this.forwardKeys.ArrowUp ||
+          this.forwardKeys.KeyW ||
+          this.forwardKeys.KeyK));
+    }
+    isLeftTurnKey(code) {
+      return "ArrowLeft" === code || "KeyA" === code || "KeyH" === code;
+    }
+    isRightTurnKey(code) {
+      return "ArrowRight" === code || "KeyD" === code || "KeyL" === code;
+    }
+    isForwardKey(code) {
+      return (
+        "Space" === code ||
+        "ArrowUp" === code ||
+        "KeyW" === code ||
+        "KeyK" === code
+      );
+    }
     onKeyDown(e) {
-      "Space" === e.code && (e.preventDefault(), (window.z2SpaceHeld = !0));
+      const code = e.code;
+      if ("Space" === code && !1 === e.isTrusted)
+        return void this.consumeControlEvent(e);
+      if (this.isLeftTurnKey(code) || this.isRightTurnKey(code)) {
+        const now = performance.now();
+        this.consumeControlEvent(e);
+        if (e.repeat) return;
+        (this.returning ||
+          this.turnAnimating ||
+          now - this.lastTurnTime < CONFIG.turn.cooldownMs) ||
+          (this.isLeftTurnKey(code)
+            ? this.turnLeft(now)
+            : this.turnRight(now));
+        return;
+      }
+      if (this.isForwardKey(code))
+        (this.consumeControlEvent(e), this.setForwardKey(code, !0));
     }
     onKeyUp(e) {
-      "Space" === e.code && (e.preventDefault(), (window.z2SpaceHeld = !1));
+      const code = e.code;
+      if ("Space" === code && !1 === e.isTrusted)
+        return void this.consumeControlEvent(e);
+      this.isForwardKey(code) &&
+        (this.consumeControlEvent(e), this.setForwardKey(code, !1));
     }
     mobileWalkZoneContains(x, y) {
       if ("function" == typeof window.__mobileWalkZoneContains)
@@ -921,50 +973,38 @@
       const i = window.innerWidth;
       return y >= 0.68 * window.innerHeight && x >= 0.3 * i && x <= 0.7 * i;
     }
-    startDrag(event, x, y) {
-      (event &&
-        event.target &&
-        ("secret-button" === event.target.id ||
-          event.target.closest("#conky-sidebar") ||
-          event.target.closest("#aboutOverlay"))) ||
-        (window.audioCtx &&
-          "suspended" === window.audioCtx.state &&
-          window.audioCtx.resume(),
-        (this.isDragging = !0),
-        (this.lastDragX = x),
-        (this.lastDragY = y),
-        (this.canvas.style.cursor = "grabbing"));
+    isUiTarget(event) {
+      const target = event && event.target;
+      return !!(
+        target &&
+        ("secret-button" === target.id ||
+          (target.closest &&
+            (target.closest("#conky-sidebar") ||
+              target.closest("#aboutOverlay"))))
+      );
     }
-    doDrag(x, y) {
-      this.isDragging &&
-        !this.returning &&
-        ((this.mx -=
-          ((x - this.lastDragX) / innerWidth) * CONFIG.look.dragScaleX),
-        (this.my -=
-          ((y - this.lastDragY) / innerHeight) * CONFIG.look.dragScaleY),
-        (this.lastDragX = x),
-        (this.lastDragY = y),
-        (this.mx = clamp(this.mx, -CONFIG.look.mxClamp, CONFIG.look.mxClamp)),
-        (this.my = clamp(this.my, -CONFIG.look.myClamp, CONFIG.look.myClamp)),
+    unlockAudio() {
+      window.audioCtx &&
+        "suspended" === window.audioCtx.state &&
+        window.audioCtx.resume();
+    }
+    setFreeLook(x, y) {
+      if (this.returning || IS_MOBILE) return;
+      const w = window.innerWidth || 1,
+        h = window.innerHeight || 1,
+        lookX = CONFIG.look.freeMouseX || 1.1,
+        lookY = CONFIG.look.freeMouseY || 0.45;
+      ((this.mx = clamp(((x - 0.5 * w) / (0.5 * w)) * lookX, -lookX, lookX)),
+        (this.my = clamp(((0.5 * h - y) / (0.5 * h)) * lookY, -lookY, lookY)),
         (window.mx = this.mx),
         (window.my = this.my));
     }
-    endDrag() {
-      ((this.isDragging = !1),
-        (this.mx = 0),
-        (this.my = 0),
-        (window.mx = 0),
-        (window.my = 0),
-        (this.canvas.style.cursor = "grab"));
-    }
     onMouseDown(e) {
-      this.startDrag(e, e.clientX, e.clientY);
+      this.isUiTarget(e) ||
+        (this.unlockAudio(), this.setFreeLook(e.clientX, e.clientY));
     }
     onMouseMove(e) {
-      this.doDrag(e.clientX, e.clientY);
-    }
-    onMouseUp() {
-      this.endDrag();
+      this.setFreeLook(e.clientX, e.clientY);
     }
     onTouchStart(e) {
       if (!e.touches || !e.touches.length) return;
@@ -976,7 +1016,8 @@
       }
       if (((window.z2TouchHeld = walkingTouch), !walkingTouch)) {
         const t = e.touches[0];
-        this.startDrag(e, t.clientX, t.clientY);
+        this.isUiTarget(e) ||
+          (this.unlockAudio(), this.setFreeLook(t.clientX, t.clientY));
       }
       e.preventDefault();
     }
@@ -990,15 +1031,15 @@
       }
       if (((window.z2TouchHeld = walkingTouch), !walkingTouch)) {
         const t = e.touches[0];
-        this.doDrag(t.clientX, t.clientY);
+        this.setFreeLook(t.clientX, t.clientY);
       }
       e.preventDefault();
     }
     onTouchEnd(e) {
-      (this.endDrag(), this.checkTouchWalk(e), e.preventDefault());
+      (this.checkTouchWalk(e), e.preventDefault());
     }
     onTouchCancel(e) {
-      (this.endDrag(), (window.z2TouchHeld = !1), e.preventDefault());
+      ((window.z2TouchHeld = !1), e.preventDefault());
     }
     checkTouchWalk(e) {
       if (!e.touches || !e.touches.length)
@@ -1059,15 +1100,6 @@
           window.dispatchEvent(new Event("mouseup")),
           window.dispatchEvent(new Event("touchend"))));
     }
-    checkTurnThreshold(now) {
-      this.isDragging &&
-        (this.tvZoom > 0.08 ||
-          this.turnAnimating ||
-          now - this.lastTurnTime < CONFIG.turn.cooldownMs ||
-          (this.mx >= CONFIG.look.turnThreshold
-            ? this.turnRight(now)
-            : this.mx <= -CONFIG.look.turnThreshold && this.turnLeft(now)));
-    }
     updateMovement(frameScale) {
       const wantsWalk = !(!window.z2SpaceHeld && !window.z2TouchHeld),
         tvZoomCfg = (CONFIG.tv && CONFIG.tv.zoom) || {},
@@ -1105,7 +1137,6 @@
       (dtMs > 250 || dtMs <= 0) && (dtMs = 33.33);
       const frameScale = dtMs / (IS_MOBILE ? 50 : 33.33);
       ((window.lastNow = now),
-        this.checkTurnThreshold(now),
         this.tickTurn(now),
         this.turnAnimating ||
           ((this.cx += 0.12 * (this.mx - this.cx)),
@@ -1405,6 +1436,7 @@
         gl.uniform2f(ov.uResolution, this.canvas.width, this.canvas.height),
         gl.uniform2f(ov.uTexSize, tex._w || 1, tex._h || 1),
         gl.uniform1f(ov.uOpacity, opacity),
+        gl.uniform1f(ov.uScale, CONFIG.overlays.scale || 0.72),
         gl.drawArrays(gl.TRIANGLES, 0, 3));
     }
     drawOverlays(now) {

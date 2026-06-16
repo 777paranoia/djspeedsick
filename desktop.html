@@ -323,60 +323,8 @@
         const vidWindow = document.getElementById("vidWindow");
         const vidImg = document.getElementById("vidImg");
         const vidClose = document.getElementById("vidClose");
-        let laptopSwipeStart = null;
-        let laptopSwipeSent = false;
-
-        function canSendLaptopSwipe() {
-          try {
-            return window.parent && window.parent !== window;
-          } catch (err) {
-            return false;
-          }
-        }
-
-        function sendLaptopSwipe() {
-          if (!canSendLaptopSwipe() || laptopSwipeSent) return;
-          laptopSwipeSent = true;
-          window.parent.postMessage({ type: "laptop-screen-swipe" }, "*");
-        }
-
-        document.addEventListener(
-          "pointerdown",
-          (e) => {
-            if (e.button !== 0) return;
-            laptopSwipeStart = {
-              x: e.clientX,
-              y: e.clientY,
-              target: e.target,
-            };
-            laptopSwipeSent = false;
-          },
-          true,
-        );
-
-        document.addEventListener(
-          "pointermove",
-          (e) => {
-            if (!laptopSwipeStart || laptopSwipeSent) return;
-            const dx = e.clientX - laptopSwipeStart.x;
-            const dy = e.clientY - laptopSwipeStart.y;
-            if (dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.45) {
-              sendLaptopSwipe();
-            }
-          },
-          true,
-        );
-
-        function resetLaptopSwipe() {
-          laptopSwipeStart = null;
-          laptopSwipeSent = false;
-        }
-
-        document.addEventListener("pointerup", resetLaptopSwipe, true);
-        document.addEventListener("pointercancel", resetLaptopSwipe, true);
-
-        // Forward drag deltas to parent so the laptop scene can pan/exit
-        let _dragLast = null;
+        // Forward cursor position to parent so the laptop scene can free-look
+        // without requiring a held mouse button.
         function _inParent() {
           try {
             return window.parent && window.parent !== window;
@@ -385,38 +333,14 @@
           }
         }
         document.addEventListener(
-          "pointerdown",
-          (e) => {
-            if (e.button !== 0 || !_inParent()) return;
-            _dragLast = { x: e.clientX, y: e.clientY };
-          },
-          true,
-        );
-        document.addEventListener(
           "pointermove",
           (e) => {
-            if (!_dragLast || !_inParent()) return;
-            const dx = e.clientX - _dragLast.x;
-            const dy = e.clientY - _dragLast.y;
-            _dragLast = { x: e.clientX, y: e.clientY };
-            window.parent.postMessage({ type: "laptop-drag", dx, dy }, "*");
-          },
-          true,
-        );
-        document.addEventListener(
-          "pointerup",
-          () => {
-            if (_dragLast && _inParent()) {
-              window.parent.postMessage({ type: "laptop-drag-end" }, "*");
-            }
-            _dragLast = null;
-          },
-          true,
-        );
-        document.addEventListener(
-          "pointercancel",
-          () => {
-            _dragLast = null;
+            if (!_inParent()) return;
+            const w = window.innerWidth || 1;
+            const h = window.innerHeight || 1;
+            const x = Math.max(-1, Math.min(1, (e.clientX - w / 2) / (w / 2)));
+            const y = Math.max(-1, Math.min(1, (h / 2 - e.clientY) / (h / 2)));
+            window.parent.postMessage({ type: "laptop-look", x, y }, "*");
           },
           true,
         );

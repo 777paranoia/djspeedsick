@@ -34,12 +34,21 @@ window.makeUI = function () {
       "border:1px solid #0f0",
     ].join(";")),
     (box.innerHTML =
-      '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="10">10: Neighborhood</option>\n        <option value="96">96: Door</option>\n        <option value="97">97: Back</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2blood">Z2 Post-Blink Blood</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button><br>\n      <button id="z4lap3">Z4 CW Lap3</button>\n      <button id="z4ccw">Z4 CCW Door</button>\n      <button id="z4annex">Z4 Annex</button><br>\n      <button id="z4altdoor">Z4 ALT Door</button>\n      <button id="z4altannex">Z4 ALT Annex</button>\n      <button id="z4altroom">Z4 ALT Room</button><br>\n      <button id="z4altbh">Z4 ALT BH</button>\n      <button id="z4bcabin">Z4B Cabin</button>\n      <button id="z4bisland">Z4B Island</button>\n      <button id="z4bmoai">Z4B Moai</button>\n      <button id="z4bdream">Z4B Dream</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#f6f;margin-bottom:3px;">THEATER:</div>\n      <button id="thtop">Top</button>\n      <button id="thfoot">Foot of Stage</button>\n      <button id="thstage">On Stage</button><br>\n      <button id="thwake">Impact &rarr; Laptop</button>\n    </div>\n  '),
+      '\n    <div>POV: <span id="pov">?</span></div>\n    <div>MODE: <span id="mode">?</span></div>\n    <div>SEQ: <span id="seq">?</span></div>\n    <div style="margin-top:6px">\n      <button id="prev">◀</button>\n      <select id="sel">\n        <option value="1">1: City</option>\n        <option value="2">2: Fractal</option>\n        <option value="3">3: BH</option>\n        <option value="4">4: Mirror</option>\n        <option value="5">5: Ocean</option>\n        <option value="6">6: Earth</option>\n        <option value="7">7: Deadcity</option>\n        <option value="8">8: Goreville</option>\n        <option value="9">9: Plane</option>\n        <option value="10">10: Neighborhood</option>\n        <option value="96">96: Door</option>\n        <option value="97">97: Back</option>\n        <option value="98">98: Left Room</option>\n        <option value="99">99: Right Room</option>\n      </select>\n      <button id="next">▶</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#0ff;margin-bottom:3px;">ZONE SKIP:</div>\n      <button id="z2hall">Z2 Hall</button>\n      <button id="z2bath">Z2 Bath</button>\n      <button id="z2blood">Z2 Post-Blink Blood</button>\n      <button id="z2bed">Z2 Bed</button><br>\n      <button id="z3bath">Z3 Bath</button>\n      <button id="z3hall">Z3 Hall</button>\n      <button id="z3cabin">Z3 Cabin</button><br>\n      <button id="z3bbed">Z3b Bed</button>\n      <button id="z3bvoid">Z3b Void</button>\n      <button id="z3besc">Z3b Esc</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#ff0;margin-bottom:3px;">Z4 / ROUTE 3:</div>\n      <button id="z2r3">Z2 R3 Bath</button>\n      <button id="z1door">Z1 Door</button><br>\n      <button id="z4elev">Z4 Elevator</button>\n      <button id="z4bay">Z4 Bay</button>\n      <button id="z4hall">Z4 Hall</button>\n      <button id="z4ring">Z4 Ring</button><br>\n      <button id="z4lap3">Z4 CW Lap1</button>\n      <button id="z4ccw">Z4 CCW Lap1</button>\n      <button id="z4annex">Z4 Annex</button><br>\n      <button id="z4altdoor">Z4 ALT Door</button>\n      <button id="z4altannex">Z4 ALT Annex</button>\n      <button id="z4altroom">Z4 ALT Room</button><br>\n      <button id="z4altbh">Z4 ALT BH</button>\n      <button id="z4bcabin">Z4B Cabin</button>\n      <button id="z4bisland">Z4B Island</button>\n      <button id="z4bmoai">Z4B Moai</button>\n      <button id="z4bdream">Z4B Dream</button><br>\n      <button id="z4desc">Z4 Descent</button>\n      <button id="z4fall">Z4 Fall</button>\n    </div>\n    <div class="dbg-section">\n      <div style="color:#f6f;margin-bottom:3px;">THEATER:</div>\n      <button id="thtop">Top</button>\n      <button id="thfoot">Foot of Stage</button>\n      <button id="thstage">On Stage</button><br>\n      <button id="thwake">Impact &rarr; Laptop</button>\n    </div>\n  '),
     document.body.appendChild(box),
     box.querySelectorAll(".dbg-section").forEach((section) => {
       section.style.cssText =
         "margin-top:6px;border-top:1px solid #0f0;padding-top:4px;";
     }));
+  const thWakeButton = box.querySelector("#thwake");
+  if (thWakeButton && !box.querySelector("#thz2hall")) {
+    const thZ2HallButton = document.createElement("button"),
+      thZ2HallBreak = document.createElement("br");
+    ((thZ2HallButton.id = "thz2hall"),
+      (thZ2HallButton.textContent = "LLRL Red -> S Hall"),
+      thWakeButton.parentNode.insertBefore(thZ2HallButton, thWakeButton),
+      thWakeButton.parentNode.insertBefore(thZ2HallBreak, thWakeButton));
+  }
   let __debugLastButtonClick = 0;
   (box.querySelectorAll("button").forEach((button) => {
     ((button.type = "button"),
@@ -565,6 +574,8 @@ window.makeUI = function () {
           (z4.lapCount = 0),
           (z4.clockwiseLapCount = 0),
           (z4.counterClockwiseLapCount = 0),
+          (z4.clockwiseEscapeReady = !1),
+          (z4.clockwiseEscapeReadyAt = 0),
           (z4.annexDoorOpen = !1));
       })),
     ($("z4lap3").onclick = () =>
@@ -578,11 +589,13 @@ window.makeUI = function () {
           (z4.lastRingU = u),
           (z4.ringDirection = 1),
           (z4.ringView = "path"),
-          (z4.signedRingTravel = 2 * Math.PI * 3),
+          (z4.signedRingTravel = 2 * Math.PI),
           (z4.ringTravel = Math.abs(z4.signedRingTravel)),
-          (z4.clockwiseLapCount = 3),
+          (z4.clockwiseLapCount = 1),
           (z4.counterClockwiseLapCount = 0),
-          (z4.lapCount = 3),
+          (z4.lapCount = 1),
+          (z4.clockwiseEscapeReady = !0),
+          (z4.clockwiseEscapeReadyAt = performance.now() - 500),
           (z4.annexDoorOpen = !1));
       })),
     ($("z4ccw").onclick = () =>
@@ -597,11 +610,13 @@ window.makeUI = function () {
           (z4.lastRingU = z4.ringU),
           (z4.ringDirection = -1),
           (z4.ringView = "path"),
-          (z4.signedRingTravel = 2 * -Math.PI * 3),
+          (z4.signedRingTravel = 2 * -Math.PI),
           (z4.ringTravel = Math.abs(z4.signedRingTravel)),
           (z4.clockwiseLapCount = 0),
-          (z4.counterClockwiseLapCount = 3),
-          (z4.lapCount = 3),
+          (z4.counterClockwiseLapCount = 1),
+          (z4.lapCount = 1),
+          (z4.clockwiseEscapeReady = !1),
+          (z4.clockwiseEscapeReadyAt = 0),
           (z4.annexDoorOpen = !0));
       })),
     ($("z4annex").onclick = () =>
@@ -818,9 +833,31 @@ window.makeUI = function () {
         ? window.__theaterDebugGoto(p)
         : console.error("[debug] mode-theater not loaded");
   };
+  function resetTheaterScene() {
+    window.__modeTheaterActive = !1;
+    if (
+      window.__modeTheaterScene &&
+      "function" == typeof window.__modeTheaterScene.destroy
+    )
+      try {
+        window.__modeTheaterScene.destroy();
+      } catch (e) {}
+    window.__modeTheaterScene = null;
+  }
+  function theaterZ2SouthHall() {
+    (clearDebugInput(), destroyActiveEngines(), resetTheaterScene());
+    "function" == typeof window.startModeTheater
+      ? window.startModeTheater({
+          fromZone2: !0,
+          walkHeld: !1,
+          touchHeld: !1,
+        })
+      : console.error("[debug] mode-theater not loaded");
+  }
   (($("thtop").onclick = () => theaterGoto(0.2)),
     ($("thfoot").onclick = () => theaterGoto(0.82)),
     ($("thstage").onclick = () => theaterGoto(1.2)),
+    ($("thz2hall").onclick = () => theaterZ2SouthHall()),
     ($("thwake").onclick = () => {
       "function" == typeof window.__wakeToLaptopFromTheater
         ? window.__wakeToLaptopFromTheater()
@@ -922,12 +959,9 @@ window.makeUI = function () {
             (z2.facing || "?");
           ("blood" === z2.seqState &&
             z2.leftBlinkCount >= 2 &&
-            !z2.z4RouteActive &&
-            !(z2.cabinTunnelRouteStep > 0)) &&
-            (info += " routes:5");
+            !z2.z4RouteActive) &&
+            (info += " routes:4");
           z2.z4RouteStep > 0 && (info += " z4:" + z2.z4RouteStep);
-          z2.cabinTunnelRouteStep > 0 &&
-            (info += " tunnel:" + z2.cabinTunnelRouteStep);
           "theater" === z2.zone3Route && (info += " theater");
           seqEl.innerText = info;
         } else seqEl.innerText = "engine1";

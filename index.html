@@ -638,7 +638,7 @@
         <div style="height: 0.6em"></div>
         <span style="font-size: 0.65rem">current location: Chicago, IL<br><br></span>
                 <span style="font-size: 0.5rem">   BATHROOM MIRROR:<br>
-RIGHT RIGHT LEFT LEFT<br>RIGHT RIGHT LEFT RIGHT<br>LEFT LEFT RIGHT RIGHT<br>LEFT LEFT RIGHT LEFT<br>LEFT LEFT LEFT LEFT<br><br>
+RIGHT RIGHT LEFT LEFT<br>RIGHT RIGHT LEFT RIGHT<br>LEFT LEFT RIGHT RIGHT<br>LEFT LEFT RIGHT LEFT<br><br>
 STATION:<br>
 CW x2<br>
 CCW x2<br>
@@ -691,7 +691,6 @@ CW x1 + CCW x1<br>
     <script src="modes/mode6.js"></script>
     <script src="modes/mode7.js"></script>
     <script src="modes/mode9.js"></script>
-    <script src="modes/mode-neighborhood.js"></script>
     <script src="modes/mode-right.js"></script>
     <script src="modes/mode-back.js"></script>
     <script src="modes/mode-left.js"></script>
@@ -706,6 +705,7 @@ CW x1 + CCW x1<br>
     <script src="modes/mode-annex.js"></script>
     <script src="modes/mode-laptop.js"></script>
     <script src="modes/mode-island.js"></script>
+    <script src="modes/mode-reverse-cabin-tunnel.js"></script>
     <script src="modes/mode-desert-road.js"></script>
     <script src="modes/mode-theater.js"></script>
     <script src="engine.js"></script>
@@ -801,51 +801,6 @@ CW x1 + CCW x1<br>
           setSiteUI(false);
           setDebugUI(clickCount % 2 === 1);
         };
-      })();
-    </script>
-    <script>
-      (() => {
-        let start = null;
-        let sent = false;
-
-        function sendSwipe() {
-          if (sent) return;
-          try {
-            if (window.parent && window.parent !== window) {
-              sent = true;
-              window.parent.postMessage({ type: "laptop-screen-swipe" }, "*");
-            }
-          } catch (err) {}
-        }
-
-        document.addEventListener(
-          "pointerdown",
-          (e) => {
-            if (e.button !== 0) return;
-            start = { x: e.clientX, y: e.clientY };
-            sent = false;
-          },
-          true,
-        );
-
-        document.addEventListener(
-          "pointermove",
-          (e) => {
-            if (!start || sent) return;
-            const dx = e.clientX - start.x;
-            const dy = e.clientY - start.y;
-            if (dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.45) sendSwipe();
-          },
-          true,
-        );
-
-        function reset() {
-          start = null;
-          sent = false;
-        }
-
-        document.addEventListener("pointerup", reset, true);
-        document.addEventListener("pointercancel", reset, true);
       })();
     </script>
   </body>

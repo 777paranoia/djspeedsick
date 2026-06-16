@@ -539,39 +539,92 @@
   function __movementNone() {
     return { forward: !1, back: !1, left: !1, right: !1 };
   }
+  function __markTurnRequest(opts, req) {
+    req < 0 ? (opts.left = !0) : req > 0 && (opts.right = !0);
+  }
+  function __navNow() {
+    return "undefined" != typeof performance && performance.now
+      ? performance.now()
+      : Date.now();
+  }
 
   function __computeMovementOptions() {
     var opts = __movementNone();
+    if (
+      window.currentTutorialRoom &&
+      window.currentTutorialRoom.running &&
+      !window.currentTutorialRoom.returning
+    ) {
+      var tut = window.currentTutorialRoom,
+        tutTurnReady =
+          !tut.turnAnimating &&
+          __navNow() - (tut.lastTurnTime || 0) >= 600;
+      if (tutTurnReady) ((opts.left = !0), (opts.right = !0));
+      tutTurnReady &&
+        ("S" === tut.facing || "E" === tut.facing) &&
+        (opts.forward = !0);
+      return opts;
+    }
     // Zone3 — per-phase mapping mirroring engine3 checkPOVThreshold gates:
     //   hallway: forward (z3SpaceHeld walks); arrow only goes where the ring
     //     allows. Normal route is a center↔left ring; alt route is center↔right.
-    //   cabin at exit row: L+R toggle door_look (and exit it). Otherwise forward.
-    //   void / falling / bh escape: no input.
+    //   cabin: forward/backward states walk with Space; exit-row arrows toggle
+    //     door_look, while crash/suction/entry states stay dark.
+    //   alt void: forward only before the escape/blink sequence takes over.
     if (window.currentZone3 && !window.currentZone3.isDead) {
       var z3 = window.currentZone3,
         z3phase = z3.centerPhase,
         z3pov = z3.activePOV,
         z3alt = !!z3.isAltRoute,
-        z3b = !!z3.isZ4BRoute;
+        z3b = !!z3.isZ4BRoute,
+        z3TurnReady =
+          "idle" === z3.slideState &&
+          __navNow() - (z3.povSwitchTime || 0) >= 600;
       if ("hallway" === z3phase) {
-        opts.forward = !0;
-        if (z3alt) {
+        "center" === z3pov &&
+          "number" == typeof z3.camZ &&
+          "number" == typeof z3.HALL_END_Z &&
+          z3.camZ < z3.HALL_END_Z - 0.01 &&
+          (opts.forward = !0);
+        if (z3TurnReady && z3alt) {
           "center" === z3pov && (opts.right = !0);
           "right" === z3pov && (opts.left = !0);
-        } else if (!z3b) {
+        } else if (z3TurnReady && !z3b) {
           "center" === z3pov && (opts.left = !0);
           "left" === z3pov && (opts.right = !0);
         }
       } else if ("cabin" === z3phase) {
-        opts.forward = !0;
+        var cs = z3.cabinState,
+          camZ3 = "number" == typeof z3.camZ ? z3.camZ : 0,
+          exitZ3 = "number" == typeof z3.EXIT_ROW_Z ? z3.EXIT_ROW_Z : 12,
+          cockpitZ3 = "number" == typeof z3.COCKPIT_Z ? z3.COCKPIT_Z : 20,
+          canCabinWalk =
+            "center" === z3pov &&
+            ((("forward" === cs || "walking_forward" === cs) &&
+              camZ3 < cockpitZ3 - 1.61) ||
+              ("backward" === cs && camZ3 > exitZ3 + 0.21));
+        canCabinWalk && (opts.forward = !0);
         var atExit =
           "number" == typeof z3.camZ &&
           "number" == typeof z3.EXIT_ROW_Z &&
           Math.abs(z3.camZ - z3.EXIT_ROW_Z) < 1.5;
-        if (atExit) {
-          var cs = z3.cabinState;
-          ("suction" !== cs && (opts.left = !0), (opts.right = !0));
+        if (z3TurnReady && !z3b && atExit) {
+          "door_look" === cs
+            ? ((opts.left = !0), (opts.right = !0))
+            : "suction" !== cs &&
+              "cockpit_turbulence" !== cs &&
+              "z4b_crash" !== cs &&
+              ((opts.left = !0), (opts.right = !0));
         }
+      } else if (
+        "void" === z3phase &&
+        z3alt &&
+        "center" === z3pov &&
+        "none" === (z3.bhEscapePhase || "none")
+      ) {
+        var bhPos = z3.bhCamPos || {};
+        ("number" != typeof bhPos.z || bhPos.z > -3049) &&
+          (opts.forward = !0);
       }
       return opts;
     }
@@ -587,40 +640,88 @@
         reached = !!z2.intersectionReached,
         camZ = "number" == typeof z2.camZ ? z2.camZ : 0,
         iZ = "number" == typeof z2.INTERSECTION_Z ? z2.INTERSECTION_Z : 0,
-        sZ = "number" == typeof z2.START_Z ? z2.START_Z : 0;
+        sZ = "number" == typeof z2.START_Z ? z2.START_Z : 0,
+        z2Busy =
+          "idle" !== z2.slideState ||
+          z2.readyForZone3 ||
+          z2.z3TransitionStarted ||
+          z2.z4TransitionStarted ||
+          z2.cabinTunnelTransitionStarted ||
+          z2.theaterBedroomHandoffStarted ||
+          z2.__z4AltBathroomTurnLanding;
+      if (z2Busy) return opts;
       ("N" === f && !reached && camZ < iZ - 0.01) ||
       ("S" === f && camZ > sZ + 0.01)
         ? (opts.forward = !0)
         : 0;
-      !reached && ("N" === f || "S" === f)
-        ? (opts.back = !0)
-        : ((opts.left = !0), (opts.right = !0));
+      if (__navNow() - (z2.povSwitchTime || 0) >= 600)
+        !reached && ("N" === f || "S" === f)
+          ? (opts.back = !0)
+          : reached && "NSEW".indexOf(f) >= 0
+            ? ((opts.left = !0), (opts.right = !0))
+            : 0;
       return opts;
     }
     // Zone4 — per-phase mapping mirroring engine4 phase walkers + turn gates:
     //   ascent / docking_shake / fog_in / fog_in_descent / descent /
     //     descent_shake / fall / impact: automatic motion, no input.
-    //   bay / hallway / annex_hallway / annex_turn_in / annex_exit_door /
-    //     entering_ring / reverse_entering_ring / reverse_hallway /
-    //     reverse_bay: walk-forward only.
-    //   ring: forward (walks ringU) + L/R (turn).
-    //   annex_room: forward; L/R only in the center zone of the room
-    //     (annexRoomT in [0.34, 0.72]) and unlocked.
-    //   z4b_cabin: forward + L/R.
+    //   bay / hallway / annex_hallway / annex_turn_in / annex_exit_door:
+    //     walk-forward only.
+    //   ring: path view can walk; side-window turns light L/R and 180 reversals
+    //     light bottom.
+    //   annex_room: path view walks while movement can change state; exact
+    //     single-side turns light L/R, 180 far-end turn lights bottom.
+    //   z4b_cabin: forward only during the user-walked forward cabin state.
     if (window.currentZone4 && !window.currentZone4.isDead) {
       var z4 = window.currentZone4,
         z4phase = z4.phase;
       if ("ring" === z4phase) {
-        ((opts.forward = !0), (opts.left = !0), (opts.right = !0));
+        if (!z4.turnAnimating)
+          if ("path" === (z4.ringView || "path")) {
+            opts.forward = !0;
+            var ringDir = z4.ringDirection || 1,
+              windowSide =
+                "function" == typeof z4._stationWindowSideAtRingU
+                  ? z4._stationWindowSideAtRingU()
+                  : 0;
+            [-1, 1].forEach(function (req) {
+              windowSide && windowSide === -ringDir * req
+                ? __markTurnRequest(opts, req)
+                : (opts.back = !0);
+            });
+          } else
+            "window" === z4.ringView &&
+              ((opts.left = !0), (opts.right = !0));
       } else if ("annex_room" === z4phase) {
-        opts.forward = !0;
         var aT = "number" == typeof z4.annexRoomT ? z4.annexRoomT : 0,
           locked =
-            "function" == typeof z4._isAltAnnexLocked && z4._isAltAnnexLocked();
-        !locked && aT >= 0.34 && aT <= 0.72 &&
-          ((opts.left = !0), (opts.right = !0));
+            "function" == typeof z4._isAltAnnexLocked && z4._isAltAnnexLocked(),
+          altRoute =
+            "function" == typeof z4._isAltAnnexRoute && z4._isAltAnnexRoute(),
+          roomView = z4.annexRoomView || "path",
+          roomDir = z4.annexRoomDir || 1,
+          centerZone = aT >= 0.34 && aT <= 0.72,
+          farZone = aT >= 0.965,
+          sequenceActive = !!z4.annexSequenceActive;
+        if (!z4.turnAnimating && "path" === roomView) {
+          if (roomDir < 0 && aT > 0.001) opts.forward = !0;
+          else if (roomDir > 0)
+            altRoute || sequenceActive
+              ? aT < 1 && (opts.forward = !0)
+              : aT < 0.965 && (opts.forward = !0);
+        }
+        if (!locked && !z4.turnAnimating)
+          if ("stage" === roomView && centerZone)
+            __markTurnRequest(opts, roomDir >= 0 ? 1 : -1);
+          else if ("path" === roomView) {
+            centerZone
+              ? __markTurnRequest(opts, roomDir >= 0 ? -1 : 1)
+              : farZone && !altRoute && !sequenceActive && (opts.back = !0);
+          }
       } else if ("z4b_cabin" === z4phase) {
-        ((opts.forward = !0), (opts.left = !0), (opts.right = !0));
+        "forward" === z4.z4bCabinState &&
+          ("number" != typeof z4.z4bCabinCamZ || z4.z4bCabinCamZ < 19.69) &&
+          (opts.forward = !0);
       } else if (
         "bay" === z4phase ||
         "hallway" === z4phase ||
@@ -640,21 +741,39 @@
     }
     // Standalone modes kill engine1 but can leave window.activePOV stale.
     // Do not let stale Zone1 POV light the red L/R scanner bars.
-    if (
-      window.__modeTheaterActive ||
-      window.__cabinTunnelActive ||
-      window.__modeDesertRoadActive
-    )
+    if (window.__modeTheaterActive) {
+      var theaterNav = window.__modeTheaterNav || {};
+      theaterNav.forward && (opts.forward = !0);
+      theaterNav.back && (opts.back = !0);
+      return opts;
+    }
+    if (window.__cabinTunnelActive || window.__modeDesertRoadActive)
       return opts;
     if (window.isEngine1Dead) return opts;
     // Zone1 — engine.js POV ring. activePOV mirrored to window from engine.js.
-    var pov = window.activePOV;
-    if ("laptop" === pov) {
-      opts.right = !0;
+    var e1 =
+        "function" == typeof window.__getEngine1NavState
+          ? window.__getEngine1NavState()
+          : null,
+      pov = e1 && e1.activePOV ? e1.activePOV : window.activePOV,
+      e1Phase = e1 && e1.phase ? e1.phase : "open",
+      e1Slide = e1 && e1.slideState ? e1.slideState : "idle",
+      e1TurnReady =
+        "idle" === e1Slide &&
+        __navNow() - ((e1 && e1.povSwitchTime) || 0) >= 600;
+    if ("idle" !== e1Slide || ("open" !== e1Phase && "center" === pov))
       return opts;
-    }
-    ((opts.left = !0), (opts.right = !0));
-    // Forward = Space/Up/W does something useful from this POV.
+    if (e1TurnReady)
+      "laptop" === pov
+        ? (opts.right = !0)
+        : "center" === pov ||
+            "left" === pov ||
+            "right" === pov ||
+            "back" === pov ||
+            "door" === pov
+          ? ((opts.left = !0), (opts.right = !0))
+          : 0;
+    // Forward = Space/Up/W/K does something useful from this POV.
     //   "back" / "left" — always walk-forward (engine.js render gates).
     //   "door" — only when __z4Route is armed (entry into the space elevator).
     ("back" === pov ||

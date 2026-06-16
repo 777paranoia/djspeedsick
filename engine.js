@@ -988,6 +988,20 @@ var currentEngine = null,
   hallucinationQuadBuf = null,
   hallucinationU = null,
   _tripAccum = 0;
+window.__getEngine1NavState = function () {
+  return {
+    phase: phase,
+    activePOV: activePOV,
+    slideState: slideState,
+    povSwitchTime: povSwitchTime,
+    lastNow: lastNow,
+    backZoom: backZoom,
+    doorZoom: doorZoom,
+    laptopZoom: laptopZoom,
+    inputReady: !!window.__initialCameraInputReady,
+    isDead: !!window.isEngine1Dead,
+  };
+};
 
 function engine1HallucinationTrip() {
   const level = window.__z4Route ? 2 : 1;
@@ -1415,10 +1429,7 @@ var slideState = "idle",
   slideDir = 0,
   slideOffset = 0,
   pendingPOV = null,
-  povSwitchTime = -9999,
-  isDragging = !1,
-  lastDragX = 0,
-  lastDragY = 0;
+  povSwitchTime = -9999;
 
 const BLINK_CLOSE_MS = 140,
   BLINK_HOLD_MS = 80,
@@ -1479,7 +1490,7 @@ function checkPOVThreshold(synthMx) {
   if ("idle" !== slideState) return;
   if (lastNow - povSwitchTime < 600) return;
   var m = typeof synthMx === "number" ? synthMx : null;
-  // Drag-driven POV threshold is disabled — only synthetic mx (from arrow keys)
+  // Mouse-look POV threshold is disabled — only synthetic mx (from arrow keys)
   // can trigger slides now. Free mouselook is capped well inside these thresholds.
   if (null === m) return;
   "center" === activePOV
@@ -1507,69 +1518,46 @@ function checkPOVThreshold(synthMx) {
               beginSlide("left", -1);
 }
 
+const FREE_LOOK_MX = 1.1,
+  FREE_LOOK_MY = 0.45;
+
 (window.addEventListener("message", function (e) {
   const t = e && e.data;
   if (!t) return;
-  if (
-    "laptop-screen-swipe" === t.type &&
-    "laptop" === activePOV &&
-    "idle" === slideState &&
-    !(laptopIframe && e.source !== laptopIframe.contentWindow)
-  ) {
-    ((mx = -1.35), (my = 0), (cx = 0), (cy = 0), (isDragging = !1));
-    beginSlide("left", -1);
-  } else if ("laptop-drag" === t.type && "laptop" === activePOV) {
-    isDragging = !0;
-    mx -= (t.dx / innerWidth) * 3;
-    my -= (t.dy / innerHeight) * 3;
-    mx = Math.max(-1.35, Math.min(1.35, mx));
-    my = Math.max(-0.5, Math.min(0.5, my));
+  if ("laptop-look" === t.type && "laptop" === activePOV) {
+    var lx = "number" == typeof t.x ? t.x : 0,
+      ly = "number" == typeof t.y ? t.y : 0;
+    mx = Math.max(-FREE_LOOK_MX, Math.min(FREE_LOOK_MX, lx * FREE_LOOK_MX));
+    my = Math.max(-FREE_LOOK_MY, Math.min(FREE_LOOK_MY, ly * FREE_LOOK_MY));
     window.mx = mx;
     window.my = my;
-  } else if ("laptop-drag-end" === t.type && "laptop" === activePOV) {
-    isDragging = !1;
-    if ("idle" === slideState) {
-      mx = 0;
-      my = 0;
-      cx = 0;
-      cy = 0;
-      window.mx = 0;
-      window.my = 0;
-    }
   }
 }),
   (window.isEngine1Dead = !1));
 
-// Free-mouselook bounds: kept well inside every POV's slide threshold
+// Free mouse-look bounds: kept well inside every POV's slide threshold
 // (engine.js 1.14/1.24, engine2 1.24, engine3 my 0.5) so the camera can roam
 // the directional frame without ever triggering an unwanted POV transition.
 // POV slides are now driven exclusively by arrow keys (see keydown handler).
-const FREE_LOOK_MX = 1.1,
-  FREE_LOOK_MY = 0.45;
-
-const startDrag = (e, t, i) => {
-    // Preserve audio unlock on first user gesture; no drag state to set anymore.
+const unlockPointerAudio = () => {
     window.audioCtx &&
       "suspended" === window.audioCtx.state &&
       window.audioCtx.resume();
   },
-  doDrag = (e, t) => {
-    // Free mouselook: cursor position drives mx/my directly, no click required.
-    // Both axes inverted — cursor-right pushes mx negative, cursor-down pushes
-    // my negative — matching the original drag direction (drag-right looked left).
-    // Skip when the laptop iframe owns the camera (it uses its own delta messages).
+  updateMouseLook = (e, t) => {
+    // Cursor position drives mx/my directly, no click required.
+    // Mouse-right/up produce positive look values; mouse-left/down negative.
+    // Skip when the laptop iframe owns the camera (it sends normalized look).
+    if (!__directionalInputReady()) return;
     if ("laptop" === activePOV) return;
     var w = window.innerWidth || 1,
       h = window.innerHeight || 1,
-      nx = (w / 2 - e) / (w / 2),
+      nx = (e - w / 2) / (w / 2),
       ny = (h / 2 - t) / (h / 2);
     ((mx = Math.max(-FREE_LOOK_MX, Math.min(FREE_LOOK_MX, nx * FREE_LOOK_MX))),
       (my = Math.max(-FREE_LOOK_MY, Math.min(FREE_LOOK_MY, ny * FREE_LOOK_MY))),
       (window.mx = mx),
       (window.my = my));
-  },
-  endDrag = () => {
-    // No-op: free mouselook never "ends", so don't snap the camera back to center.
   };
 
 function simStep(e) {
@@ -1652,6 +1640,7 @@ function render(e) {
     let t = Math.min((e - start) / 3e3, 1);
     ((l = 1 - Math.pow(1 - t, 3)), t >= 1 && ((phase = "open"), (timer = e)));
   }
+  __markInitialCameraInputReady();
   if (
     ("center" === activePOV &&
       ((9 === mode &&
@@ -1961,7 +1950,6 @@ window.__wakeToLaptopFromTheater = function () {
       (slideState = "idle"),
       (slideOffset = 0),
       (pendingPOV = null),
-      (isDragging = !1),
       (povSwitchTime = -9999),
       (laptopZoom = 1),
       (laptopZoomTarget = 1),
@@ -2003,65 +1991,122 @@ window.__wakeToLaptopFromTheater = function () {
 };
 
 var __e1SpaceHeld = !1;
+var __e1ForwardKeys = { Space: !1, ArrowUp: !1, KeyW: !1, KeyK: !1 };
+var __directionalKeysHeldBeforeReady = {};
+
+function __e1ForwardCode(ev) {
+  if (!ev) return "";
+  if (" " === ev.key || "Spacebar" === ev.key) return "Space";
+  return Object.prototype.hasOwnProperty.call(__e1ForwardKeys, ev.code)
+    ? ev.code
+    : "";
+}
+
+function __syncE1ForwardHeld() {
+  __e1SpaceHeld = !!(
+    __e1ForwardKeys.Space ||
+    __e1ForwardKeys.ArrowUp ||
+    __e1ForwardKeys.KeyW ||
+    __e1ForwardKeys.KeyK
+  );
+}
+
+window.__initialCameraInputReady = !!window.__initialCameraInputReady;
+
+function __markInitialCameraInputReady() {
+  if (
+    !window.__initialCameraInputReady &&
+    "open" === phase &&
+    currentEngine &&
+    !window.isEngine1Dead
+  )
+    window.__initialCameraInputReady = !0;
+}
+
+function __isDirectionalControlCode(code) {
+  return (
+    "Space" === code ||
+    "ArrowUp" === code ||
+    "KeyW" === code ||
+    "KeyK" === code ||
+    "ArrowDown" === code ||
+    "ArrowLeft" === code ||
+    "KeyA" === code ||
+    "KeyH" === code ||
+    "ArrowRight" === code ||
+    "KeyD" === code ||
+    "KeyL" === code
+  );
+}
+
+function __directionalInputReady() {
+  return (
+    !!window.__initialCameraInputReady ||
+    !!(
+      window.currentTutorialRoom &&
+      window.currentTutorialRoom.running &&
+      !window.currentTutorialRoom.returning
+    ) ||
+    !!window.__modeTheaterActive ||
+    !!window.__modeDesertRoadActive ||
+    !!window.__cabinTunnelActive ||
+    !!window.__z4bIslandActive
+  );
+}
+
+window.addEventListener("keydown", function (ev) {
+  if (!__isDirectionalControlCode(ev.code)) return;
+  if (__directionalKeysHeldBeforeReady[ev.code]) {
+    ev.preventDefault();
+    ev.stopImmediatePropagation && ev.stopImmediatePropagation();
+    return;
+  }
+  if (__directionalInputReady()) return;
+  __directionalKeysHeldBeforeReady[ev.code] = !0;
+  ev.preventDefault();
+  ev.stopImmediatePropagation && ev.stopImmediatePropagation();
+});
+
+window.addEventListener("keyup", function (ev) {
+  if (!__directionalKeysHeldBeforeReady[ev.code]) return;
+  delete __directionalKeysHeldBeforeReady[ev.code];
+  ev.preventDefault();
+  ev.stopImmediatePropagation && ev.stopImmediatePropagation();
+});
 
 (window.addEventListener("keydown", function (ev) {
-  "Space" === ev.code && (ev.preventDefault(), (__e1SpaceHeld = !0));
+  var code = __e1ForwardCode(ev);
+  code &&
+    (ev.preventDefault(),
+    __directionalInputReady() &&
+      ((__e1ForwardKeys[code] = !0), __syncE1ForwardHeld()));
 }),
   window.addEventListener("keyup", function (ev) {
-    "Space" === ev.code && (ev.preventDefault(), (__e1SpaceHeld = !1));
+    var code = __e1ForwardCode(ev);
+    code &&
+      (ev.preventDefault(),
+      (__e1ForwardKeys[code] = !1),
+      __syncE1ForwardHeld());
   }),
-  // Up arrow and W mirror Space: dispatch a synthetic Space keyboard event
-  // so every engine's existing Space handler (engine.js __e1SpaceHeld,
-  // engine2 z2SpaceHeld, engine3 z3SpaceHeld, engine4 z4SpaceHeld) reacts.
-  // Per-key tracking so holding W + Up only fires one synthetic keyup once both
-  // are released.
-  (function () {
-    var __aliasHeld = { ArrowUp: !1, KeyW: !1 };
-    function __aliasAnyHeld() {
-      return __aliasHeld.ArrowUp || __aliasHeld.KeyW;
-    }
-    function __fireSpace(type) {
-      try {
-        var ev = new KeyboardEvent(type, {
-          code: "Space",
-          key: " ",
-          keyCode: 32,
-          which: 32,
-          bubbles: !0,
-          cancelable: !0,
-        });
-        window.dispatchEvent(ev);
-      } catch (e) {}
-    }
-    window.addEventListener(
-      "keydown",
-      function (ev) {
-        if (!(ev.code in __aliasHeld) || ev.repeat) return;
-        ev.preventDefault();
-        var wasHeld = __aliasAnyHeld();
-        __aliasHeld[ev.code] = !0;
-        wasHeld || __fireSpace("keydown");
-      },
-      !0,
-    );
-    window.addEventListener(
-      "keyup",
-      function (ev) {
-        if (!(ev.code in __aliasHeld)) return;
-        ev.preventDefault();
-        __aliasHeld[ev.code] = !1;
-        __aliasAnyHeld() || __fireSpace("keyup");
-      },
-      !0,
-    );
-  })(),
-  // Arrow-key POV sliding (replaces drag-sliding).
+  // Key-driven POV sliding.
   // ArrowLeft  → simulate mx>=+1.3 path (slide toward "left" neighbor).
   // ArrowRight → simulate mx<=-1.3 path (slide toward "right" neighbor).
   window.addEventListener("keydown", function (ev) {
-    if ("ArrowLeft" !== ev.code && "ArrowRight" !== ev.code) return;
+    var leftKey =
+        "ArrowLeft" === ev.code || "KeyA" === ev.code || "KeyH" === ev.code,
+      rightKey =
+        "ArrowRight" === ev.code || "KeyD" === ev.code || "KeyL" === ev.code;
+    if (!leftKey && !rightKey) return;
     ev.preventDefault();
-    var synth = "ArrowLeft" === ev.code ? 1.3 : -1.3,
+    if (ev.repeat) return;
+    if (
+      window.__modeTheaterActive ||
+      window.__modeDesertRoadActive ||
+      window.__cabinTunnelActive ||
+      window.__z4bIslandActive
+    )
+      return;
+    var synth = leftKey ? 1.3 : -1.3,
       now = performance.now();
     if (
       window.currentZone3 &&
@@ -2070,8 +2115,8 @@ var __e1SpaceHeld = !1;
     ) {
       // Zone3 owns the input while alive (post-plane hallway, cabin door_look,
       // alt-route center↔right etc.). arrowSlide forwards the synthetic mx into
-      // its checkPOVThreshold with the fromArrow gate set, so drag/mouselook
-      // no longer fires these — only arrow keys do.
+      // its checkPOVThreshold with the fromArrow gate set, so mouse-look no
+      // longer fires these — only slide keys do.
       try {
         window.currentZone3.arrowSlide(synth);
       } catch (e) {}
@@ -2095,14 +2140,11 @@ var __e1SpaceHeld = !1;
       checkPOVThreshold(synth);
     } catch (e) {}
   }),
-  window.addEventListener("mousedown", (e) =>
-    startDrag(e, e.clientX, e.clientY),
-  ),
-  window.addEventListener("mousemove", (e) => doDrag(e.clientX, e.clientY)),
-  window.addEventListener("mouseup", endDrag),
+  window.addEventListener("mousedown", unlockPointerAudio),
+  window.addEventListener("mousemove", (e) => updateMouseLook(e.clientX, e.clientY)),
   window.addEventListener(
     "touchstart",
-    (e) => startDrag(e, e.touches[0].clientX, e.touches[0].clientY),
+    unlockPointerAudio,
     {
       passive: !0,
     },
@@ -2111,13 +2153,12 @@ var __e1SpaceHeld = !1;
     "touchmove",
     (e) => {
       e.touches.length > 0 &&
-        doDrag(e.touches[0].clientX, e.touches[0].clientY);
+        updateMouseLook(e.touches[0].clientX, e.touches[0].clientY);
     },
     {
       passive: !0,
     },
   ),
-  window.addEventListener("touchend", endDrag),
   canvas.addEventListener("pointerup", function (e) {
     window.__mobileDebug &&
       "open" === phase &&

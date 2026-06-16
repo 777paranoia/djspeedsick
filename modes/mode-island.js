@@ -85,42 +85,10 @@
       (window.__z4bIslandRelativeLookV2Installed ||
         ((window.__z4bIslandRelativeLookV2Installed = !0),
         window.addEventListener(
-          "mousedown",
-          function (e) {
-            (!0 === window.__z4bIslandActive || z4bCurrentProgramIsIsland()) &&
-              ((islandPointerDown = !0),
-              (islandHasLastClient = !0),
-              (islandLastClientX = e.clientX),
-              (islandLastClientY = e.clientY));
-          },
-          !0,
-        ),
-        window.addEventListener(
           "mousemove",
           function (e) {
-            if (!0 === window.__z4bIslandActive && islandPointerDown) {
-              var dx =
-                  "number" == typeof e.movementX
-                    ? e.movementX
-                    : e.clientX - islandLastClientX,
-                dy =
-                  "number" == typeof e.movementY
-                    ? e.movementY
-                    : e.clientY - islandLastClientY;
-              ((islandLastClientX = e.clientX),
-                (islandLastClientY = e.clientY),
-                (islandHasLastClient = !0),
-                (Math.abs(dx) > 0 || Math.abs(dy) > 0) &&
-                  islandDragDelta(dx, dy));
-            }
-          },
-          !0,
-        ),
-        window.addEventListener(
-          "mouseup",
-          function () {
-            !0 === window.__z4bIslandActive &&
-              ((islandPointerDown = !1), (islandHasLastClient = !1));
+            (!0 === window.__z4bIslandActive || z4bCurrentProgramIsIsland()) &&
+              islandPointerLook(e.clientX, e.clientY);
           },
           !0,
         ),
@@ -149,7 +117,10 @@
               var x = e.touches[0].clientX,
                 y = e.touches[0].clientY;
               (islandHasLastClient &&
-                islandDragDelta(x - islandLastClientX, y - islandLastClientY),
+                islandTouchLookDelta(
+                  x - islandLastClientX,
+                  y - islandLastClientY,
+                ),
                 (islandLastClientX = x),
                 (islandLastClientY = y),
                 (islandHasLastClient = !0));
@@ -207,6 +178,12 @@
       ((window.__z4bIslandEscapeState = escapeState),
         (window.__z4bIslandBlinkState = blinkState));
       var z4bIslandLevelToken = 0,
+        z4bIslandLevelForwardKeys = {
+          Space: !1,
+          ArrowUp: !1,
+          KeyW: !1,
+          KeyK: !1,
+        },
         z4bIslandLevelSpaceHeld = !1,
         z4bIslandLevelProgram = null,
         z4bIslandLevelQuad = null,
@@ -217,9 +194,15 @@
         window.addEventListener(
           "keydown",
           function (e) {
+            var key = z4bIslandLevelSpaceCode(e);
             !0 === window.__z4bIslandActive &&
-              z4bIslandLevelSpaceKey(e) &&
-              ((z4bIslandLevelSpaceHeld = !0),
+              key &&
+              ((z4bIslandLevelForwardKeys[key] = !0),
+              (z4bIslandLevelSpaceHeld =
+                z4bIslandLevelForwardKeys.Space ||
+                z4bIslandLevelForwardKeys.ArrowUp ||
+                z4bIslandLevelForwardKeys.KeyW ||
+                z4bIslandLevelForwardKeys.KeyK),
               e.preventDefault && e.preventDefault());
           },
           !0,
@@ -227,8 +210,14 @@
         window.addEventListener(
           "keyup",
           function (e) {
-            z4bIslandLevelSpaceKey(e) &&
-              ((z4bIslandLevelSpaceHeld = !1),
+            var key = z4bIslandLevelSpaceCode(e);
+            key &&
+              ((z4bIslandLevelForwardKeys[key] = !1),
+              (z4bIslandLevelSpaceHeld =
+                z4bIslandLevelForwardKeys.Space ||
+                z4bIslandLevelForwardKeys.ArrowUp ||
+                z4bIslandLevelForwardKeys.KeyW ||
+                z4bIslandLevelForwardKeys.KeyK),
               !0 === window.__z4bIslandActive &&
                 e.preventDefault &&
                 e.preventDefault());
@@ -701,7 +690,17 @@
     function islandClamp(v, lo, hi) {
       return Math.max(lo, Math.min(hi, v));
     }
-    function islandDragDelta(dx, dy) {
+    function islandPointerLook(x, y) {
+      var w = Math.max(1, window.innerWidth || 1),
+        h = Math.max(1, window.innerHeight || 1),
+        nx = (x - w / 2) / (w / 2),
+        ny = (h / 2 - y) / (h / 2);
+      ((islandTargetLookX = islandClamp(nx * 1.65, -1.65, 1.65)),
+        (islandTargetLookY = islandClamp(ny * 0.95, -0.95, 0.95)),
+        (islandLookReady = !0),
+        (islandLookLastT = performance.now()));
+    }
+    function islandTouchLookDelta(dx, dy) {
       (("number" == typeof dx && isFinite(dx)) || (dx = 0),
         ("number" == typeof dy && isFinite(dy)) || (dy = 0));
       var w = Math.max(1, window.innerWidth || 1),
@@ -1609,7 +1608,18 @@
       } else requestAnimationFrame(install);
     }
     function z4bIslandLevelSpaceKey(e) {
-      return e && ("Space" === e.code || " " === e.key || "Spacebar" === e.key);
+      return !!z4bIslandLevelSpaceCode(e);
+    }
+    function z4bIslandLevelSpaceCode(e) {
+      if (!e) return "";
+      if (
+        "Space" === e.code ||
+        "ArrowUp" === e.code ||
+        "KeyW" === e.code ||
+        "KeyK" === e.code
+      )
+        return e.code;
+      return " " === e.key || "Spacebar" === e.key ? "Space" : "";
     }
     function z4bIslandLevelCompile(type, source) {
       var sh = gl.createShader(type);

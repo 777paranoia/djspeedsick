@@ -668,6 +668,38 @@ function checkZ2Touch(e) {
   }
 }
 
+function isZ2ForwardKey(e) {
+  return !!(
+    e &&
+    ("Space" === e.code ||
+      "ArrowUp" === e.code ||
+      "KeyW" === e.code ||
+      "KeyK" === e.code ||
+      " " === e.key ||
+      "Spacebar" === e.key)
+  );
+}
+
+const z2ForwardKeys = {
+  Space: !!window.z2SpaceHeld,
+  ArrowUp: !1,
+  KeyW: !1,
+  KeyK: !1,
+};
+
+function getZ2ForwardCode(e) {
+  return e && (" " === e.key || "Spacebar" === e.key) ? "Space" : e.code;
+}
+
+function syncZ2ForwardHeld() {
+  window.z2SpaceHeld = !!(
+    z2ForwardKeys.Space ||
+    z2ForwardKeys.ArrowUp ||
+    z2ForwardKeys.KeyW ||
+    z2ForwardKeys.KeyK
+  );
+}
+
 ((window.z2SpaceHeld = window.z2SpaceHeld || !1),
   (window.z2TouchHeld = window.z2TouchHeld || !1),
   (window.__mobileWalkZoneContains =
@@ -677,15 +709,19 @@ function checkZ2Touch(e) {
       return t >= 0.68 * window.innerHeight && e >= 0.3 * i && e <= 0.7 * i;
     }),
   window.addEventListener("keydown", (e) => {
-    "Space" === e.code &&
+    isZ2ForwardKey(e) &&
       (e.preventDefault(),
-      (window.z2SpaceHeld = !0),
+      (z2ForwardKeys[getZ2ForwardCode(e)] = !0),
+      syncZ2ForwardHeld(),
       window.currentZone2 &&
         window.currentZone2.voidVid &&
         window.currentZone2.voidVid.play().catch(() => {}));
   }),
   window.addEventListener("keyup", (e) => {
-    "Space" === e.code && (e.preventDefault(), (window.z2SpaceHeld = !1));
+    isZ2ForwardKey(e) &&
+      (e.preventDefault(),
+      (z2ForwardKeys[getZ2ForwardCode(e)] = !1),
+      syncZ2ForwardHeld());
   }),
   window.addEventListener("touchstart", checkZ2Touch, {
     passive: !1,
@@ -1367,10 +1403,10 @@ class Zone2Engine {
       !this.__z4AltBathroomTurnLanding &&
       !("idle" !== this.slideState || e - this.povSwitchTime < 600)
     ) {
-      var dragLeft = t >= 1.24;
-      if (dragLeft || t <= -1.24) {
-        var dir = dragLeft ? "L" : "R",
-          slideDir = dragLeft ? 1 : -1,
+      var turnLeft = t >= 1.24;
+      if (turnLeft || t <= -1.24) {
+        var dir = turnLeft ? "L" : "R",
+          slideDir = turnLeft ? 1 : -1,
           newFacing = this._nextFacing(this.facing, dir);
         if (newFacing !== this.facing) {
           ((this.facing = newFacing),
@@ -1398,74 +1434,8 @@ class Zone2Engine {
               (this.rightBlinkCount = 0),
               (this.z3bTurbulenceStart = -1),
               (this.__z2BlackholePathActive = !1)));
-          var z4Consumed = !1,
-            cabinTunnelConsumed = !1;
-          if (
-            "blood" === this.seqState ||
-            this.z4RouteActive ||
-            this.cabinTunnelRouteActive
-          ) {
-            var tunnelStep = this.cabinTunnelRouteStep || 0,
-              tunnelExpect = [
-                {
-                  dir: "L",
-                  to: "S",
-                },
-                {
-                  dir: "L",
-                  to: "E",
-                },
-                {
-                  dir: "L",
-                  to: "N",
-                },
-                {
-                  dir: "L",
-                  to: "W",
-                },
-                {
-                  dir: "R",
-                  to: "N",
-                },
-              ][tunnelStep];
-            tunnelExpect &&
-            newFacing === tunnelExpect.to &&
-            dir === tunnelExpect.dir
-              ? tunnelStep >= 4
-                ? ((this.seqState = "cabin_tunnel"),
-                  (this.zone3Route = "cabin_tunnel"),
-                  (this.cabinTunnelRouteStep = 5),
-                  (this.cabinTunnelRouteActive = !1),
-                  (this.z4RouteStep = 0),
-                  (this.z4RouteActive = !1),
-                  (cabinTunnelConsumed = !0),
-                  console.log("[CabinTunnelRoute] COMPLETE -> cabin tunnel"),
-                  this.beginCabinTunnelTransition &&
-                    this.beginCabinTunnelTransition())
-                : tunnelStep >= 3
-                  ? ((this.seqState = "blood"),
-                    (this.zone3Route = "z3"),
-                    (this.cabinTunnelRouteStep = 4),
-                    (this.cabinTunnelRouteActive = !0),
-                    (this.cabinTunnelTransitionStarted = !1),
-                    (this.z4RouteStep = 0),
-                    (this.z4RouteActive = !1),
-                    this.setLeftRoomTexture && this.setLeftRoomTexture("blood"),
-                    (cabinTunnelConsumed = !0),
-                    console.log(
-                      "[CabinTunnelRoute] ARMED -> bathroom blood; R/N starts tunnel",
-                    ))
-                : ((this.cabinTunnelRouteStep = tunnelStep + 1),
-                  (this.cabinTunnelRouteActive = !0),
-                  (cabinTunnelConsumed = !0),
-                  console.log(
-                    "[CabinTunnelRoute] MATCH -> step now " +
-                      this.cabinTunnelRouteStep,
-                  ))
-              : this.cabinTunnelRouteStep > 0 &&
-                (console.log("[CabinTunnelRoute] RESET — wrong turn"),
-                (this.cabinTunnelRouteStep = 0),
-                (this.cabinTunnelRouteActive = !1));
+          var z4Consumed = !1;
+          if ("blood" === this.seqState || this.z4RouteActive) {
             var step = this.z4RouteStep;
             if (step < 3) {
               var expect = [
@@ -1544,7 +1514,7 @@ class Zone2Engine {
               " z4Active=" +
                 this.z4RouteActive,
             );
-          (z4Consumed || cabinTunnelConsumed) ||
+          z4Consumed ||
             ("E" === newFacing && "blood" === this.seqState
               ? ((this.seqState = "bedroom_visited"),
                 (this.zone3Route = "z3"),
@@ -2286,17 +2256,16 @@ class Zone2Engine {
           (window.__z2CabinTunnelRoute = !0),
           (window.__z4Route = !1),
           (window.__z4RouteActive = !1));
-        "function" == typeof window.startModeDesertRoad
-          ? window.startModeDesertRoad({
-              fromZone2: !0,
-              startWithCabinTunnel: !0,
-              roadsideIntro: !0,
-              startZ: 168,
-              speed: 22,
-              boost: 3,
-              autopilot: !0,
-            })
-          : console.error("[CabinTunnelRoute] mode-desert-road is not loaded");
+        if ("function" != typeof window.startDesertDreamTunnel) {
+          console.error(
+            "[CabinTunnelRoute] cabin-tunnel or desert-road not loaded",
+          );
+        } else {
+          window.startDesertDreamTunnel({
+            fromZone2: !0,
+            startZ: 168,
+          });
+        }
         setTimeout(function () {
           fadeEl.style.opacity = "0";
           setTimeout(function () {

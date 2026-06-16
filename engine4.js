@@ -1,6 +1,35 @@
 !(function () {
   let z4SpaceHeld = window.z4SpaceHeld || !1,
     z4TouchHeld = window.z4TouchHeld || !1;
+  const z4ForwardKeys = {
+    Space: !!window.z4SpaceHeld,
+    ArrowUp: !1,
+    KeyW: !1,
+    KeyK: !1,
+  };
+  function isZ4ForwardKey(e) {
+    return !!(e && e.code in z4ForwardKeys);
+  }
+  function syncZ4ForwardHeld() {
+    z4SpaceHeld =
+      z4ForwardKeys.Space ||
+      z4ForwardKeys.ArrowUp ||
+      z4ForwardKeys.KeyW ||
+      z4ForwardKeys.KeyK;
+    window.z4SpaceHeld = z4SpaceHeld;
+  }
+  function isZ4LeftTurnKey(e) {
+    return (
+      e &&
+      ("ArrowLeft" === e.code || "KeyA" === e.code || "KeyH" === e.code)
+    );
+  }
+  function isZ4RightTurnKey(e) {
+    return (
+      e &&
+      ("ArrowRight" === e.code || "KeyD" === e.code || "KeyL" === e.code)
+    );
+  }
   function checkZ4Touch(ev) {
     if (!ev.touches) return;
     let held = !1;
@@ -46,7 +75,7 @@
           return;
         const w = Math.max(1, window.innerWidth || 1),
           h = Math.max(1, window.innerHeight || 1),
-          nx = (w / 2 - ev.clientX) / (w / 2),
+          nx = (ev.clientX - w / 2) / (w / 2),
           ny = (h / 2 - ev.clientY) / (h / 2);
         ((window.mx = z4ClampMouse(nx * 0.24, -0.24, 0.24)),
           (window.my = z4ClampMouse(ny * 0.15, -0.15, 0.15)));
@@ -54,23 +83,27 @@
       { passive: !0 },
     ),
     window.addEventListener("keydown", function (e) {
-      if (
-        ("Space" === e.code &&
-          (e.preventDefault(), (z4SpaceHeld = !0), (window.z4SpaceHeld = !0)),
-        "ArrowLeft" === e.code || "ArrowRight" === e.code)
-      ) {
+      if (isZ4ForwardKey(e)) {
+        e.preventDefault();
+        z4ForwardKeys[e.code] = !0;
+        syncZ4ForwardHeld();
+      }
+      if (isZ4LeftTurnKey(e) || isZ4RightTurnKey(e)) {
+        e.preventDefault();
+        if (e.repeat) return;
         const z4 = window.currentZone4;
+        const req = isZ4LeftTurnKey(e) ? -1 : 1;
         z4 && !z4.isDead && "ring" === z4.phase
-          ? (window.__z4TurnRequested = "ArrowLeft" === e.code ? -1 : 1)
+          ? (window.__z4TurnRequested = req)
           : z4 &&
             !z4.isDead &&
             "annex_room" === z4.phase &&
-            (window.__z4AnnexTurnRequested = "ArrowLeft" === e.code ? -1 : 1);
+            (window.__z4AnnexTurnRequested = req);
       }
     }),
     window.addEventListener("keyup", function (e) {
-      "Space" === e.code &&
-        (e.preventDefault(), (z4SpaceHeld = !1), (window.z4SpaceHeld = !1));
+      isZ4ForwardKey(e) &&
+        (e.preventDefault(), (z4ForwardKeys[e.code] = !1), syncZ4ForwardHeld());
     }),
     window.addEventListener("touchstart", checkZ4Touch, { passive: !1 }),
     window.addEventListener("touchmove", checkZ4Touch, { passive: !1 }),
@@ -154,6 +187,8 @@
         (this.totalCounterClockwiseTravel = 0),
         (this.totalClockwiseLapCount = 0),
         (this.totalCounterClockwiseLapCount = 0),
+        (this.clockwiseEscapeReady = !1),
+        (this.clockwiseEscapeReadyAt = 0),
         (this.altAnnexPatternStage = 0),
         (this.altAnnexCwTravel = 0),
         (this.altAnnexCcwTravel = 0),
@@ -1521,7 +1556,10 @@
             this.counterClockwiseLapCount,
           )),
           this._updateAltAnnexLapPattern(deltaU, now));
-        var normalAnnexDoorOpen = this.counterClockwiseLapCount >= 2;
+        if (this.clockwiseLapCount >= 1 && !this.clockwiseEscapeReady)
+          ((this.clockwiseEscapeReady = !0),
+            (this.clockwiseEscapeReadyAt = now));
+        var normalAnnexDoorOpen = this.counterClockwiseLapCount >= 1;
         ((this.annexDoorOpen = normalAnnexDoorOpen || this.altAnnexDoorOpen),
           this.lapCount >= 99 &&
             ((this.blackholeIntensity = 1), (this.blackholeVisible = !0)));
@@ -1557,7 +1595,14 @@
               (this.ringView = "path"),
               (this.turnAnimating = !1),
               (this.turnInputLatch = 0)));
-        } else if (this.clockwiseLapCount >= 2) {
+        } else if (
+          this.clockwiseEscapeReady &&
+          now - (this.clockwiseEscapeReadyAt || now) >= 450 &&
+          moving &&
+          !this.turnAnimating &&
+          "path" === this.ringView &&
+          this.ringDirection > 0
+        ) {
           var entranceU = (this.stationSection + 0.5) * SECTION_ANGLE_LAP,
             angDist = Math.abs(this.ringU - entranceU);
           (angDist > Math.PI && (angDist = 2 * Math.PI - angDist),
@@ -2210,7 +2255,7 @@
       );
     }
     _checkStationTurnThreshold(now) {
-      // Drag/mouselook no longer drives station or annex-room turns — those
+      // Mouse-look no longer drives station or annex-room turns — those
       // are arrow-key only now (engine4 keydown handler sets
       // window.__z4TurnRequested / __z4AnnexTurnRequested directly, and the
       // ring/annex phase code in _updatePhase consumes them). We only clear
@@ -2506,8 +2551,8 @@
       }
       // In bay/hallway and the auto-motion transition phases between hallway
       // and ring, any residual lookX/lookY from a prior mouse position reads
-      // as a "stuck drag-turn" — the camera path is on rails, so leftover
-      // mouselook just rotates the view weirdly. Force zero for these phases.
+      // as a stuck turn — the camera path is on rails, so leftover mouse-look
+      // just rotates the view weirdly. Force zero for these phases.
       if (
         "bay" === this.phase ||
         "hallway" === this.phase ||

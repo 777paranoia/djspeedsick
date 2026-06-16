@@ -47,9 +47,13 @@ uniform vec4 tubeC;
 float tubeShell(vec3 p){
   vec3 pa = p - tubeA.xyz;
   float s = dot(pa, tubeB.xyz);
-  float radial = length(pa - tubeB.xyz * s);
-  return max(abs(radial - tubeC.x) - tubeC.y,
-             abs(s - tubeB.w * 0.5) - tubeB.w * 0.5);
+  vec3 rp = pa - tubeB.xyz * s;
+  float radial = length(rp);
+  float a = atan(rp.y, rp.x);
+  float tear = 0.48 * sin(a * 5.0 + 0.7) + 0.26 * sin(a * 11.0 - 1.4);
+  float side = abs(radial - tubeC.x) - tubeC.y;
+  float axial = max(-s - tear, s - tubeB.w);
+  return max(side, axial);
 }
 
 float trenchCut(vec2 xz, float h){
@@ -332,17 +336,21 @@ vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
   float edgeDust = shoulder * (1.0 - road);
   col = mix(col, sandCol * 0.78 + roadCol * 0.22, edgeDust * 0.45);
 
-  // Buried fuselage: cut interior + tail get airliner hull instead of sand.
+  // Buried fuselage: the other end of the cabin tunnel. Soot-dark inside,
+  // pale scuffed airliner skin at the broken lip.
   float hullM = trenchMask(sp.xz);
   if(hullM > 0.001){
     vec2 hrel = sp.xz - trenchA.xy;
     float halong = dot(hrel, -trenchA.zw);
-    vec3 hull = vec3(0.44, 0.46, 0.50);
+    vec3 hull = mix(vec3(0.68, 0.69, 0.67), vec3(0.070, 0.068, 0.070),
+                    smoothstep(0.4, 5.8, halong));
     float rib = smoothstep(0.78, 0.94, 0.5 + 0.5 * sin(halong * 4.4));
-    hull *= 0.72 + 0.22 * rib;                       // frame ribs
-    hull *= 0.88 + 0.24 * fbm(sp.xz * 6.0);          // scuffed paint
-    hull = mix(hull, sandCol, 0.18);                 // dust film
-    col = mix(col, hull, hullM * 0.92);
+    hull *= 0.70 + 0.34 * rib;                       // frame ribs
+    hull *= 0.82 + 0.34 * fbm(sp.xz * 6.0);          // scuffed, grimy
+    float deep = smoothstep(0.5, 6.5, halong);       // toward the buried tail
+    hull += vec3(0.055, 0.014, 0.011) * deep;        // dull red cabin glow
+    hull = mix(hull, sandCol, 0.05);                 // faint dust film at lip
+    col = mix(col, hull, hullM * 0.96);
   }
 
   float rim = smoothstep(1.3, 0.0, abs(signedEdge)) * (1.0 - road);
@@ -375,23 +383,36 @@ vec3 TraceColor(vec3 ro, vec3 rd){
       vec3 radVec = pa - tubeB.xyz * s;
       float rl = max(length(radVec), 1e-3);
       if(rl < tubeC.x){
-        // Interior wall: dark cabin shell with faint frame ribs.
-        float rib = smoothstep(0.72, 0.94, 0.5 + 0.5 * sin(s * 4.2));
-        col = vec3(0.085, 0.082, 0.080) * (0.75 + 0.55 * rib);
-        col += vec3(0.06, 0.06, 0.065) *
+        // Interior wall: same dark cabin section, with frame ribs and seat
+        // silhouettes disappearing into warm smoke.
+        float rib = smoothstep(0.72, 0.94, 0.5 + 0.5 * sin(s * 4.6));
+        float floorBand = 1.0 - smoothstep(0.30, 0.78, radVec.y / rl);
+        float seatRows = smoothstep(0.50, 0.95, 0.5 + 0.5 * sin(s * 7.9));
+        col = vec3(0.060, 0.058, 0.060) * (0.68 + 0.58 * rib);
+        col = mix(col, vec3(0.018, 0.018, 0.021), floorBand * 0.38);
+        col = mix(col, vec3(0.020, 0.023, 0.042), seatRows * floorBand * 0.24);
+        col += vec3(0.060, 0.014, 0.010) * smoothstep(0.0, 9.0, s); // depth glow
+        float lip = 1.0 - smoothstep(0.4, 4.6, s);
+        vec3 scrapedLip = mix(vec3(0.58, 0.59, 0.56), vec3(0.10, 0.095, 0.090), floorBand);
+        col = mix(col, scrapedLip, lip * 0.72);
+        col += vec3(0.052, 0.052, 0.058) *
                max(dot(tn, normalize(vec3(0.3, 0.8, -0.5))), 0.0);
       } else {
-        // Exterior: pale airliner hull with a red livery stripe down the side.
-        vec3 hull = vec3(0.74, 0.75, 0.77);
-        float band = radVec.y / rl;          // 0 at the sides of the cylinder
-        float stripe = 1.0 - smoothstep(0.10, 0.30, abs(band));
-        hull = mix(hull, vec3(0.60, 0.045, 0.05), stripe);
+        // Exterior: pale fuselage skin from the same wreck, not a generic pipe.
+        float sideBand = 1.0 - smoothstep(0.07, 0.24, abs(radVec.y / rl));
+        float windows = smoothstep(0.57, 0.93, 0.5 + 0.5 * sin(s * 8.2)) *
+                        smoothstep(0.18, 0.56, abs(radVec.y / rl));
+        float ribs = smoothstep(0.92, 0.985, 0.5 + 0.5 * sin(s * 4.6));
+        vec3 hull = mix(vec3(0.62, 0.64, 0.63), vec3(0.045, 0.047, 0.052), windows * 0.82);
+        hull = mix(hull, vec3(0.58, 0.035, 0.040), sideBand * 0.42);
+        hull *= 0.82 + 0.30 * fbm(sp.xz * 5.0);        // grime / dents
+        hull = mix(hull, vec3(0.12, 0.12, 0.13), ribs * 0.28);
         float dif = max(dot(tn, sunDir), 0.0);
         float sh = softShadow(sp + tn * 0.15, sunDir);
-        col = hull * (vec3(0.46, 0.48, 0.52) * 0.46 +
+        col = hull * (vec3(0.46, 0.48, 0.52) * 0.44 +
                       vec3(1.00, 0.92, 0.74) * dif * sh);
         float fre = pow(1.0 - max(dot(-rd, tn), 0.0), 3.0);
-        col += getSky(sp, reflect(rd, tn), sunDir) * fre * 0.12;
+        col += getSky(sp, reflect(rd, tn), sunDir) * fre * 0.10;
       }
       col = mix(col, sky, smoothstep(0.0, 1.0, t / FAR));
     } else {
@@ -454,7 +475,7 @@ void main(){
 // Scene runtime: camera + movement.
 // =============================================================================
 //
-// Three phases, all advanced ONLY by held forward input (Space / W / Up Arrow /
+// Three phases, all advanced ONLY by held forward input (Space / W / Up Arrow / K /
 // touch-hold). No auto-advance anywhere — release the key, the camera stops.
 //
 //   PHASE_APPROACH : starts ~20 ft (6.1 m) off the road, perpendicular to it,
@@ -467,7 +488,7 @@ void main(){
 //   PHASE_TRACK    : rails-locked. camX = roadCenter(camZ), yaw = road tangent,
 //                    held input drives camZ forward along the road.
 //
-// Mouse drag = look offset (yaw + pitch) clamped within rail limits.
+// Mouse position = look offset (yaw + pitch) clamped within rail limits.
 // =============================================================================
 (function () {
   "use strict";
@@ -757,25 +778,37 @@ void main(){
     var TURN_DURATION    = typeof opts.turnDur     === "number" ? opts.turnDur     : 0.85; // seconds of held input
     var ROAD_OFFSET      = typeof opts.roadOffset  === "number" ? opts.roadOffset  : 6.10; // ~20 ft
     var TRACK_LOOK_AHEAD = typeof opts.lookAhead   === "number" ? opts.lookAhead   : 8.0;
-    var LOOK_SENS        = typeof opts.lookSens    === "number" ? opts.lookSens    : 0.0035;
     var RENDER_SCALE     = typeof opts.renderScale === "number" ? opts.renderScale : 1.00;
     var MAX_DIM          = typeof opts.maxDim      === "number" ? opts.maxDim      : 1600;
     var CENTER_PITCH     = typeof opts.centerPitch === "number" ? opts.centerPitch : -0.08;
     var startZ           = typeof opts.startZ      === "number" ? opts.startZ      : 0.0;
 
     // --- Canvas ---
-    var canvas = document.getElementById("c");
-    if (!canvas) {
-      canvas = document.createElement("canvas");
-      canvas.id = "c";
-      canvas.style.cssText =
-        "position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;";
-      document.body.appendChild(canvas);
-    }
-    var gl = canvas.getContext("webgl2", {
+    // The desert needs WebGL2. In the standalone harness "#c" is unused, so
+    // we grab it directly. Inside the game the engine already holds a WebGL1
+    // context on "#c", and a canvas can't switch context type — so if webgl2
+    // is refused we swap "#c" for a fresh canvas (the old engine is already
+    // dead by the time the cabin-tunnel route hands off here).
+    var glOpts = {
       antialias: false, alpha: false, depth: false, stencil: false,
       premultipliedAlpha: false, preserveDrawingBuffer: false,
-    });
+    };
+    function makeDesertCanvas() {
+      var c = document.createElement("canvas");
+      c.id = "c";
+      c.style.cssText =
+        "position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;z-index:1;";
+      return c;
+    }
+    var canvas = document.getElementById("c");
+    var gl = canvas ? canvas.getContext("webgl2", glOpts) : null;
+    if (!gl) {
+      var freshCanvas = makeDesertCanvas();
+      if (canvas && canvas.parentNode) canvas.parentNode.replaceChild(freshCanvas, canvas);
+      else document.body.appendChild(freshCanvas);
+      canvas = freshCanvas;
+      gl = canvas.getContext("webgl2", glOpts);
+    }
     if (!gl) {
       console.error("[mode-desert-road] WebGL2 required");
       return null;
@@ -878,7 +911,7 @@ void main(){
     // The overlay counter-shifts against mouse-look so the bike stays
     // straight on the road while the eyes wander.
     var HARLEY = opts.harley !== false;
-    var BIKE_AHEAD   = typeof opts.bikeAhead   === "number" ? opts.bikeAhead   : 12;
+    var BIKE_AHEAD   = typeof opts.bikeAhead   === "number" ? opts.bikeAhead   : 2.5;
     var RIDE_TOP     = typeof opts.rideSpeed   === "number" ? opts.rideSpeed   : 24;  // m/s
     var RIDE_ACCEL   = 9;
     var RIDE_DRAG    = 14;
@@ -890,59 +923,49 @@ void main(){
     var bikeOverlayEl = null;
 
     // --- Tunnel-exit emerge intro (plane-tunnel handoff) ------------------
-    // Camera starts BELOW grade inside a trench carved into the terrain,
-    // off the +X side of the road a few feet past the shoulder, and climbs
-    // a ~30 degree ramp (held input only) up to the surface. The trench
-    // mouth faces the road, so PHASE_APPROACH takes over seamlessly.
+    // A passenger-jet fuselage section lies half-buried in the dune off the
+    // +X side of the road, its TORN-OPEN END angled UP out of the sand. You
+    // start deep inside the buried tube and climb the tilted interior up and
+    // out through the raised opening, then step down onto the sand and walk
+    // to the road. NO ditch is carved into the ground (trench disabled) — the
+    // fuselage is the tubeShell alone, occluded by the dune where it's buried.
     var EMERGE = !!(opts.emergeIntro || opts.roadsideIntro || opts.startWithCabinTunnel);
-    var TRENCH_SLOPE  = 0.577; // tan(30 deg)
-    var TRENCH_MAXD   = 4.2;
-    var TRENCH_HALFW  = 1.35;
-    var EMERGE_ALONG0 = typeof opts.emergeAlong0 === "number"
-      ? opts.emergeAlong0
-      : 7.4;                   // metres of ramp behind the mouth at start
-    var MOUTH_BACK    = typeof opts.mouthBack === "number" ? opts.mouthBack : 4.0;
+    var EM_TILT       = typeof opts.exitTilt   === "number" ? opts.exitTilt   : 0.5235987756; // 30 degrees
+    var EM_COS = Math.cos(EM_TILT), EM_SIN = Math.sin(EM_TILT);
+    var TUBE_R        = typeof opts.exitRadius === "number" ? opts.exitRadius : 1.72;
+    var TUBE_LEN      = typeof opts.exitLen    === "number" ? opts.exitLen    : 30.0;
+    var EMERGE_ALONG0 = typeof opts.emergeAlong0 === "number" ? opts.emergeAlong0 : 13.6;
+    var MOUTH_BACK    = typeof opts.mouthBack  === "number" ? opts.mouthBack  : 28.0;
+    var MOUTH_RAISE   = typeof opts.mouthRaise === "number" ? opts.mouthRaise : 0.12; // lower lip just above sand
     var emergeAlong = 0;
-    var mouthX = 0, mouthZ = 0;
+    var mouthX = 0, mouthZ = 0, mouthY = 0;
 
     // --- Initial camera placement ---
-    // Probe the GPU so camY is exact (not the JS approximation, which can
-    // drift off the rendered ground).
     var camZ = startZ;
     var camX, camY;
-    var yaw = -Math.PI / 2;       // looking -X (toward the road)
+    var yaw = -Math.PI / 2;       // looking -X (out the mouth, toward the road)
     var lookYaw = 0.0;
     var lookPitch = CENTER_PITCH;
     var phase = PHASE_APPROACH;
 
     runProbe(roadCenterJS(camZ) + ROAD_OFFSET, camZ);
     if (EMERGE) {
+      // Mouth sits a couple metres past the +X shoulder, raised above the
+      // dune so the opening clearly juts up. Axis = mouth -> buried tail,
+      // pointing +X and DOWN into the sand.
       mouthX = probeBuf[0] + probeBuf[1] + MOUTH_BACK; // roadCenter + halfWidth + back
       mouthZ = camZ;
-      TRENCH_JS = {
-        mx: mouthX, mz: mouthZ, dx: -1, dz: 0,
-        slope: TRENCH_SLOPE, maxD: TRENCH_MAXD, halfW: TRENCH_HALFW,
-      };
-      gl.useProgram(program);
-      if (u.trenchA) gl.uniform4f(u.trenchA, mouthX, mouthZ, -1, 0);
-      if (u.trenchB) gl.uniform4f(u.trenchB, 1, TRENCH_SLOPE, TRENCH_MAXD, TRENCH_HALFW);
-      gl.useProgram(probeProgram);
-      if (pu.trenchA) gl.uniform4f(pu.trenchA, mouthX, mouthZ, -1, 0);
-      if (pu.trenchB) gl.uniform4f(pu.trenchB, 1, TRENCH_SLOPE, TRENCH_MAXD, TRENCH_HALFW);
-      // Fuselage tube around the ramp: axis runs from the mouth (just above
-      // grade, open end facing the road) down-back at 30 degrees, parallel
-      // to and +0.9 m above the climb floor.
       runProbe(mouthX, mouthZ);
-      var mouthGroundY = probeBuf[2];
-      var tubeInv = 1 / Math.hypot(1, TRENCH_SLOPE);
+      var groundAtMouth = probeBuf[2];
+      mouthY = groundAtMouth + TUBE_R + MOUTH_RAISE;
       gl.useProgram(program);
-      if (u.tubeA) gl.uniform4f(u.tubeA, mouthX, mouthGroundY + 0.9, mouthZ, 1);
-      if (u.tubeB) gl.uniform4f(u.tubeB, tubeInv, -TRENCH_SLOPE * tubeInv, 0, 11.0);
-      if (u.tubeC) gl.uniform4f(u.tubeC, 1.55, 0.25, 0, 0);
+      if (u.tubeA) gl.uniform4f(u.tubeA, mouthX, mouthY, mouthZ, 1);
+      if (u.tubeB) gl.uniform4f(u.tubeB, EM_COS, -EM_SIN, 0, TUBE_LEN); // mouth -> tail
+      if (u.tubeC) gl.uniform4f(u.tubeC, TUBE_R, 0.22, 0, 0);
       emergeAlong = EMERGE_ALONG0;
-      camX = mouthX + emergeAlong;            // behind the mouth, down the ramp
-      runProbe(camX, camZ);
-      camY = probeBuf[2] + EYE_ABOVE;         // trench floor + eye height
+      camX = mouthX + EM_COS * emergeAlong;             // deep inside, +X
+      camZ = mouthZ;
+      camY = (mouthY - EM_SIN * emergeAlong) - TUBE_R + EYE_ABOVE; // on the tube floor
       phase = PHASE_EMERGE;
     } else {
       TRENCH_JS = null;
@@ -952,10 +975,15 @@ void main(){
     }
 
     // --- Parked harley placement + texture --------------------------------
+    // The bike is parked ON the road, AT the point where the perpendicular
+    // walk-out from the tunnel meets the road (z = startZ), oriented ALONG
+    // the road with its front pointing DOWN-road (+Z = the way you'll ride).
+    // You approach from the +X shoulder, so you meet its broad SIDE PROFILE
+    // head-on — exactly what a side-on photo reads as. It hides on mount.
     if (HARLEY) {
-      bikeZ = startZ + BIKE_AHEAD;
+      bikeZ = startZ;                         // directly ahead from the tunnel mouth
       runProbe(roadCenterJS(bikeZ), bikeZ);   // probeBuf: center/halfWidth at bikeZ
-      bikeX = probeBuf[0] - probeBuf[1] * 0.40;   // right side of the lane (rider view)
+      bikeX = probeBuf[0];                     // ON the road centerline
       runProbe(bikeX, bikeZ);
       bikeY = probeBuf[2];                    // exact ground height under it
       var harleyImg = new Image();
@@ -971,12 +999,14 @@ void main(){
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        var halfW = 1.25;                     // ~2.5 m long cruiser
+        var halfW = 1.55;                     // ~3.1 m screen-readable cruiser
         var hgt = halfW * 2 * (harleyImg.naturalHeight / Math.max(1, harleyImg.naturalWidth));
         gl.useProgram(program);
         if (u.harleyTex) gl.uniform1i(u.harleyTex, 0);
         if (u.harleyA) gl.uniform4f(u.harleyA, bikeX, bikeY, bikeZ, 1);
-        if (u.harleyB) gl.uniform4f(u.harleyB, halfW, hgt, 0.30, 0);
+        // quad yaw = +pi/2 → in-plane axis r = (0,0,1): the bike lies ALONG
+        // the road, photo front (texture u=1, right edge) at +Z = down-road.
+        if (u.harleyB) gl.uniform4f(u.harleyB, halfW, hgt, Math.PI * 0.5, 0);
         harleyReady = true;
       };
       harleyImg.onerror = function () {
@@ -994,12 +1024,26 @@ void main(){
 
     // --- Input ---
     var keys = Object.create(null);
+    if (opts.walkHeld || opts.spaceHeld) keys.Space = true;
+    function forwardKey(code) {
+      return code === "Space" || code === "ArrowUp" || code === "KeyW" || code === "KeyK";
+    }
+    function turnAliasKey(code) {
+      return (
+        code === "ArrowLeft" ||
+        code === "ArrowRight" ||
+        code === "KeyA" ||
+        code === "KeyD" ||
+        code === "KeyH" ||
+        code === "KeyL"
+      );
+    }
     function onKeyDown(e) {
       var t = e.target;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       keys[e.code] = true;
-      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown" ||
-          e.code === "ArrowLeft" || e.code === "ArrowRight") e.preventDefault();
+      if (forwardKey(e.code) || e.code === "ArrowDown" || turnAliasKey(e.code))
+        e.preventDefault();
     }
     function onKeyUp(e) { keys[e.code] = false; }
     window.addEventListener("keydown", onKeyDown, { passive: false });
@@ -1013,11 +1057,8 @@ void main(){
     canvas.addEventListener("touchend",    onTouchEnd);
     canvas.addEventListener("touchcancel", onTouchEnd);
 
-    // Mouse → look offset, clamped to rail limits. NO drag — every mousemove
-    // applies a delta. Clicking the canvas requests pointer lock so the
-    // cursor can't hit a screen edge and stall.
-    var lastMX = 0, lastMY = 0;
-    var haveLast = false;
+    // Mouse -> look offset, clamped to rail limits. No held button: cursor
+    // position directly chooses the look direction.
     function clampLook() {
       var yLim = Math.PI * 0.245;
       var pLim = Math.PI * 0.18;
@@ -1026,33 +1067,17 @@ void main(){
       if (lookPitch > CENTER_PITCH + pLim) lookPitch = CENTER_PITCH + pLim;
       if (lookPitch < CENTER_PITCH - pLim) lookPitch = CENTER_PITCH - pLim;
     }
-    function onMouseDown(e) {
-      if (e.button !== 0) return;
-      // Pointer-lock as a nicety; falls back to raw-coord delta below if denied.
-      if (canvas.requestPointerLock && document.pointerLockElement !== canvas) {
-        try { canvas.requestPointerLock(); } catch (_) {}
-      }
-    }
     function onMouseMove(e) {
-      var dx, dy;
-      if (document.pointerLockElement === canvas) {
-        dx = e.movementX || 0;
-        dy = e.movementY || 0;
-      } else {
-        if (!haveLast) {
-          lastMX = e.clientX; lastMY = e.clientY;
-          haveLast = true;
-          return;
-        }
-        dx = e.clientX - lastMX;
-        dy = e.clientY - lastMY;
-        lastMX = e.clientX; lastMY = e.clientY;
-      }
-      lookYaw   -= dx * LOOK_SENS;
-      lookPitch -= dy * LOOK_SENS;
+      var yLim = Math.PI * 0.245,
+        pLim = Math.PI * 0.18,
+        w = Math.max(1, window.innerWidth || 1),
+        h = Math.max(1, window.innerHeight || 1),
+        nx = (e.clientX - w / 2) / (w / 2),
+        ny = (h / 2 - e.clientY) / (h / 2);
+      lookYaw = nx * yLim;
+      lookPitch = CENTER_PITCH + ny * pLim;
       clampLook();
     }
-    canvas.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
 
     // --- Resize ---
@@ -1105,12 +1130,13 @@ void main(){
       var shiftX = Math.tan(lookYaw) * h * 0.5;
       var shiftY = Math.tan(lookPitch - CENTER_PITCH) * h * 0.5;
       var bob = Math.sin(now * 0.012) * Math.min(1, rideSpeed / 8) * 4;
+      var y = Math.min(0, shiftY + bob);
       bikeOverlayEl.style.cssText =
         "position:fixed;left:50%;bottom:0;z-index:600;pointer-events:none;" +
         "user-select:none;-webkit-user-drag:none;display:block;" +
-        "width:" + Math.round(Math.min(w * 0.62, 980)) + "px;" +
+        "width:" + Math.round(Math.min(w * 0.82, 1320)) + "px;" +
         "transform:translateX(calc(-50% + " + shiftX.toFixed(1) + "px))" +
-        " translateY(" + (shiftY + bob).toFixed(1) + "px);";
+        " translateY(" + y.toFixed(1) + "px);";
     }
 
     // --- Frame loop ---
@@ -1126,20 +1152,23 @@ void main(){
       prev = now;
       if (!paused) simTime += dt;
 
-      // Held-forward gates ALL camera motion. Release = stop.
-      var held = !!(keys.Space || keys.KeyW || keys.ArrowUp || touchHeld);
+      // Held-forward gates ALL camera motion. Release = stop. While paused
+      // (e.g. the cabin-tunnel overlay still owns the screen) input is
+      // ignored entirely — otherwise the same held Space that advances the
+      // tunnel would already be walking the desert camera underneath it.
+      var held = !paused &&
+        !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld);
 
       if (phase === PHASE_EMERGE) {
-        // Climb the 30-degree ramp out of the trench. Held input only.
-        if (held) emergeAlong -= WALK_SPEED * 0.87 * dt; // horizontal component
+        // Climb the tilted fuselage interior up toward the raised mouth.
+        if (held) emergeAlong -= WALK_SPEED * dt;
         if (emergeAlong <= 0) {
           emergeAlong = 0;
           phase = PHASE_APPROACH;
         }
-        camX = mouthX + emergeAlong;
+        camX = mouthX + EM_COS * emergeAlong;
         camZ = mouthZ;
-        runProbe(camX, camZ);
-        camY = probeBuf[2] + EYE_ABOVE;         // rides the trench floor up
+        camY = (mouthY - EM_SIN * emergeAlong) - TUBE_R + EYE_ABOVE;
       }
       else if (phase === PHASE_APPROACH) {
         if (held) camX -= WALK_SPEED * dt;
@@ -1150,7 +1179,10 @@ void main(){
           phase = PHASE_TURN;
           turnProgress = 0;
         }
-        camY = probeBuf[2] + EYE_ABOVE;         // GPU's surfFunc(camX, camZ)
+        // Ease the ~0.8 m step-down from the raised mouth onto the sand
+        // instead of snapping, then track the ground exactly.
+        var tgtY = probeBuf[2] + EYE_ABOVE;     // GPU's surfFunc(camX, camZ)
+        camY += (tgtY - camY) * Math.min(1, 9 * dt);
       }
       else if (phase === PHASE_TURN) {
         if (held) turnProgress = Math.min(1, turnProgress + dt / TURN_DURATION);
@@ -1187,8 +1219,9 @@ void main(){
       var effYaw   = yaw + lookYaw;
       var effPitch = lookPitch;
       if (phase === PHASE_EMERGE) {
-        // Looking up the ramp while underground; eases to level at the mouth.
-        effPitch += 0.55 * Math.min(1, emergeAlong / 6.5);
+        // Look up the tilted tube toward the bright opening; eases to level
+        // as you reach the mouth.
+        effPitch += (EM_TILT + 0.16) * Math.min(1, emergeAlong / 5.5);
       }
       var cp = Math.cos(effPitch), sp = Math.sin(effPitch);
       var cy = Math.cos(effYaw),   sy = Math.sin(effYaw);
@@ -1196,6 +1229,15 @@ void main(){
       var eye  = [camX, camY, camZ];
       var look = [camX + fx, camY + fy, camZ + fz];
       var view = lookAtMat4(eye, look, [0, 1, 0]);
+      // Verification-only free camera (no-op in production; only active when
+      // a debug global is explicitly set by an offscreen render harness).
+      if (window.__DESERT_DEBUG_CAM) {
+        var dc = window.__DESERT_DEBUG_CAM;
+        var dcp = Math.cos(dc.pitch), dsp = Math.sin(dc.pitch);
+        var dcy = Math.cos(dc.yaw),   dsy = Math.sin(dc.yaw);
+        view = lookAtMat4([dc.x, dc.y, dc.z],
+          [dc.x + dsy * dcp, dc.y + dsp, dc.z + dcy * dcp], [0, 1, 0]);
+      }
 
       driveBikeOverlay(now);
 
@@ -1227,7 +1269,9 @@ void main(){
           yaw: yaw, lookYaw: lookYaw, lookPitch: lookPitch,
           phase: phase, turnProgress: turnProgress, emergeAlong: emergeAlong,
           mounted: mounted, rideSpeed: rideSpeed,
-          held: !!(keys.Space || keys.KeyW || keys.ArrowUp || touchHeld),
+          mouthX: mouthX, mouthY: mouthY, mouthZ: mouthZ,
+          bikeX: bikeX, bikeY: bikeY, bikeZ: bikeZ,
+          held: !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld),
         };
       },
       destroy: function () {
@@ -1236,11 +1280,7 @@ void main(){
         cancelAnimationFrame(rafId);
         window.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("keyup",   onKeyUp);
-        canvas.removeEventListener("mousedown",   onMouseDown);
         window.removeEventListener("mousemove",   onMouseMove);
-        if (document.pointerLockElement === canvas) {
-          try { document.exitPointerLock(); } catch (_) {}
-        }
         canvas.removeEventListener("touchstart",  onTouchStart);
         canvas.removeEventListener("touchend",    onTouchEnd);
         canvas.removeEventListener("touchcancel", onTouchEnd);

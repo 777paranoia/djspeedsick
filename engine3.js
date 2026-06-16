@@ -831,6 +831,38 @@ vec2 cabinWindowUV(vec3 p, vec3 rd){
 let z3SpaceHeld = !1,
   z3TouchHeld = !1;
 
+const z3ForwardKeys = {
+  Space: !1,
+  ArrowUp: !1,
+  KeyW: !1,
+  KeyK: !1,
+};
+
+function getZ3ForwardCode(t) {
+  return t && (" " === t.key || "Spacebar" === t.key) ? "Space" : t.code;
+}
+
+function isZ3ForwardKey(t) {
+  return !!(
+    t &&
+    ("Space" === t.code ||
+      "ArrowUp" === t.code ||
+      "KeyW" === t.code ||
+      "KeyK" === t.code ||
+      " " === t.key ||
+      "Spacebar" === t.key)
+  );
+}
+
+function syncZ3ForwardHeld() {
+  z3SpaceHeld = !!(
+    z3ForwardKeys.Space ||
+    z3ForwardKeys.ArrowUp ||
+    z3ForwardKeys.KeyW ||
+    z3ForwardKeys.KeyK
+  );
+}
+
 function checkZ3Touch(t) {
   if (!t.touches) return;
   if (!window.currentZone3 && !z3SpaceHeld) return void (z3TouchHeld = !1);
@@ -853,10 +885,16 @@ function checkZ3Touch(t) {
 }
 
 (window.addEventListener("keydown", (t) => {
-  "Space" === t.code && (t.preventDefault(), (z3SpaceHeld = !0));
+  isZ3ForwardKey(t) &&
+    (t.preventDefault(),
+    (z3ForwardKeys[getZ3ForwardCode(t)] = !0),
+    syncZ3ForwardHeld());
 }),
   window.addEventListener("keyup", (t) => {
-    "Space" === t.code && (t.preventDefault(), (z3SpaceHeld = !1));
+    isZ3ForwardKey(t) &&
+      (t.preventDefault(),
+      (z3ForwardKeys[getZ3ForwardCode(t)] = !1),
+      syncZ3ForwardHeld());
   }),
   window.addEventListener("touchstart", checkZ3Touch, {
     passive: !1,
@@ -1454,7 +1492,8 @@ class Zone3Engine {
   }
   arrowSlide(synthMx) {
     // Called by the global arrow-key handler in engine.js. Drives the same
-    // POV/door_look transitions that drag used to, but only on arrow press.
+    // POV/door_look transitions that the old mouse-threshold path used to,
+    // but only on arrow press.
     this.checkPOVThreshold(
       window.lastNow || performance.now(),
       synthMx,
@@ -1462,7 +1501,7 @@ class Zone3Engine {
     );
   }
   checkPOVThreshold(t, e, fromArrow) {
-    // Drag/mouselook can no longer drive zone3 POV slides or door_look.
+    // Mouse-look can no longer drive zone3 POV slides or door_look.
     // Only arrow-key triggers (via arrowSlide → fromArrow=true) advance state.
     if (!fromArrow) return;
     this.isZ4BRoute ||
