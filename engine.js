@@ -2047,6 +2047,7 @@ function __directionalInputReady() {
       window.currentTutorialRoom.running &&
       !window.currentTutorialRoom.returning
     ) ||
+    !!window.__modeAlleyActive ||
     !!window.__modeTheaterActive ||
     !!window.__modeDesertRoadActive ||
     !!window.__cabinTunnelActive ||

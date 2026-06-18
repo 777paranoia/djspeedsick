@@ -41,6 +41,41 @@ window.makeUI = function () {
         "margin-top:6px;border-top:1px solid #0f0;padding-top:4px;";
     }));
   const thWakeButton = box.querySelector("#thwake");
+  const desertSection = document.createElement("div");
+  desertSection.className = "dbg-section";
+  desertSection.style.cssText =
+    "margin-top:6px;border-top:1px solid #0f0;padding-top:4px;";
+  desertSection.innerHTML =
+    '<div style="color:#fb3;margin-bottom:3px;">DESERT ROAD:</div>' +
+    '<button id="desertemerge">Emerge</button>' +
+    '<button id="desertapproach">Approach</button>' +
+    '<button id="desertturn">Turn</button>' +
+    '<button id="deserttrack">Track</button>' +
+    '<button id="desertride">Ride</button>';
+  box.appendChild(desertSection);
+  desertSection.querySelectorAll("button").forEach((button) => {
+    button.type = "button";
+    button.tabIndex = -1;
+    button.style.cssText =
+      "background:#111;color:#fb3;border:1px solid #fb3;font:11px monospace;cursor:pointer;margin:1px;padding:2px 6px;";
+  });
+  const alleySection = document.createElement("div");
+  alleySection.className = "dbg-section";
+  alleySection.style.cssText =
+    "margin-top:6px;border-top:1px solid #0f0;padding-top:4px;";
+  alleySection.innerHTML =
+    '<div style="color:#7cf;margin-bottom:3px;">ALLEY:</div>' +
+    '<button id="alleystart">Arrival</button>' +
+    '<button id="alleycourt">Court</button>' +
+    '<button id="alleydoor">Door</button>' +
+    '<button id="alleybase">Basement</button>';
+  box.appendChild(alleySection);
+  alleySection.querySelectorAll("button").forEach((button) => {
+    button.type = "button";
+    button.tabIndex = -1;
+    button.style.cssText =
+      "background:#111;color:#7cf;border:1px solid #7cf;font:11px monospace;cursor:pointer;margin:1px;padding:2px 6px;";
+  });
   if (thWakeButton && !box.querySelector("#thz2hall")) {
     const thZ2HallButton = document.createElement("button"),
       thZ2HallBreak = document.createElement("br");
@@ -232,13 +267,15 @@ window.makeUI = function () {
               ? Math.PI
               : 0;
     ((z2.facing = facing),
-      (z2.activePOV = pov || ("function" == typeof z2._povForFacing
-        ? z2._povForFacing(facing)
-        : "W" === facing
-          ? "left"
-          : "E" === facing
-            ? "right"
-            : "center")),
+      (z2.activePOV =
+        pov ||
+        ("function" == typeof z2._povForFacing
+          ? z2._povForFacing(facing)
+          : "W" === facing
+            ? "left"
+            : "E" === facing
+              ? "right"
+              : "center")),
       (z2.hallwayYaw = yaw),
       (z2.hallwayYawTarget = yaw));
   }
@@ -854,6 +891,21 @@ window.makeUI = function () {
         })
       : console.error("[debug] mode-theater not loaded");
   }
+  function enterRoadEngine() {
+    (clearDebugInput(), destroyActiveEngines());
+  }
+  const desertGoto = (target) => {
+    enterRoadEngine();
+    "function" == typeof window.__desertDebugGoto
+      ? window.__desertDebugGoto(target)
+      : console.error("[debug] mode-desert-road not loaded");
+  };
+  const alleyGoto = (target) => {
+    enterRoadEngine();
+    "function" == typeof window.__alleyDebugGoto
+      ? window.__alleyDebugGoto(target)
+      : console.error("[debug] mode-alley not loaded");
+  };
   (($("thtop").onclick = () => theaterGoto(0.2)),
     ($("thfoot").onclick = () => theaterGoto(0.82)),
     ($("thstage").onclick = () => theaterGoto(1.2)),
@@ -863,6 +915,15 @@ window.makeUI = function () {
         ? window.__wakeToLaptopFromTheater()
         : console.error("[debug] __wakeToLaptopFromTheater not available");
     }),
+    ($("desertemerge").onclick = () => desertGoto("emerge")),
+    ($("desertapproach").onclick = () => desertGoto("approach")),
+    ($("desertturn").onclick = () => desertGoto("turn")),
+    ($("deserttrack").onclick = () => desertGoto("track")),
+    ($("desertride").onclick = () => desertGoto("ride")),
+    ($("alleystart").onclick = () => alleyGoto("parked")),
+    ($("alleycourt").onclick = () => alleyGoto("court")),
+    ($("alleydoor").onclick = () => alleyGoto("door")),
+    ($("alleybase").onclick = () => alleyGoto("basement")),
     setInterval(() => {
       try {
         const povEl = $("pov"),
@@ -883,7 +944,33 @@ window.makeUI = function () {
         const z4 = window.currentZone4,
           z3 = window.currentZone3,
           z2 = window.currentZone2;
-        if (z4) {
+        if (window.__modeAlleyActive && window.__modeAlleyScene) {
+          const alley = window.__modeAlleyScene.getState();
+          seqEl.innerText =
+            "alley " +
+            alley.phase +
+            " x:" +
+            alley.x.toFixed(1) +
+            " door:" +
+            alley.doorOpen.toFixed(2);
+        } else if (window.__modeDesertRoadActive && window.__modeDesertRoadScene) {
+          const desert = window.__modeDesertRoadScene.getState();
+          const desertPhase = {
+            0: "approach",
+            1: "turn",
+            2: "track",
+            3: "emerge",
+            4: "ride",
+          };
+          seqEl.innerText =
+            "desert " +
+            (desertPhase[desert.phase] || desert.phase) +
+            " x:" +
+            desert.x.toFixed(1) +
+            " z:" +
+            desert.z.toFixed(1) +
+            (desert.mounted ? " spd:" + desert.rideSpeed.toFixed(1) : "");
+        } else if (z4) {
           let info = "z4 " + z4.phase;
           if ("ring" === z4.phase) {
             const alt = window.__z4AltAnnex || {},
@@ -957,9 +1044,9 @@ window.makeUI = function () {
             z2.activePOV +
             " face:" +
             (z2.facing || "?");
-          ("blood" === z2.seqState &&
+          "blood" === z2.seqState &&
             z2.leftBlinkCount >= 2 &&
-            !z2.z4RouteActive) &&
+            !z2.z4RouteActive &&
             (info += " routes:4");
           z2.z4RouteStep > 0 && (info += " z4:" + z2.z4RouteStep);
           "theater" === z2.zone3Route && (info += " theater");

@@ -504,7 +504,7 @@ function startMainSiteAudio() {
       window.TUTORIAL_TEXTURE_ROOT || "files/img/rooms/tutorial/"),
       (window.TUTORIAL_MANUAL_START = !0));
     const script = document.createElement("script");
-    ((script.src = "tutorial.js?v=20260524-tvframes2"),
+    ((script.src = "tutorial.js?v=20260618-camera-axis"),
       (script.async = !0),
       (script.dataset.tutorialEntry = "tutorial.js"),
       (script.onload = startTutorial),

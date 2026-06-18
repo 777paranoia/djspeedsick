@@ -1299,16 +1299,18 @@
             zz = eye[2] - center[2],
             len = Math.hypot(zx, zy, zz) || 1;
           ((zx /= len), (zy /= len), (zz /= len));
-          let xx = up[1] * zz - up[2] * zy,
-            xy = up[2] * zx - up[0] * zz,
-            xz = up[0] * zy - up[1] * zx;
+          // This camera looks down +Z, so z × up keeps world +X on
+          // screen-right. The previous up × z basis mirrored the view.
+          let xx = zy * up[2] - zz * up[1],
+            xy = zz * up[0] - zx * up[2],
+            xz = zx * up[1] - zy * up[0];
           ((len = Math.hypot(xx, xy, xz) || 1),
             (xx /= len),
             (xy /= len),
             (xz /= len));
-          const yx = zy * xz - zz * xy,
-            yy = zz * xx - zx * xz,
-            yz = zx * xy - zy * xx;
+          const yx = xy * zz - xz * zy,
+            yy = xz * zx - xx * zz,
+            yz = xx * zy - xy * zx;
           return new Float32Array([
             xx,
             yx,

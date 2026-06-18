@@ -459,12 +459,14 @@ void main(){
 
   // Porthole mode (u_holdWalls = 1): the layer underneath must only ever be
   // seen THROUGH the opening mouth, never through semi-transparent fuselage
-  // walls. Everything outside a circular aperture (which dilates as the
-  // mouth phase plays out) is forced fully opaque; inside it the shader's
-  // own alpha applies. With u_holdWalls = 0 behavior is unchanged.
+  // walls. Everything outside a circular aperture stays fully opaque; inside
+  // the opening the tunnel thins out late so the real desert underlay is what
+  // you see at the end instead of a generic full-screen fade.
   float aperture = smoothstep(0.80, 0.985, p);
   float hole = aperture * smoothstep(0.10 + 0.40 * aperture, 0.04, length(uv));
-  alpha = mix(alpha, mix(1.0, alpha, hole), clamp(u_holdWalls, 0.0, 1.0));
+  float exitClear = smoothstep(0.86, 1.0, p);
+  float holeAlpha = alpha * mix(1.0, 0.08, exitClear);
+  alpha = mix(alpha, mix(1.0, holeAlpha, hole), clamp(u_holdWalls, 0.0, 1.0));
 
   alpha *= u_opacity;
   if(alpha < 0.004) discard;
@@ -536,6 +538,15 @@ void main(){
       holdWalls: gl.getUniformLocation(prog, "u_holdWalls")
     };
 
+    var carriedForwardKeys = opts.forwardKeys || null;
+    var initialForwardKeys = {
+      Space: carriedForwardKeys
+        ? !!carriedForwardKeys.Space
+        : !!(opts.spaceHeld || opts.walkHeld),
+      ArrowUp: !!(carriedForwardKeys && carriedForwardKeys.ArrowUp),
+      KeyW: !!(carriedForwardKeys && carriedForwardKeys.KeyW),
+      KeyK: !!(carriedForwardKeys && carriedForwardKeys.KeyK)
+    };
     var state = {
       canvas: canvas,
       gl: gl,
@@ -545,19 +556,22 @@ void main(){
       speed: typeof opts.speed === "number" ? opts.speed : 0.035,
       opacity: typeof opts.opacity === "number" ? opts.opacity : 1,
       holdWalls: opts.holdWalls ? 1 : 0,
-      mouseX: 0,
-      mouseY: 0,
+      mouseX: typeof opts.mouseX === "number" ? Math.max(-1, Math.min(1, opts.mouseX)) : 0,
+      mouseY: typeof opts.mouseY === "number" ? Math.max(-1, Math.min(1, opts.mouseY)) : 0,
+      touchHeld: false,
       running: true,
-      space: !!(opts.spaceHeld || opts.walkHeld),
+      space: !!(
+        initialForwardKeys.Space ||
+        initialForwardKeys.ArrowUp ||
+        initialForwardKeys.KeyW ||
+        initialForwardKeys.KeyK
+      ),
       lastT: performance.now(),
       raf: 0
     };
-    var forwardKeys = {
-      Space: !!state.space,
-      ArrowUp: false,
-      KeyW: false,
-      KeyK: false
-    };
+    root.__cabinTunnelActive = true;
+    root.__cabinTunnelNav = { forward: false, back: false, left: false, right: false };
+    var forwardKeys = initialForwardKeys;
 
     function resize() {
       var dpr = Math.min(2, root.devicePixelRatio || 1);
@@ -586,6 +600,15 @@ void main(){
     function syncForward() {
       state.space = !!(forwardKeys.Space || forwardKeys.ArrowUp || forwardKeys.KeyW || forwardKeys.KeyK);
     }
+    function syncCabinTunnelNav() {
+      root.__cabinTunnelNav = {
+        forward: !!(state.running && state.progress < 1.0 &&
+          (!state.autoplay || state.space || state.touchHeld)),
+        back: false,
+        left: false,
+        right: false
+      };
+    }
     function keydown(e) {
       var code = forwardKey(e);
       if (code) {
@@ -610,6 +633,7 @@ void main(){
       var dt = Math.min(0.05, Math.max(0, (now - state.lastT) * 0.001));
       state.lastT = now;
       if (state.autoplay || state.space) state.progress = Math.min(1, state.progress + dt * state.speed);
+      syncCabinTunnelNav();
       if (typeof opts.onFrame === "function") opts.onFrame(state);
       resize();
       gl.useProgram(prog);
@@ -628,7 +652,8 @@ void main(){
       gl.uniform1f(loc.gridFade, 0);
       gl.uniform1f(loc.holdWalls, state.holdWalls);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      state.raf = requestAnimationFrame(frame);
+      if (typeof opts.onAfterFrame === "function") opts.onAfterFrame(state);
+      state.raf = state.running ? requestAnimationFrame(frame) : 0;
     }
 
     canvas.addEventListener("mousemove", pointer, true);
@@ -638,6 +663,8 @@ void main(){
 
     state.stop = function () {
       state.running = false;
+      root.__cabinTunnelActive = false;
+      root.__cabinTunnelNav = null;
       cancelAnimationFrame(state.raf);
       canvas.removeEventListener("mousemove", pointer, true);
       canvas.removeEventListener("pointermove", pointer, true);
@@ -654,6 +681,7 @@ void main(){
     };
 
     root.__reverseCabinTunnel = state;
+    syncCabinTunnelNav();
     resize();
     state.raf = requestAnimationFrame(frame);
     return state;
@@ -683,6 +711,7 @@ void main(){
     var fadeStart = 0;
     var introStart = 0;
     var introOpaque = fadeInMs <= 0;
+    var introCovered = false;
 
     function startDesert() {
       if (desertStarted) return;
@@ -691,7 +720,6 @@ void main(){
         fromZone2: !!opts.fromZone2,
         fromTheater: !!opts.fromTheater,
         emergeIntro: true,
-        walkHeld: !!opts.walkHeld,
         startZ: startZ
       });
       if (root.__modeDesertRoadScene && root.__modeDesertRoadScene.pause) {
@@ -707,15 +735,20 @@ void main(){
       opacity: introOpaque ? baseOpacity : 0,
       holdWalls: opts.holdWalls === undefined ? true : !!opts.holdWalls,
       spaceHeld: !!opts.walkHeld,
+      forwardKeys: opts.forwardKeys,
+      mouseX: opts.mouseX,
+      mouseY: opts.mouseY,
       onFrame: function (state) {
-        if (!introStart) introStart = performance.now();
         if (!introOpaque) {
-          var inK = Math.min(1, (performance.now() - introStart) / Math.max(1, fadeInMs));
-          state.opacity = baseOpacity * inK;
-          if (inK >= 1) {
+          if (!introStart) introStart = performance.now();
+          var introK = Math.min(
+            1,
+            (performance.now() - introStart) / Math.max(1, fadeInMs)
+          );
+          state.opacity = baseOpacity * introK;
+          if (introK >= 1) {
             introOpaque = true;
             state.opacity = baseOpacity;
-            if (typeof opts.onIntroOpaque === "function") opts.onIntroOpaque();
           }
         }
         if (typeof opts.onFrame === "function") opts.onFrame(state);
@@ -735,14 +768,23 @@ void main(){
             if (typeof opts.onComplete === "function") opts.onComplete();
           }
         }
+      },
+      onAfterFrame: function (state) {
+        if (introOpaque && !introCovered) {
+          introCovered = true;
+          if (typeof opts.onIntroOpaque === "function") opts.onIntroOpaque();
+        }
+        if (typeof opts.onAfterFrame === "function") opts.onAfterFrame(state);
       }
     });
 
     if (tunnel && tunnel.canvas) {
       var ts = function () {
+        tunnel.touchHeld = true;
         tunnel.setAutoplay && tunnel.setAutoplay(true);
       };
       var te = function () {
+        tunnel.touchHeld = false;
         tunnel.setAutoplay && tunnel.setAutoplay(false);
       };
       tunnel.canvas.addEventListener("touchstart", ts, { passive: true });

@@ -1455,11 +1455,14 @@
         stageBeat: 0,
         impactOutcome: "",
         escapeActive: !1,
+        escapeImpactCamera: null,
         handoffDone: !1,
+        handoffTransitioning: !1,
         last: performance.now(),
         routeDir: 1,
-        viewFacing: 0,
-        turnSign: 1,
+        turnYaw: 0,
+        turnYawTarget: 0,
+        lastTurnSign: 1,
         crashTurned: !1,
         crashTurn: 0,
         // hallway phase (theater route from Z2)
@@ -1476,8 +1479,12 @@
       }
       function canTurnAround() {
         if (state.escapeActive) return atCrashTurnGate();
+        if (state.hallPhase)
+          return (
+            !state.handoffDone &&
+            state.hallCamZ < HALL_PHASE_START_Z - 0.01
+          );
         return (
-          !state.hallPhase &&
           !state.handoffDone &&
           state.impactOutcome !== "escaped-red" &&
           state.progress > 0.002
@@ -1487,18 +1494,22 @@
         if (atCrashTurnGate()) {
           if (sign < 0) {
             ((state.crashTurned = !0),
-              (state.routeDir = 1),
-              (state.turnSign = -1));
+              (state.routeDir = 1));
             updateTheaterNav();
           }
           return;
         }
         if (!canTurnAround()) return;
-        state.turnSign = sign || state.turnSign || 1;
-        state.routeDir = -state.routeDir;
+        const turnSign = sign < 0 ? -1 : 1;
+        ((state.lastTurnSign = turnSign),
+          (state.turnYawTarget += turnSign * Math.PI),
+          (state.routeDir = -state.routeDir),
+          updateTheaterNav());
       }
       function updateTheaterNav() {
-        const canControl = !state.handoffDone && state.impactOutcome !== "escaped-red",
+        const canControl =
+            (!state.handoffDone || state.handoffTransitioning) &&
+            state.impactOutcome !== "escaped-red",
           blockedAtCrashGate =
             state.escapeActive &&
             state.routeDir > 0 &&
@@ -1854,73 +1865,87 @@
       function beginDesertDreamHandoff() {
         if (state.handoffDone) return;
         state.handoffDone = !0;
+        state.handoffTransitioning = !0;
         updateTheaterNav();
-        const walkHeld = !!state.space,
+        const handoffForwardKeys = {
+            Space: !!state.forwardKeys.Space,
+            ArrowUp: !!state.forwardKeys.ArrowUp,
+            KeyW: !!state.forwardKeys.KeyW,
+            KeyK: !!state.forwardKeys.KeyK,
+          },
+          walkHeld = !!(
+            handoffForwardKeys.Space ||
+            handoffForwardKeys.ArrowUp ||
+            handoffForwardKeys.KeyW ||
+            handoffForwardKeys.KeyK
+          ),
           theaterScene = window.__modeTheaterScene;
         let tornDown = !1,
           fallbackTimer = 0;
         function teardownTheater() {
           if (tornDown) return;
           tornDown = !0;
+          state.handoffTransitioning = !1;
           fallbackTimer && clearTimeout(fallbackTimer);
-          requestAnimationFrame(function () {
-            ((window.__modeTheaterActive = !1), (window.isEngine1Dead = !0));
-            try {
-              if (theaterScene && "function" == typeof theaterScene.destroy)
-                theaterScene.destroy();
-              else if (((disposed = !0), rafId)) {
-                try {
-                  cancelAnimationFrame(rafId);
-                } catch (e) {}
-                rafId = 0;
-              }
-            } catch (e) {
-              console.error("[mode-theater] theater teardown before desert dream failed", e);
-              ((disposed = !0), rafId && cancelAnimationFrame(rafId), (rafId = 0));
-            }
-            (window.__modeTheaterScene === theaterScene &&
-              (window.__modeTheaterScene = null),
-              (window.__modeTheaterActive = !1),
-              (window.isEngine1Dead = !0));
-            try {
-              canvas && (canvas.style.transform = "");
-            } catch (e) {}
-          });
-        }
-        setTimeout(function () {
+          ((window.__modeTheaterActive = !1), (window.isEngine1Dead = !0));
           try {
-            if ("function" == typeof window.startDesertDreamTunnel) {
-              window.startDesertDreamTunnel({
-                fromTheater: !0,
-                walkHeld: walkHeld,
-                startZ: 168,
-                progress: 0.04,
-                desertAt: 0.58,
-                fadeMs: 1200,
-                fadeInMs: 380,
-                onIntroOpaque: teardownTheater,
-              });
-              fallbackTimer = setTimeout(teardownTheater, 900);
-            } else if ("function" == typeof window.startModeDesertRoad) {
-              window.startModeDesertRoad({
-                fromTheater: !0,
-                emergeIntro: !0,
-                startWithCabinTunnel: !0,
-                walkHeld: walkHeld,
-                startZ: 168,
-              });
-              teardownTheater();
-            } else {
-              console.error(
-                "[mode-theater] desert dream tunnel entrypoint not available at crash handoff",
-              );
-              teardownTheater();
+            if (theaterScene && "function" == typeof theaterScene.destroy)
+              theaterScene.destroy();
+            else if (((disposed = !0), rafId)) {
+              try {
+                cancelAnimationFrame(rafId);
+              } catch (e) {}
+              rafId = 0;
             }
           } catch (e) {
-            console.error("[mode-theater] desert dream handoff failed", e);
+            console.error("[mode-theater] theater teardown before desert dream failed", e);
+            ((disposed = !0), rafId && cancelAnimationFrame(rafId), (rafId = 0));
+          }
+          (window.__modeTheaterScene === theaterScene &&
+            (window.__modeTheaterScene = null),
+            (window.__modeTheaterActive = !1),
+            (window.isEngine1Dead = !0));
+          try {
+            canvas && (canvas.style.transform = "");
+          } catch (e) {}
+        }
+        try {
+          if ("function" == typeof window.startDesertDreamTunnel) {
+            window.startDesertDreamTunnel({
+              fromTheater: !0,
+              walkHeld: walkHeld,
+              forwardKeys: handoffForwardKeys,
+              startZ: 168,
+              // Skip the blue setup throat and land inside the established
+              // cabin fog while preserving forward motion from the theater.
+              progress: 0.18,
+              desertAt: 0.58,
+              fadeMs: 720,
+              fadeInMs: 260,
+              mouseX: state.lookX,
+              mouseY: state.lookY,
+              onIntroOpaque: teardownTheater,
+            });
+            fallbackTimer = setTimeout(teardownTheater, 650);
+          } else if ("function" == typeof window.startModeDesertRoad) {
+            window.startModeDesertRoad({
+              fromTheater: !0,
+              emergeIntro: !0,
+              startWithCabinTunnel: !0,
+              walkHeld: walkHeld,
+              startZ: 168,
+            });
+            teardownTheater();
+          } else {
+            console.error(
+              "[mode-theater] desert dream tunnel entrypoint not available at crash handoff",
+            );
             teardownTheater();
           }
-        }, 0);
+        } catch (e) {
+          console.error("[mode-theater] desert dream handoff failed", e);
+          teardownTheater();
+        }
       }
       return (
         (rafId = requestAnimationFrame(function frame(now) {
@@ -1938,13 +1963,24 @@
           // ─── Hallway phase state update (render happens below with hallway overlay)
           if (state.hallPhase) {
             state.hallWakeIn = Math.min(1, state.hallWakeIn + dt * 2.5);
-            if (state.space) state.hallCamZ -= HALL_PHASE_SPEED * dt;
-            if (state.hallCamZ <= HALL_PHASE_EXIT_Z || !hallwayProgram || !hallLoc) {
+            if (state.space)
+              state.hallCamZ -= HALL_PHASE_SPEED * dt * state.routeDir;
+            if (state.routeDir < 0 && state.hallCamZ >= HALL_PHASE_START_Z) {
+              ((state.hallCamZ = HALL_PHASE_START_Z),
+                (state.routeDir = 1),
+                (state.turnYawTarget += state.lastTurnSign * Math.PI));
+            }
+            if (
+              (state.routeDir > 0 && state.hallCamZ <= HALL_PHASE_EXIT_Z) ||
+              !hallwayProgram ||
+              !hallLoc
+            ) {
               state.hallPhase = false;
               state.progress = 0;
               state.routeDir = 1;
-              state.viewFacing = 0;
-              state.turnSign = 1;
+              state.turnYaw = 0;
+              state.turnYawTarget = 0;
+              state.lastTurnSign = 1;
             }
             // Fall through: 3D theater renders at progress=0 (tunnel entry camera),
             // then hallway overlay draws on top with transparent south face.
@@ -1955,7 +1991,7 @@
           if (
             state.space &&
             !state.hallPhase &&
-            !state.handoffDone &&
+            (!state.handoffDone || state.handoffTransitioning) &&
             state.impactOutcome !== "escaped-red"
           ) {
             const routeMax =
@@ -1972,25 +2008,49 @@
               routeMax,
             );
           }
+          // After escaping the red, reaching the crash gate while walking forward
+          // auto-initiates the turn toward the tunnel, so forward keeps flowing
+          // into the desert handoff instead of dead-stopping at the gate waiting
+          // for a separate turn input.
+          if (
+            state.escapeActive &&
+            state.routeDir > 0 &&
+            !state.crashTurned &&
+            state.progress >= CRASH_TURN_PROGRESS - CRASH_TURN_GATE_EPS
+          ) {
+            ((state.crashTurned = !0), updateTheaterNav());
+          }
           if (
             state.escapeActive &&
             state.routeDir > 0 &&
             state.progress >= CABIN_FOG_HANDOFF_PROGRESS &&
             !state.handoffDone
           )
-            return void beginDesertDreamHandoff();
+            beginDesertDreamHandoff();
           if (
             !state.hallPhase &&
             state.routeDir < 0 &&
             state.progress <= 0.002
-          )
-            state.routeDir = 1;
-          const targetFacing = state.routeDir < 0 ? 1 : 0,
-            turnStep = dt * 3.6;
-          state.viewFacing =
-            state.viewFacing < targetFacing
-              ? Math.min(targetFacing, state.viewFacing + turnStep)
-              : Math.max(targetFacing, state.viewFacing - turnStep);
+          ) {
+            ((state.routeDir = 1),
+              (state.turnYawTarget += state.lastTurnSign * Math.PI));
+          }
+          const turnDelta = state.turnYawTarget - state.turnYaw,
+            turnStep = Math.PI * dt * 3.6;
+          if (Math.abs(turnDelta) <= turnStep)
+            state.turnYaw = state.turnYawTarget;
+          else state.turnYaw += Math.sign(turnDelta) * turnStep;
+          if (
+            Math.abs(state.turnYawTarget - state.turnYaw) < 1e-5 &&
+            Math.abs(state.turnYawTarget) >= Math.PI * 2
+          ) {
+            const normalizedYaw = Math.atan2(
+              Math.sin(state.turnYawTarget),
+              Math.cos(state.turnYawTarget),
+            );
+            ((state.turnYaw = normalizedYaw),
+              (state.turnYawTarget = normalizedYaw));
+          }
           const targetCrashTurn = state.crashTurned ? 1 : 0,
             crashTurnStep = dt * 3.2;
           state.crashTurn =
@@ -2105,13 +2165,45 @@
               finalLook: finalLook,
             };
           })(state.progress);
-          state.escapeActive &&
-            (cam = crashEntryCamera(
+          if (state.escapeActive) {
+            const routeCam = crashEntryCamera(
               state.progress,
               camLookX,
               camLookY,
               state.crashTurn,
-            ));
+            );
+            if (state.escapeImpactCamera) {
+              const resume = smoothstep(
+                STAGE_ESCAPE_PROGRESS,
+                CRASH_TURN_PROGRESS,
+                state.progress,
+              );
+              cam = {
+                eye: [
+                  mix(state.escapeImpactCamera.eye[0], routeCam.eye[0], resume),
+                  mix(state.escapeImpactCamera.eye[1], routeCam.eye[1], resume),
+                  mix(state.escapeImpactCamera.eye[2], routeCam.eye[2], resume),
+                ],
+                target: [
+                  mix(state.escapeImpactCamera.target[0], routeCam.target[0], resume),
+                  mix(state.escapeImpactCamera.target[1], routeCam.target[1], resume),
+                  mix(state.escapeImpactCamera.target[2], routeCam.target[2], resume),
+                ],
+                finalLook: 1,
+              };
+              // routeCam only contributes `resume` worth of mouse-look, so the
+              // pinned impact-recovery camera (resume≈0 right after the red)
+              // would ignore the mouse. Add the remaining (1-resume) of look on
+              // top so free-look stays responsive the whole time.
+              const lookFill = 1 - resume,
+                eFwd = norm(sub(cam.target, cam.eye)),
+                eSide = norm(cross(eFwd, [0, 1, 0]));
+              ((cam.target[0] += eSide[0] * camLookX * 12 * lookFill),
+                (cam.target[1] += camLookY * 5 * lookFill),
+                (cam.target[2] += eSide[2] * camLookX * 12 * lookFill));
+              resume >= 0.999 && (state.escapeImpactCamera = null);
+            } else cam = routeCam;
+          }
           // During hallPhase, the cloned Z2 hallway and the 3D theater tunnel
           // share one camera path. hallCamZ maps directly onto the tunnel entry:
           // 2.4 starts at the intersection, -3.4 lands at the BACK.png plane.
@@ -2127,12 +2219,10 @@
             ];
             cam.finalLook = 0;
           }
-          if (!state.hallPhase && state.viewFacing > 0.001) {
-            const turn = smoothstep(0, 1, state.viewFacing),
-              f = sub(cam.target, cam.eye),
-              a = Math.PI * turn * state.turnSign,
-              c = Math.cos(a),
-              s = Math.sin(a),
+          if (Math.abs(state.turnYaw) > 0.001) {
+            const f = sub(cam.target, cam.eye),
+              c = Math.cos(state.turnYaw),
+              s = Math.sin(state.turnYaw),
               rx = f[0] * c - f[2] * s,
               rz = f[0] * s + f[2] * c;
             cam.target = [cam.eye[0] + rx, cam.eye[1] + f[1], cam.eye[2] + rz];
@@ -2605,9 +2695,15 @@
             gl.disable(gl.CULL_FACE),
             reveal.impactAge >= 0)
           ) {
-            state.impactOutcome ||
-              (state.impactOutcome =
-                state.progress <= STAGE_ESCAPE_PROGRESS ? "escaped-red" : "laptop");
+            if (!state.impactOutcome) {
+              state.impactOutcome =
+                state.progress <= STAGE_ESCAPE_PROGRESS ? "escaped-red" : "laptop";
+              if ("escaped-red" === state.impactOutcome)
+                state.escapeImpactCamera = {
+                  eye: cam.eye.slice(),
+                  target: cam.target.slice(),
+                };
+            }
             const redHang = 1 - smoothstep(0.55, 1.75, reveal.impactAge);
             if ("escaped-red" === state.impactOutcome) {
               const fade = 1 - smoothstep(0.2, ESCAPE_RED_FADE_SECONDS, reveal.impactAge);
@@ -2617,8 +2713,9 @@
                   (state.impactOutcome = "escaped-active"),
                   (state.progress = STAGE_ESCAPE_PROGRESS),
                   (state.routeDir = 1),
-                  (state.viewFacing = 0),
-                  (state.turnSign = state.turnSign || 1),
+                  (state.turnYaw = 0),
+                  (state.turnYawTarget = 0),
+                  (state.lastTurnSign = 1),
                   (state.crashTurned = !1),
                   (state.crashTurn = 0));
                 updateTheaterNav();
@@ -2854,7 +2951,10 @@
             gl.uniform1f(hallLoc.time, 0.001 * now);
             gl.uniform2f(hallLoc.mouse, state.lookX, state.lookY);
             gl.uniform1f(hallLoc.camZ, state.hallCamZ);
-            gl.uniform1f(hallLoc.yawOffset, HALL_PHASE_YAW);
+            gl.uniform1f(
+              hallLoc.yawOffset,
+              HALL_PHASE_YAW + state.turnYaw,
+            );
             gl.uniform1f(hallLoc.blink, state.hallWakeIn < 1 ? 1 - state.hallWakeIn : normalBlink());
             gl.uniform1f(hallLoc.shake, 0);
             gl.uniform1f(hallLoc.isWalking, state.space ? 1 : 0);
@@ -2872,12 +2972,15 @@
           seek(p) {
             ((state.progress = clamp(p, 0, THEATER_ROUTE_MAX_PROGRESS)),
               (state.routeDir = 1),
-              (state.viewFacing = 0),
-              (state.turnSign = 1),
+              (state.turnYaw = 0),
+              (state.turnYawTarget = 0),
+              (state.lastTurnSign = 1),
               (state.handoffDone = !1),
+              (state.handoffTransitioning = !1),
               (state.stageActive = !1),
               (state.impactOutcome = ""),
               (state.escapeActive = !1),
+              (state.escapeImpactCamera = null),
               (state.crashTurned = !1),
               (state.crashTurn = 0),
               (state.stageBeat = 0));

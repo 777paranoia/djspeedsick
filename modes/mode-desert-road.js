@@ -92,7 +92,7 @@ float trenchMask(vec2 xz){
   return clamp(cut * 1.4, 0.0, 1.0);
 }
 
-#define FAR 160.0
+#define FAR 520.0
 #define PI 3.141592653589793
 #define TAU 6.283185307179586
 
@@ -137,14 +137,23 @@ float fbm(vec2 p){
 }
 
 float roadCenter(float z){
-  float big = (n1D(z * 0.006) - 0.5) * 34.0;
-  float med = (n1D(z * 0.018 + 13.7) - 0.5) * 11.0;
-  float small = sin(z * 0.030 + n1D(z * 0.012 + 7.3) * TAU) * 2.5;
-  return big + med + small;
+  // Long engineered alignments with occasional broad mountain bends.
+  float broad = (n1D(z * 0.0024 + 5.7) - 0.5) * 42.0;
+  float bend = (n1D(z * 0.0062 + 17.1) - 0.5) * 9.0;
+  return broad + bend;
 }
 
 float roadHalfWidth(float z){
-  return mix(2.2, 3.8, n1D(z * 0.011 + 23.4));
+  return 4.10 + (n1D(z * 0.0045 + 23.4) - 0.5) * 0.24;
+}
+
+float roadGrade(float z){
+  // The long visible crests and dips are one of the defining features in the
+  // supplied references. Keep the grade broad enough to remain driveable.
+  float roll = cos(z * 0.0115) * 4.2 +
+               cos(z * 0.0045 + 0.45) * 3.2;
+  float secondary = (n1D(z * 0.0052 + 31.0) - 0.5) * 1.4;
+  return roll + secondary;
 }
 
 void roadData(vec2 xz, out float road, out float shoulder, out float centerOffset, out float signedEdge){
@@ -152,26 +161,41 @@ void roadData(vec2 xz, out float road, out float shoulder, out float centerOffse
   float w = roadHalfWidth(xz.y);
   centerOffset = xz.x - c;
   signedEdge = abs(centerOffset) - w;
-  road = 1.0 - smoothstep(0.0, 1.35, signedEdge);
-  shoulder = 1.0 - smoothstep(1.0, 5.0, signedEdge);
+  road = 1.0 - smoothstep(-0.04, 0.22, signedEdge);
+  shoulder = 1.0 - smoothstep(0.20, 4.8, signedEdge);
 }
 
 float roadFloorHeight(vec3 p){
   float center = roadCenter(p.z);
-  float laneNoise = n2D(vec2(center * 0.031, p.z * 0.020));
-  float slowNoise = n2D(vec2(center * 0.017 + 19.0, p.z * 0.010));
-  return laneNoise * 0.72 + slowNoise * 0.55 + 0.22;
+  float aggregate = n2D(vec2(center * 0.041, p.z * 0.035));
+  float crown = abs(p.x - center) * 0.014;
+  return roadGrade(p.z) + 0.38 + crown + (aggregate - 0.5) * 0.055;
 }
 
 float duneFunc(vec3 p){
-  vec2 q = p.xz / 2.5;
-  float layer1 = n2D(q * 0.20) * 2.0 - 0.5;
-  layer1 = smoothstep(0.0, 1.05, layer1);
-  float layer2 = n2D(q * 0.275);
-  layer2 = 1.0 - abs(layer2 - 0.5) * 2.0;
-  layer2 = smoothstep(0.2, 1.0, layer2 * layer2);
-  float layer3 = n2D(q * 1.50);
-  return (layer1 * 0.70 + layer2 * 0.25 + layer3 * 0.05) * 4.0;
+  // Basin floor + real mountain mass. The former shader never rose beyond a
+  // few metres, so palette changes could not make it resemble Anza-Borrego.
+  vec2 q = p.xz;
+  vec2 rq = rot2(0.31) * q;
+  float grade = roadGrade(p.z);
+  float fan = (n2D(q * 0.014 + vec2(3.7, -8.2)) - 0.5) * 2.3;
+  float folds = 1.0 - abs(n2D(rq * 0.046 + vec2(-5.0, 11.0)) * 2.0 - 1.0);
+  folds = smoothstep(0.43, 0.94, folds) * 0.95;
+  float washField = n2D(vec2(q.x * 0.030 + q.y * 0.009, q.y * 0.025) + vec2(17.0, 4.0));
+  float wash = 1.0 - smoothstep(0.035, 0.115, abs(washField - 0.50));
+  // Mountains rise outside the alluvial corridor. Ridged noise cuts the long
+  // diagonal faces and ravines visible in the reference ranges.
+  float lateral = abs(p.x - roadCenter(p.z));
+  float rangeGate = smoothstep(34.0, 125.0, lateral);
+  float massif = n2D(vec2(p.x * 0.0075, p.z * 0.0048) + vec2(19.0, -7.0));
+  float ridges = 1.0 - abs(n2D(vec2(p.x * 0.019 + p.z * 0.006,
+                                    p.z * 0.012) + vec2(-3.0, 27.0)) * 2.0 - 1.0);
+  ridges *= ridges;
+  float mountain = rangeGate * rangeGate * (12.0 + massif * 31.0 + ridges * 15.0);
+  float cutReach = 1.0 - smoothstep(70.0, 155.0, p.z);
+  float cutBank = cutReach * smoothstep(9.5, 27.0, lateral) *
+                  (2.0 + folds * 4.2);
+  return grade + 0.40 + fan + folds - wash * 0.48 + cutBank + mountain;
 }
 
 float surfFunc(vec3 p){
@@ -181,13 +205,14 @@ float surfFunc(vec3 p){
   float centerOffset;
   float signedEdge;
   roadData(p.xz, road, shoulder, centerOffset, signedEdge);
-  float corridor = 1.0 - smoothstep(0.0, 9.0, abs(centerOffset));
+  float corridor = 1.0 - smoothstep(0.0, 15.0, abs(centerOffset));
   float roadFloor = roadFloorHeight(p);
-  float flattened = mix(dunes, roadFloor, shoulder);
-  flattened -= road * 0.10;
-  float rim = smoothstep(1.8, 0.0, abs(signedEdge)) * (1.0 - road);
-  flattened += rim * 0.14;
-  return trenchCut(p.xz, mix(dunes, flattened, max(shoulder, corridor * 0.35)));
+  float engineered = roadFloor + max(signedEdge, 0.0) * 0.035;
+  float flattened = mix(dunes, engineered, shoulder);
+  flattened -= road * 0.045;
+  float berm = (1.0 - smoothstep(0.15, 1.35, abs(signedEdge))) * (1.0 - road);
+  flattened += berm * 0.075;
+  return trenchCut(p.xz, mix(dunes, flattened, max(shoulder, corridor * 0.18)));
 }
 
 float map(vec3 p){
@@ -215,7 +240,7 @@ float traceTerrain(vec3 ro, vec3 rd){
   // at grazing angles AND gives exact hits (no distance quantization rings).
   float t = 0.0;
   float tPrev = 0.0;
-  for(int i = 0; i < 128; i++){
+  for(int i = 0; i < 120; i++){
     vec3 p = ro + rd * t;
     float h = map(p);
     if(h < 0.0){
@@ -229,7 +254,7 @@ float traceTerrain(vec3 ro, vec3 rd){
     if(h < 0.002) return t;
     if(t > FAR) break;
     tPrev = t;
-    t += max(h * 0.70, 0.02 + t * 0.012);
+    t += max(h * 0.62, 0.035 + t * 0.018);
   }
   return FAR;
 }
@@ -256,10 +281,10 @@ float sandLines(vec2 p, float dist){
 }
 
 float softShadow(vec3 ro, vec3 rd){
-  // 22 iters is enough; the shadow only feeds a diff multiplier, not detail.
+  // Keep this coarse; the shadow only feeds a diffuse multiplier.
   float res = 1.0;
   float t = 0.35;
-  for(int i = 0; i < 22; i++){
+  for(int i = 0; i < 16; i++){
     float h = map(ro + rd * t);
     res = min(res, 9.0 * h / t);
     t += clamp(h, 0.18, 2.4);
@@ -269,27 +294,110 @@ float softShadow(vec3 ro, vec3 rd){
 }
 
 vec3 getSky(vec3 ro, vec3 rd, vec3 sunDir){
-  // Anza-Borrego: low-saturation pale sky, washed-out at the horizon. Big haze
-  // band, gold-white sun rather than red. Top is a dusty pale blue, not deep.
-  float y = clamp(rd.y * 0.5 + 0.5, 0.0, 1.0);
-  vec3 horizon = vec3(0.82, 0.74, 0.62);
-  vec3 zenith  = vec3(0.52, 0.62, 0.72);
-  vec3 sky = mix(horizon, zenith, pow(y, 0.65));
+  // Deep, dry high-desert blue fading to cyan and mineral haze at the basin.
+  float altitude = smoothstep(-0.08, 0.78, rd.y);
+  vec3 horizon = vec3(0.48, 0.68, 0.81);
+  vec3 zenith  = vec3(0.055, 0.285, 0.64);
+  vec3 sky = mix(horizon, zenith, pow(altitude, 0.62));
   // Soft pale gold sun (wide), narrow white core.
   float sunWide  = pow(max(dot(rd, sunDir), 0.0), 24.0);
   float sunCore  = pow(max(dot(rd, sunDir), 0.0), 256.0);
   sky += vec3(1.00, 0.88, 0.62) * sunWide * 0.55;
   sky += vec3(1.00, 0.96, 0.86) * sunCore * 1.20;
-  // Horizon haze: thick, pale, slightly warm — the Borrego dust hangs low.
-  float haze = pow(1.0 - y, 3.0);
-  sky = mix(sky, vec3(0.86, 0.80, 0.70), haze * 0.55);
+  // Long wind-sheared cloud bands like the supplied daylight references.
+  float az = atan(rd.x, rd.z);
+  vec2 cloudP = vec2(az * 1.35 + rd.y * 6.5, rd.y * 9.0);
+  float cloudN = n2D(cloudP + vec2(4.2, 12.7)) * 0.52 +
+                 n2D(cloudP * vec2(2.4, 0.58) - vec2(9.0, 3.0)) * 0.31 +
+                 n2D(cloudP * vec2(5.2, 0.34) + vec2(2.0, 17.0)) * 0.17;
+  float highBand = smoothstep(0.54, 0.73, cloudN) *
+                   smoothstep(0.06, 0.18, rd.y) * (1.0 - smoothstep(0.64, 0.90, rd.y));
+  float lowStreak = smoothstep(0.61, 0.76,
+                    n2D(vec2(az * 2.8 + rd.y * 13.0, rd.y * 19.0) + vec2(31.0, 5.0))) *
+                    smoothstep(0.015, 0.08, rd.y) * (1.0 - smoothstep(0.23, 0.40, rd.y));
+  sky = mix(sky, vec3(0.82, 0.88, 0.93), highBand * 0.46);
+  sky = mix(sky, vec3(0.90, 0.91, 0.90), lowStreak * 0.34);
+
+  // Pale grey-tan dust is concentrated tightly around the horizon.
+  float haze = exp(-abs(rd.y) * 10.0);
+  sky = mix(sky, vec3(0.76, 0.73, 0.66), haze * 0.30);
   return sky;
 }
 
 float getMist(vec3 ro, vec3 rd, float t){
-  float d = smoothstep(14.0, FAR, t);
-  float low = smoothstep(0.65, -0.10, rd.y);
+  float d = smoothstep(95.0, FAR, t);
+  float low = 1.0 - smoothstep(-0.10, 0.65, rd.y);
   return d * low;
+}
+
+float ridgeNoise(float x, float scale, float seed){
+  return n1D(x * scale + seed) * 0.55 +
+         n1D(x * scale * 2.17 + seed * 1.73) * 0.30 +
+         n1D(x * scale * 4.31 - seed) * 0.15;
+}
+
+vec3 borregoBackdrop(vec3 sky, vec3 ro, vec3 rd, vec3 sunDir){
+  float y = rd.y;
+  float az = atan(rd.x, rd.z);
+  float sunWash = smoothstep(0.25, 0.95, dot(rd, sunDir));
+
+  // A full mountain range, not a thin horizon stripe. Two silhouette layers
+  // and directional face noise create the large folded Peninsular Range mass.
+  float farProfile = 0.070 + ridgeNoise(az, 2.15, 8.0) * 0.185;
+  farProfile += ridgeNoise(az + 2.8, 7.5, 42.0) * 0.030;
+  float farFill = (1.0 - smoothstep(farProfile - 0.006, farProfile + 0.005, y)) *
+                  smoothstep(-0.145, -0.060, y);
+  float faceNoise = n2D(vec2(az * 21.0 + y * 9.0, y * 38.0) + vec2(7.0, 18.0));
+  float ravine = pow(abs(sin(az * 18.0 + y * 31.0 + faceNoise * 4.0)), 3.0);
+  float faceLight = 0.62 + faceNoise * 0.34 - ravine * 0.27;
+  vec3 farCol = mix(vec3(0.31, 0.34, 0.40), vec3(0.58, 0.49, 0.43), sunWash);
+  farCol *= faceLight;
+  farCol = mix(farCol, vec3(0.51, 0.52, 0.55), 0.18);
+  sky = mix(sky, farCol, farFill * 0.96);
+
+  float nearProfile = 0.012 + ridgeNoise(az + 1.7, 3.7, 23.0) * 0.105;
+  nearProfile += 0.024 * sin(az * 4.5 + 1.3);
+  float nearFill = (1.0 - smoothstep(nearProfile - 0.008, nearProfile + 0.005, y)) *
+                   smoothstep(-0.135, -0.055, y);
+  vec3 ridgeDir = normalize(vec3(sin(az), 0.16, cos(az)));
+  float ridgeLit = 0.35 + 0.65 * max(dot(ridgeDir, sunDir), 0.0);
+  float nearFace = n2D(vec2(az * 29.0 - y * 7.0, y * 46.0) + vec2(2.0, 31.0));
+  vec3 nearCol = mix(vec3(0.32, 0.30, 0.28), vec3(0.67, 0.56, 0.42), ridgeLit);
+  nearCol *= 0.70 + nearFace * 0.34;
+  sky = mix(sky, nearCol, nearFill * 0.94);
+
+  float dustLine = smoothstep(-0.075, 0.025, y) * (1.0 - smoothstep(0.035, 0.150, y));
+  return mix(sky, vec3(0.73, 0.69, 0.61), dustLine * 0.16);
+}
+
+float borregoScrub(vec2 xz, float centerOffset, float t){
+  vec2 cell = floor(xz / 4.8);
+  vec2 f = fract(xz / 4.8);
+  float seed = hash21(cell);
+  vec2 jitter = vec2(hash21(cell + vec2(13.1, 2.7)),
+                     hash21(cell + vec2(5.4, 19.2))) * 0.70 + 0.15;
+  vec2 d = (f - jitter) * vec2(1.18, 0.88);
+  float bush = 1.0 - smoothstep(0.055, 0.205, length(d));
+  float density = smoothstep(0.42, 0.92, seed);
+  float roadClear = smoothstep(7.2, 11.5, abs(centerOffset));
+  float farFade = 1.0 - smoothstep(135.0, 260.0, t);
+  return bush * density * roadClear * farFade;
+}
+
+float ocotilloMark(vec2 xz, float centerOffset, float t){
+  vec2 cell = floor((xz + vec2(3.4, 1.1)) / 11.0);
+  vec2 f = fract((xz + vec2(3.4, 1.1)) / 11.0);
+  float seed = hash21(cell + vec2(41.0, 9.0));
+  vec2 base = vec2(hash21(cell + vec2(1.7, 22.4)),
+                   hash21(cell + vec2(17.2, 4.8))) * 0.62 + 0.19;
+  vec2 d = f - base;
+  float stalk = 1.0 - smoothstep(0.006, 0.020, abs(d.x + d.y * 0.18));
+  stalk *= smoothstep(0.015, 0.060, d.y) * (1.0 - smoothstep(0.22, 0.42, d.y));
+  float crown = 1.0 - smoothstep(0.020, 0.065, length(d - vec2(0.0, 0.28)));
+  float density = smoothstep(0.83, 1.0, seed);
+  float roadClear = smoothstep(5.0, 13.0, abs(centerOffset));
+  float farFade = 1.0 - smoothstep(85.0, 175.0, t);
+  return max(stalk, crown * 0.45) * density * roadClear * farFade;
 }
 
 vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
@@ -318,23 +426,58 @@ vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
 
   float grain  = mix(0.5, fbm(sp.xz * 16.0), fadeHi);
   float grain2 = mix(0.5, fbm(sp.xz * 32.0 - 0.5), fadeHi);
-  vec3 sandCol = mix(vec3(0.92, 0.86, 0.72), vec3(0.74, 0.66, 0.52), grain);
-  sandCol = mix(sandCol * 1.22, sandCol * 0.74, grain2);
-  sandCol *= vec3(1.04, 1.02, 0.96);
+  vec3 sandCol = mix(vec3(0.84, 0.80, 0.69), vec3(0.60, 0.55, 0.45), grain);
+  sandCol = mix(sandCol * 1.14, sandCol * 0.78, grain2);
+  sandCol *= vec3(1.02, 1.01, 0.98);
   sandCol += sandLines(sp.xz, t) * vec3(0.06, 0.05, 0.04) * fadeMid;
   sandCol *= 0.86 + 0.22 * mix(0.5, hash31(floor(sp * 96.0)), fadeGrit);
+  float paleWash = smoothstep(0.57, 0.86, fbm(sp.xz * 0.055 + vec2(18.0, -7.0)));
+  sandCol = mix(sandCol, vec3(0.82, 0.78, 0.67), paleWash * (1.0 - road) * 0.24);
+  float arroyoField = n2D(vec2(sp.x * 0.030 + sp.z * 0.009,
+                               sp.z * 0.025) + vec2(17.0, 4.0));
+  float arroyoBed = 1.0 - smoothstep(0.040, 0.125, abs(arroyoField - 0.50));
+  sandCol = mix(sandCol, vec3(0.72, 0.70, 0.63), arroyoBed * (1.0 - road) * 0.36);
+  float cutSlope = 1.0 - smoothstep(0.58, 0.93, n.y);
+  float exposedRock = smoothstep(0.18, 0.82, cutSlope);
+  vec3 rockCol = mix(vec3(0.47, 0.44, 0.39), vec3(0.68, 0.58, 0.45),
+                    n2D(sp.xz * 0.065 + vec2(12.0, -4.0)));
+  sandCol = mix(sandCol, rockCol, exposedRock * (1.0 - road) * 0.62);
 
-  // Hard-pack dirt road: grey-brown gravel, with a faded ochre center stripe.
+  // Weathered S-22 asphalt: sun-bleached aggregate, repaired seams, double
+  // yellow center lines and narrow white edges bleeding into gravel shoulders.
   float gravel = mix(0.5, fbm(sp.xz * vec2(10.0, 10.0)), fadeHi);
-  vec3 roadCol = mix(vec3(0.20, 0.18, 0.16), vec3(0.36, 0.32, 0.27), gravel);
-  roadCol += (fbm(vec2(sp.x * 26.0, sp.z * 3.5)) - 0.5) * 0.08 * fadeHi;
-  float stripe = smoothstep(0.16, 0.0, abs(centerOffset));
-  stripe *= step(0.56, fract(sp.z * 0.115));
-  roadCol = mix(roadCol, vec3(0.78, 0.70, 0.42), stripe * 0.80);
+  vec3 roadCol = mix(vec3(0.075, 0.078, 0.074), vec3(0.21, 0.205, 0.19), gravel);
+  roadCol += (fbm(vec2(sp.x * 20.0, sp.z * 3.0)) - 0.5) * 0.065 * fadeHi;
+  float seam = 1.0 - smoothstep(0.0, 0.030, abs(fract(sp.z * 0.031 +
+                          n1D(sp.z * 0.018) * 0.20) - 0.5));
+  roadCol *= 1.0 - seam * 0.10 * fadeMid;
+  float laneWear = 1.0 - smoothstep(0.35, 0.95,
+                         abs(abs(centerOffset) - roadHalfWidth(sp.z) * 0.49));
+  roadCol *= 1.0 - laneWear * 0.055;
+  float yellowA = 1.0 - smoothstep(0.025, 0.105, abs(centerOffset - 0.14));
+  float yellowB = 1.0 - smoothstep(0.025, 0.105, abs(centerOffset + 0.14));
+  float yellowLines = max(yellowA, yellowB);
+  float roadW = roadHalfWidth(sp.z);
+  float whiteEdges = 1.0 - smoothstep(0.055, 0.135,
+                           abs(abs(centerOffset) - max(roadW - 0.30, 1.8)));
+  whiteEdges *= road;
+  roadCol = mix(roadCol, vec3(0.82, 0.64, 0.19), yellowLines * 0.88);
+  roadCol = mix(roadCol, vec3(0.82, 0.80, 0.72), whiteEdges * 0.72);
+  float reflector = 1.0 - smoothstep(0.025, 0.10, abs(fract(sp.z * 0.23) - 0.5));
+  roadCol += vec3(0.34, 0.25, 0.06) * yellowLines * reflector * fadeMid;
 
   vec3 col = mix(sandCol, roadCol, road);
   float edgeDust = shoulder * (1.0 - road);
-  col = mix(col, sandCol * 0.78 + roadCol * 0.22, edgeDust * 0.45);
+  vec3 shoulderCol = mix(sandCol, vec3(0.60, 0.57, 0.49), 0.28 + gravel * 0.16);
+  col = mix(col, shoulderCol, edgeDust * 0.58);
+  float scrubShadow = borregoScrub(sp.xz + vec2(0.72, -0.58), centerOffset, t) * (1.0 - road);
+  col *= 1.0 - scrubShadow * 0.24;
+  float scrub = borregoScrub(sp.xz, centerOffset, t) * (1.0 - road);
+  float ocotillo = ocotilloMark(sp.xz, centerOffset, t) * (1.0 - road);
+  float plantTone = hash21(floor(sp.xz / 4.8));
+  vec3 scrubCol = mix(vec3(0.21, 0.24, 0.15), vec3(0.39, 0.36, 0.21), plantTone);
+  col = mix(col, scrubCol, scrub * 0.84);
+  col = mix(col, vec3(0.20, 0.15, 0.075), ocotillo * 0.88);
 
   // Buried fuselage: the other end of the cabin tunnel. Soot-dark inside,
   // pale scuffed airliner skin at the broken lip.
@@ -353,7 +496,7 @@ vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
     col = mix(col, hull, hullM * 0.96);
   }
 
-  float rim = smoothstep(1.3, 0.0, abs(signedEdge)) * (1.0 - road);
+  float rim = (1.0 - smoothstep(0.0, 1.3, abs(signedEdge))) * (1.0 - road);
   col += vec3(0.06, 0.045, 0.028) * rim;
 
   // Pale neutral ambient + pale-gold sun. Less warm bias than red-rock desert.
@@ -370,7 +513,7 @@ vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
 vec3 TraceColor(vec3 ro, vec3 rd){
   vec3 sunDir = normalize(vec3(0.38, 0.58, -0.72));
   float t = traceTerrain(ro, rd);
-  vec3 sky = getSky(ro, rd, sunDir);
+  vec3 sky = borregoBackdrop(getSky(ro, rd, sunDir), ro, rd, sunDir);
   vec3 col = sky;
   if(t < FAR){
     vec3 sp = ro + rd * t;
@@ -418,9 +561,9 @@ vec3 TraceColor(vec3 ro, vec3 rd){
     } else {
       col = terrainColor(sp, rd, sunDir, t);
       float mist = getMist(ro, rd, t);
-      col = mix(col, sky, smoothstep(0.0, 1.0, t / FAR));
-      // Pale dust-haze tint, not warm-orange. Anza-Borrego dust is grey-tan.
-      col = col * 0.75 + col * 1.5 * mist + vec3(0.60, 0.55, 0.48) * mist;
+      // Distance haze separates the basin, foothills and far range without
+      // bleaching the entire foreground.
+      col = mix(col, sky, mist * 0.58);
     }
   }
   // Parked harley sprite quad (in front of whatever the terrain gave us).
@@ -475,8 +618,8 @@ void main(){
 // Scene runtime: camera + movement.
 // =============================================================================
 //
-// Three phases, all advanced ONLY by held forward input (Space / W / Up Arrow / K /
-// touch-hold). No auto-advance anywhere — release the key, the camera stops.
+// Three phases, all advanced ONLY by live forward input (Space / W / Up Arrow / K /
+// touch-hold). Handoff-held input is not carried in; press again to move.
 //
 //   PHASE_APPROACH : starts ~20 ft (6.1 m) off the road, perpendicular to it,
 //                    facing the road. Held input walks the camera straight in
@@ -487,6 +630,7 @@ void main(){
 //                    moves.
 //   PHASE_TRACK    : rails-locked. camX = roadCenter(camZ), yaw = road tangent,
 //                    held input drives camZ forward along the road.
+//   PHASE_RIDE     : ArrowUp throttles the motorcycle; ArrowDown brakes.
 //
 // Mouse position = look offset (yaw + pitch) clamped within rail limits.
 // =============================================================================
@@ -547,35 +691,49 @@ void main(){
     "  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n" +
     "}\n" +
     "float roadCenter(float z){\n" +
-    "  float big = (n1D(z * 0.006) - 0.5) * 34.0;\n" +
-    "  float med = (n1D(z * 0.018 + 13.7) - 0.5) * 11.0;\n" +
-    "  float small = sin(z * 0.030 + n1D(z * 0.012 + 7.3) * TAU) * 2.5;\n" +
-    "  return big + med + small;\n" +
+    "  float broad = (n1D(z * 0.0024 + 5.7) - 0.5) * 42.0;\n" +
+    "  float bend = (n1D(z * 0.0062 + 17.1) - 0.5) * 9.0;\n" +
+    "  return broad + bend;\n" +
     "}\n" +
-    "float roadHalfWidth(float z){ return mix(2.2, 3.8, n1D(z * 0.011 + 23.4)); }\n" +
+    "float roadHalfWidth(float z){ return 4.10 + (n1D(z * 0.0045 + 23.4) - 0.5) * 0.24; }\n" +
+    "float roadGrade(float z){\n" +
+    "  float roll = cos(z * 0.0115) * 4.2 + cos(z * 0.0045 + 0.45) * 3.2;\n" +
+    "  float secondary = (n1D(z * 0.0052 + 31.0) - 0.5) * 1.4;\n" +
+    "  return roll + secondary;\n" +
+    "}\n" +
     "void roadData(vec2 xz, out float road, out float shoulder, out float centerOffset, out float signedEdge){\n" +
     "  float c = roadCenter(xz.y);\n" +
     "  float w = roadHalfWidth(xz.y);\n" +
     "  centerOffset = xz.x - c;\n" +
     "  signedEdge = abs(centerOffset) - w;\n" +
-    "  road = 1.0 - smoothstep(0.0, 1.35, signedEdge);\n" +
-    "  shoulder = 1.0 - smoothstep(1.0, 5.0, signedEdge);\n" +
+    "  road = 1.0 - smoothstep(-0.04, 0.22, signedEdge);\n" +
+    "  shoulder = 1.0 - smoothstep(0.20, 4.8, signedEdge);\n" +
     "}\n" +
     "float roadFloorHeight(vec3 p){\n" +
     "  float center = roadCenter(p.z);\n" +
-    "  float laneNoise = n2D(vec2(center * 0.031, p.z * 0.020));\n" +
-    "  float slowNoise = n2D(vec2(center * 0.017 + 19.0, p.z * 0.010));\n" +
-    "  return laneNoise * 0.72 + slowNoise * 0.55 + 0.22;\n" +
+    "  float aggregate = n2D(vec2(center * 0.041, p.z * 0.035));\n" +
+    "  float crown = abs(p.x - center) * 0.014;\n" +
+    "  return roadGrade(p.z) + 0.38 + crown + (aggregate - 0.5) * 0.055;\n" +
     "}\n" +
     "float duneFunc(vec3 p){\n" +
-    "  vec2 q = p.xz / 2.5;\n" +
-    "  float l1 = n2D(q * 0.20) * 2.0 - 0.5;\n" +
-    "  l1 = smoothstep(0.0, 1.05, l1);\n" +
-    "  float l2 = n2D(q * 0.275);\n" +
-    "  l2 = 1.0 - abs(l2 - 0.5) * 2.0;\n" +
-    "  l2 = smoothstep(0.2, 1.0, l2 * l2);\n" +
-    "  float l3 = n2D(q * 1.50);\n" +
-    "  return (l1 * 0.70 + l2 * 0.25 + l3 * 0.05) * 4.0;\n" +
+    "  vec2 q = p.xz;\n" +
+    "  float c = cos(0.31), s = sin(0.31);\n" +
+    "  vec2 rq = vec2(c * q.x - s * q.y, s * q.x + c * q.y);\n" +
+    "  float grade = roadGrade(p.z);\n" +
+    "  float fan = (n2D(q * 0.014 + vec2(3.7, -8.2)) - 0.5) * 2.3;\n" +
+    "  float folds = 1.0 - abs(n2D(rq * 0.046 + vec2(-5.0, 11.0)) * 2.0 - 1.0);\n" +
+    "  folds = smoothstep(0.43, 0.94, folds) * 0.95;\n" +
+    "  float washField = n2D(vec2(q.x * 0.030 + q.y * 0.009, q.y * 0.025) + vec2(17.0, 4.0));\n" +
+    "  float wash = 1.0 - smoothstep(0.035, 0.115, abs(washField - 0.50));\n" +
+    "  float lateral = abs(p.x - roadCenter(p.z));\n" +
+    "  float rangeGate = smoothstep(34.0, 125.0, lateral);\n" +
+    "  float massif = n2D(vec2(p.x * 0.0075, p.z * 0.0048) + vec2(19.0, -7.0));\n" +
+    "  float ridges = 1.0 - abs(n2D(vec2(p.x * 0.019 + p.z * 0.006, p.z * 0.012) + vec2(-3.0, 27.0)) * 2.0 - 1.0);\n" +
+    "  ridges *= ridges;\n" +
+    "  float mountain = rangeGate * rangeGate * (12.0 + massif * 31.0 + ridges * 15.0);\n" +
+    "  float cutReach = 1.0 - smoothstep(70.0, 155.0, p.z);\n" +
+    "  float cutBank = cutReach * smoothstep(9.5, 27.0, lateral) * (2.0 + folds * 4.2);\n" +
+    "  return grade + 0.40 + fan + folds - wash * 0.48 + cutBank + mountain;\n" +
     "}\n" +
     "float trenchCut(vec2 xz, float h){\n" +
     "  if(trenchB.x < 0.5) return h;\n" +
@@ -597,13 +755,14 @@ void main(){
     "  float dunes = duneFunc(p);\n" +
     "  float road, shoulder, centerOffset, signedEdge;\n" +
     "  roadData(p.xz, road, shoulder, centerOffset, signedEdge);\n" +
-    "  float corridor = 1.0 - smoothstep(0.0, 9.0, abs(centerOffset));\n" +
+    "  float corridor = 1.0 - smoothstep(0.0, 15.0, abs(centerOffset));\n" +
     "  float roadFloor = roadFloorHeight(p);\n" +
-    "  float flattened = mix(dunes, roadFloor, shoulder);\n" +
-    "  flattened -= road * 0.10;\n" +
-    "  float rim = smoothstep(1.8, 0.0, abs(signedEdge)) * (1.0 - road);\n" +
-    "  flattened += rim * 0.14;\n" +
-    "  return trenchCut(p.xz, mix(dunes, flattened, max(shoulder, corridor * 0.35)));\n" +
+    "  float engineered = roadFloor + max(signedEdge, 0.0) * 0.035;\n" +
+    "  float flattened = mix(dunes, engineered, shoulder);\n" +
+    "  flattened -= road * 0.045;\n" +
+    "  float berm = (1.0 - smoothstep(0.15, 1.35, abs(signedEdge))) * (1.0 - road);\n" +
+    "  flattened += berm * 0.075;\n" +
+    "  return trenchCut(p.xz, mix(dunes, flattened, max(shoulder, corridor * 0.18)));\n" +
     "}\n" +
     "void main(){\n" +
     "  float c = roadCenter(u_z);\n" +
@@ -648,29 +807,45 @@ void main(){
     return t * t * (3 - 2 * t);
   }
   function roadCenterJS(z) {
-    var big   = (n1DJS(z * 0.006)        - 0.5) * 34.0;
-    var med   = (n1DJS(z * 0.018 + 13.7) - 0.5) * 11.0;
-    var small = Math.sin(z * 0.030 + n1DJS(z * 0.012 + 7.3) * Math.PI * 2) * 2.5;
-    return big + med + small;
+    var broad = (n1DJS(z * 0.0024 + 5.7) - 0.5) * 42.0;
+    var bend = (n1DJS(z * 0.0062 + 17.1) - 0.5) * 9.0;
+    return broad + bend;
   }
   function roadHalfWidthJS(z) {
-    return 2.2 + (3.8 - 2.2) * n1DJS(z * 0.011 + 23.4);
+    return 4.10 + (n1DJS(z * 0.0045 + 23.4) - 0.5) * 0.24;
+  }
+  function roadGradeJS(z) {
+    var roll = Math.cos(z * 0.0115) * 4.2 +
+               Math.cos(z * 0.0045 + 0.45) * 3.2;
+    var secondary = (n1DJS(z * 0.0052 + 31.0) - 0.5) * 1.4;
+    return roll + secondary;
   }
   function roadFloorHeightJS(x, z) {
     var center = roadCenterJS(z);
-    var laneNoise = n2DJS(center * 0.031,        z * 0.020);
-    var slowNoise = n2DJS(center * 0.017 + 19.0, z * 0.010);
-    return laneNoise * 0.72 + slowNoise * 0.55 + 0.22;
+    var aggregate = n2DJS(center * 0.041, z * 0.035);
+    var crown = Math.abs(x - center) * 0.014;
+    return roadGradeJS(z) + 0.38 + crown + (aggregate - 0.5) * 0.055;
   }
   function duneFuncJS(x, z) {
-    var qx = x / 2.5, qz = z / 2.5;
-    var l1 = n2DJS(qx * 0.20, qz * 0.20) * 2 - 0.5;
-    l1 = smoothstepJS(0.0, 1.05, l1);
-    var l2 = n2DJS(qx * 0.275, qz * 0.275);
-    l2 = 1.0 - Math.abs(l2 - 0.5) * 2.0;
-    l2 = smoothstepJS(0.2, 1.0, l2 * l2);
-    var l3 = n2DJS(qx * 1.50, qz * 1.50);
-    return (l1 * 0.70 + l2 * 0.25 + l3 * 0.05) * 4.0;
+    var c = Math.cos(0.31), s = Math.sin(0.31);
+    var rqx = c * x - s * z;
+    var rqz = s * x + c * z;
+    var grade = roadGradeJS(z);
+    var fan = (n2DJS(x * 0.014 + 3.7, z * 0.014 - 8.2) - 0.5) * 2.3;
+    var folds = 1.0 - Math.abs(n2DJS(rqx * 0.046 - 5.0, rqz * 0.046 + 11.0) * 2.0 - 1.0);
+    folds = smoothstepJS(0.43, 0.94, folds) * 0.95;
+    var washField = n2DJS(x * 0.030 + z * 0.009 + 17.0, z * 0.025 + 4.0);
+    var wash = 1.0 - smoothstepJS(0.035, 0.115, Math.abs(washField - 0.50));
+    var lateral = Math.abs(x - roadCenterJS(z));
+    var rangeGate = smoothstepJS(34.0, 125.0, lateral);
+    var massif = n2DJS(x * 0.0075 + 19.0, z * 0.0048 - 7.0);
+    var ridges = 1.0 - Math.abs(n2DJS(x * 0.019 + z * 0.006 - 3.0,
+                                      z * 0.012 + 27.0) * 2.0 - 1.0);
+    ridges *= ridges;
+    var mountain = rangeGate * rangeGate * (12.0 + massif * 31.0 + ridges * 15.0);
+    var cutReach = 1.0 - smoothstepJS(70.0, 155.0, z);
+    var cutBank = cutReach * smoothstepJS(9.5, 27.0, lateral) * (2.0 + folds * 4.2);
+    return grade + 0.40 + fan + folds - wash * 0.48 + cutBank + mountain;
   }
   // Tunnel-exit trench mirror. Set by startModeDesertRoad when emergeIntro
   // is on; null = disabled. KEEP IN SYNC with trenchCut in BOTH shaders.
@@ -697,15 +872,16 @@ void main(){
     var w = roadHalfWidthJS(z);
     var centerOffset = x - center;
     var signedEdge = Math.abs(centerOffset) - w;
-    var road     = 1.0 - smoothstepJS(0.0, 1.35, signedEdge);
-    var shoulder = 1.0 - smoothstepJS(1.0, 5.0,  signedEdge);
-    var corridor = 1.0 - smoothstepJS(0.0, 9.0,  Math.abs(centerOffset));
+    var road     = 1.0 - smoothstepJS(-0.04, 0.22, signedEdge);
+    var shoulder = 1.0 - smoothstepJS(0.20, 4.8, signedEdge);
+    var corridor = 1.0 - smoothstepJS(0.0, 15.0, Math.abs(centerOffset));
     var roadFloor = roadFloorHeightJS(x, z);
-    var flattened = dunes * (1 - shoulder) + roadFloor * shoulder;
-    flattened -= road * 0.10;
-    var rim = smoothstepJS(1.8, 0.0, Math.abs(signedEdge)) * (1 - road);
-    flattened += rim * 0.14;
-    var blendT = Math.max(shoulder, corridor * 0.35);
+    var engineered = roadFloor + Math.max(signedEdge, 0) * 0.035;
+    var flattened = dunes * (1 - shoulder) + engineered * shoulder;
+    flattened -= road * 0.045;
+    var berm = (1 - smoothstepJS(0.15, 1.35, Math.abs(signedEdge))) * (1 - road);
+    flattened += berm * 0.075;
+    var blendT = Math.max(shoulder, corridor * 0.18);
     return trenchCutJS(x, z, dunes * (1 - blendT) + flattened * blendT);
   }
 
@@ -780,7 +956,7 @@ void main(){
     var TRACK_LOOK_AHEAD = typeof opts.lookAhead   === "number" ? opts.lookAhead   : 8.0;
     var RENDER_SCALE     = typeof opts.renderScale === "number" ? opts.renderScale : 1.00;
     var MAX_DIM          = typeof opts.maxDim      === "number" ? opts.maxDim      : 1600;
-    var CENTER_PITCH     = typeof opts.centerPitch === "number" ? opts.centerPitch : -0.08;
+    var CENTER_PITCH     = typeof opts.centerPitch === "number" ? opts.centerPitch : -0.025;
     var startZ           = typeof opts.startZ      === "number" ? opts.startZ      : 0.0;
 
     // --- Canvas ---
@@ -828,6 +1004,7 @@ void main(){
       console.error("[mode-desert-road]", e.message);
       return null;
     }
+    window.__modeDesertRoadActive = true;
 
     var u = {
       view:      gl.getUniformLocation(program, "view"),
@@ -907,14 +1084,15 @@ void main(){
     // --- Parked harley + ride ---------------------------------------------
     // A world-space sprite quad parked on the road ahead. Walking into it
     // (PHASE_TRACK) mounts: the world sprite hides, bike.png overlays the
-    // screen as the rider's own machine, and held input becomes throttle.
+    // screen as the rider's own machine, and ArrowUp becomes throttle.
     // The overlay counter-shifts against mouse-look so the bike stays
     // straight on the road while the eyes wander.
     var HARLEY = opts.harley !== false;
     var BIKE_AHEAD   = typeof opts.bikeAhead   === "number" ? opts.bikeAhead   : 2.5;
     var RIDE_TOP     = typeof opts.rideSpeed   === "number" ? opts.rideSpeed   : 24;  // m/s
-    var RIDE_ACCEL   = 9;
-    var RIDE_DRAG    = 14;
+    var RIDE_ACCEL   = typeof opts.rideAccel   === "number" ? opts.rideAccel   : 9;
+    var RIDE_DRAG    = typeof opts.rideDrag    === "number" ? opts.rideDrag    : 4.8;
+    var RIDE_BRAKE   = typeof opts.rideBrake   === "number" ? opts.rideBrake   : 30;
     var bikeZ = 0, bikeX = 0, bikeY = 0;
     var harleyReady = false;
     var mounted = false;
@@ -1024,7 +1202,7 @@ void main(){
 
     // --- Input ---
     var keys = Object.create(null);
-    if (opts.walkHeld || opts.spaceHeld) keys.Space = true;
+    window.__modeDesertRoadNav = { forward: false, back: false, left: false, right: false };
     function forwardKey(code) {
       return code === "Space" || code === "ArrowUp" || code === "KeyW" || code === "KeyK";
     }
@@ -1042,12 +1220,20 @@ void main(){
       var t = e.target;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       keys[e.code] = true;
-      if (forwardKey(e.code) || e.code === "ArrowDown" || turnAliasKey(e.code))
+      if (forwardKey(e.code) || e.code === "ArrowDown" || turnAliasKey(e.code)) {
         e.preventDefault();
+        e.stopPropagation();
+      }
     }
-    function onKeyUp(e) { keys[e.code] = false; }
-    window.addEventListener("keydown", onKeyDown, { passive: false });
-    window.addEventListener("keyup",   onKeyUp);
+    function onKeyUp(e) {
+      keys[e.code] = false;
+      if (forwardKey(e.code) || e.code === "ArrowDown" || turnAliasKey(e.code)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown, { passive: false, capture: true });
+    window.addEventListener("keyup",   onKeyUp,   { passive: false, capture: true });
 
     // Touch: any held finger counts as "forward".
     var touchHeld = false;
@@ -1056,6 +1242,29 @@ void main(){
     canvas.addEventListener("touchstart",  onTouchStart, { passive: false });
     canvas.addEventListener("touchend",    onTouchEnd);
     canvas.addEventListener("touchcancel", onTouchEnd);
+
+    function walkHeld() {
+      return !paused && !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld);
+    }
+    function rideThrottleHeld() {
+      return !paused && !!(keys.ArrowUp || touchHeld);
+    }
+    function rideBrakeHeld() {
+      return !paused && !!keys.ArrowDown;
+    }
+    function syncDesertRoadNav() {
+      var nav = { forward: false, back: false, left: false, right: false };
+      if (!paused) {
+        if (phase === PHASE_RIDE) {
+          nav.forward = true;
+          nav.back = rideSpeed > 0.05 || rideBrakeHeld();
+        } else {
+          nav.forward = true;
+        }
+      }
+      window.__modeDesertRoadNav = nav;
+      return nav;
+    }
 
     // Mouse -> look offset, clamped to rail limits. No held button: cursor
     // position directly chooses the look direction.
@@ -1119,24 +1328,20 @@ void main(){
       phase = PHASE_RIDE;
     }
 
-    // The overlay is the rider's own machine: it tracks the ROAD, not the
-    // eyes. Mouse-look pans the view; the bike counter-shifts by the same
-    // angle so it stays glued straight ahead on the road. (fov 90 vertical:
-    // screen offset of a world direction = tan(angle) * height/2.)
-    function driveBikeOverlay(now) {
+    // The overlay is the rider's own machine. Horizontal look may slide it
+    // against the world, but vertical eye movement must never lift the bike
+    // away from the viewport edge. Keep the PNG permanently bottom-anchored.
+    function driveBikeOverlay() {
       if (!bikeOverlayEl || !mounted) return;
       var w = window.innerWidth || 800;
       var h = window.innerHeight || 600;
       var shiftX = Math.tan(lookYaw) * h * 0.5;
-      var shiftY = Math.tan(lookPitch - CENTER_PITCH) * h * 0.5;
-      var bob = Math.sin(now * 0.012) * Math.min(1, rideSpeed / 8) * 4;
-      var y = Math.min(0, shiftY + bob);
       bikeOverlayEl.style.cssText =
-        "position:fixed;left:50%;bottom:0;z-index:600;pointer-events:none;" +
+        "position:fixed;left:50%;bottom:-3px;z-index:600;pointer-events:none;" +
         "user-select:none;-webkit-user-drag:none;display:block;" +
         "width:" + Math.round(Math.min(w * 0.82, 1320)) + "px;" +
-        "transform:translateX(calc(-50% + " + shiftX.toFixed(1) + "px))" +
-        " translateY(" + y.toFixed(1) + "px);";
+        "height:auto;max-width:none;transform-origin:50% 100%;" +
+        "transform:translate3d(calc(-50% + " + shiftX.toFixed(1) + "px),0,0);";
     }
 
     // --- Frame loop ---
@@ -1156,8 +1361,8 @@ void main(){
       // (e.g. the cabin-tunnel overlay still owns the screen) input is
       // ignored entirely — otherwise the same held Space that advances the
       // tunnel would already be walking the desert camera underneath it.
-      var held = !paused &&
-        !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld);
+      var held = walkHeld();
+      syncDesertRoadNav();
 
       if (phase === PHASE_EMERGE) {
         // Climb the tilted fuselage interior up toward the raised mouth.
@@ -1197,9 +1402,13 @@ void main(){
       else {
         // PHASE_TRACK walks the rails; PHASE_RIDE throttles them.
         if (phase === PHASE_RIDE) {
-          rideSpeed = held
-            ? Math.min(RIDE_TOP, rideSpeed + RIDE_ACCEL * dt)
-            : Math.max(0, rideSpeed - RIDE_DRAG * dt);
+          var throttleHeld = rideThrottleHeld();
+          var brakeHeld = rideBrakeHeld();
+          if (throttleHeld && !brakeHeld) {
+            rideSpeed = Math.min(RIDE_TOP, rideSpeed + RIDE_ACCEL * dt);
+          } else {
+            rideSpeed = Math.max(0, rideSpeed - (brakeHeld ? RIDE_BRAKE : RIDE_DRAG) * dt);
+          }
           camZ += rideSpeed * dt;
         } else if (held) {
           camZ += WALK_SPEED * dt;
@@ -1214,6 +1423,7 @@ void main(){
           mountHarley();
         }
       }
+      syncDesertRoadNav();
 
       // view = lookAt(eye, eye + forward, up).
       var effYaw   = yaw + lookYaw;
@@ -1239,7 +1449,7 @@ void main(){
           [dc.x + dsy * dcp, dc.y + dsp, dc.z + dcy * dcp], [0, 1, 0]);
       }
 
-      driveBikeOverlay(now);
+      driveBikeOverlay();
 
       // Render.
       resize();
@@ -1263,23 +1473,81 @@ void main(){
     var handle = {
       pause:  function () { paused = true; },
       resume: function () { paused = false; prev = performance.now(); },
+      // Snap the live scene straight into a phase. Accepts a string
+      // ("emerge"|"approach"|"turn"|"track"|"ride") or the PHASE_* int.
+      // Mirrors mode-alley.js seek() so the shared road engine is driven
+      // the same way from the debug UI.
+      seek: function (target) {
+        if (target === "emerge" || target === PHASE_EMERGE) {
+          // The fuselage interior only renders when the scene was started
+          // with the emerge intro (tube uniforms are set once, at startup).
+          phase = PHASE_EMERGE;
+          if (EMERGE) {
+            emergeAlong = EMERGE_ALONG0;
+            camX = mouthX + EM_COS * emergeAlong;
+            camZ = mouthZ;
+            camY = (mouthY - EM_SIN * emergeAlong) - TUBE_R + EYE_ABOVE;
+          }
+        } else if (target === "approach" || target === PHASE_APPROACH) {
+          // Off the +X shoulder, perpendicular to the road, facing it.
+          phase = PHASE_APPROACH;
+          turnProgress = 0;
+          runProbe(roadCenterJS(camZ) + ROAD_OFFSET, camZ);
+          camX = probeBuf[0] + ROAD_OFFSET;
+          runProbe(camX, camZ);
+          camY = probeBuf[2] + EYE_ABOVE;
+          yaw = turnStartYaw;
+        } else if (target === "turn" || target === PHASE_TURN) {
+          // On the centerline, about to pivot from -X to +Z.
+          phase = PHASE_TURN;
+          turnProgress = 0;
+          camX = roadCenterJS(camZ);
+          runProbe(camX, camZ);
+          camY = probeBuf[2] + EYE_ABOVE;
+          yaw = turnStartYaw;
+        } else if (target === "ride" || target === PHASE_RIDE) {
+          // Rails-locked on the road, then mount the harley if it's loaded.
+          camX = roadCenterJS(camZ);
+          runProbe(camX, camZ);
+          camY = probeBuf[2] + EYE_ABOVE;
+          yaw = Math.atan2(roadCenterJS(camZ + TRACK_LOOK_AHEAD) - camX, TRACK_LOOK_AHEAD);
+          turnProgress = 1;
+          if (HARLEY && harleyReady) mountHarley();
+          else phase = PHASE_TRACK; // bike texture still loading; land on the road
+        } else {
+          // "track" / "road" (default): rails-locked, walking the road.
+          phase = PHASE_TRACK;
+          turnProgress = 1;
+          camX = roadCenterJS(camZ);
+          runProbe(camX, camZ);
+          camY = probeBuf[2] + EYE_ABOVE;
+          yaw = Math.atan2(roadCenterJS(camZ + TRACK_LOOK_AHEAD) - camX, TRACK_LOOK_AHEAD);
+        }
+        lookYaw = 0;
+        lookPitch = CENTER_PITCH;
+        return handle;
+      },
       getState: function () {
         return {
           x: camX, y: camY, z: camZ,
           yaw: yaw, lookYaw: lookYaw, lookPitch: lookPitch,
           phase: phase, turnProgress: turnProgress, emergeAlong: emergeAlong,
           mounted: mounted, rideSpeed: rideSpeed,
+          throttleHeld: rideThrottleHeld(), brakeHeld: rideBrakeHeld(),
+          nav: syncDesertRoadNav(),
           mouthX: mouthX, mouthY: mouthY, mouthZ: mouthZ,
           bikeX: bikeX, bikeY: bikeY, bikeZ: bikeZ,
-          held: !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld),
+          held: walkHeld(),
         };
       },
       destroy: function () {
         if (destroyed) return;
         destroyed = true;
         cancelAnimationFrame(rafId);
-        window.removeEventListener("keydown", onKeyDown);
-        window.removeEventListener("keyup",   onKeyUp);
+        window.removeEventListener("keydown", onKeyDown, true);
+        window.removeEventListener("keyup",   onKeyUp,   true);
+        window.__modeDesertRoadActive = false;
+        window.__modeDesertRoadNav = null;
         window.removeEventListener("mousemove",   onMouseMove);
         canvas.removeEventListener("touchstart",  onTouchStart);
         canvas.removeEventListener("touchend",    onTouchEnd);
@@ -1307,5 +1575,45 @@ void main(){
       try { window.__modeDesertRoadScene.destroy(); } catch (e) {}
     }
     window.__modeDesertRoadScene = null;
+  };
+
+  // Debug transport: jump straight to any desert phase. Tears down any
+  // competing road-engine scene (desert/alley/theater), starts the desert
+  // with phase-appropriate opts, then snaps to the target. Mirrors the
+  // alley hook (__alleyDebugGoto) — alley shares this same road engine.
+  window.__desertDebugGoto = function (target) {
+    var competing = [
+      window.__modeDesertRoadScene,
+      window.__modeAlleyScene,
+      window.__modeTheaterScene,
+    ];
+    for (var i = 0; i < competing.length; i++) {
+      var s = competing[i];
+      if (s && typeof s.destroy === "function") {
+        try { s.destroy(); } catch (e) {}
+      }
+    }
+    window.__modeDesertRoadScene = null;
+    window.isEngine1Dead = true;
+
+    var opts = {};
+    if (target === "emerge") opts.emergeIntro = true;
+    else if (target === "approach") { /* default placement is the approach */ }
+    else opts.startOnRoad = true; // turn / track / ride all begin on the road
+
+    var scene = window.startModeDesertRoad(opts);
+    if (scene && typeof scene.seek === "function") {
+      scene.seek(target || "track");
+      if (target === "ride") {
+        // harley.png loads async; re-apply the mount once the texture is ready.
+        setTimeout(function () {
+          if (window.__modeDesertRoadScene === scene) scene.seek("ride");
+        }, 140);
+        setTimeout(function () {
+          if (window.__modeDesertRoadScene === scene) scene.seek("ride");
+        }, 360);
+      }
+    }
+    return scene;
   };
 })();

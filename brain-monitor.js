@@ -741,14 +741,36 @@
     }
     // Standalone modes kill engine1 but can leave window.activePOV stale.
     // Do not let stale Zone1 POV light the red L/R scanner bars.
+    if (window.__modeAlleyActive) {
+      var alleyNav = window.__modeAlleyNav || {};
+      alleyNav.forward && (opts.forward = !0);
+      alleyNav.back && (opts.back = !0);
+      alleyNav.left && (opts.left = !0);
+      alleyNav.right && (opts.right = !0);
+      return opts;
+    }
     if (window.__modeTheaterActive) {
       var theaterNav = window.__modeTheaterNav || {};
       theaterNav.forward && (opts.forward = !0);
       theaterNav.back && (opts.back = !0);
       return opts;
     }
-    if (window.__cabinTunnelActive || window.__modeDesertRoadActive)
+    if (window.__cabinTunnelActive) {
+      var cabinNav = window.__cabinTunnelNav || {};
+      cabinNav.forward && (opts.forward = !0);
+      cabinNav.back && (opts.back = !0);
+      cabinNav.left && (opts.left = !0);
+      cabinNav.right && (opts.right = !0);
       return opts;
+    }
+    if (window.__modeDesertRoadActive) {
+      var desertNav = window.__modeDesertRoadNav || {};
+      desertNav.forward && (opts.forward = !0);
+      desertNav.back && (opts.back = !0);
+      desertNav.left && (opts.left = !0);
+      desertNav.right && (opts.right = !0);
+      return opts;
+    }
     if (window.isEngine1Dead) return opts;
     // Zone1 — engine.js POV ring. activePOV mirrored to window from engine.js.
     var e1 =
