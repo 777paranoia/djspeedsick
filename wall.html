@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Gallery Wall</title>
+<style>
+  :root { --ui: rgba(255,255,255,0.85); --ui-bg: rgba(20,20,22,0.32); --ui-bg-hover: rgba(20,20,22,0.55); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #111114; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; touch-action: none; }
+
+  /* subtle vignette for depth/mood */
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background: radial-gradient(120% 120% at 50% 48%, transparent 55%, rgba(0,0,0,0.45) 100%);
+  }
+
+  /* left / right controls */
+  .ctrl {
+    position: fixed; top: 0; height: 100%; width: 22%; min-width: 90px; max-width: 240px;
+    z-index: 5; border: 0; cursor: pointer; color: var(--ui);
+    background: transparent; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent; user-select: none; transition: background .25s ease;
+    outline: none;
+  }
+  .ctrl:hover, .ctrl.active { background: linear-gradient(var(--side), var(--ui-bg-hover), transparent); }
+  #left  { left: 0;  --side: to right; }
+  #right { right: 0; --side: to left; }
+  .ctrl svg { width: 46px; height: 46px; opacity: .55; transition: opacity .2s ease, transform .15s ease; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .ctrl:hover svg, .ctrl.active svg { opacity: .95; }
+  .ctrl.active svg { transform: scale(.9); }
+  #right svg { transform: scaleX(-1); }
+  #right.active svg { transform: scaleX(-1) scale(.9); }
+
+  #hint {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    z-index: 6; color: var(--ui); font: 500 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
+    letter-spacing: .04em; padding: 8px 16px; border-radius: 999px; background: var(--ui-bg);
+    backdrop-filter: blur(6px); pointer-events: none; transition: opacity 1s ease; text-align: center;
+  }
+  #loader {
+    position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    background: #111114; color: var(--ui); font: 500 14px system-ui, sans-serif; letter-spacing: .05em;
+    transition: opacity .6s ease;
+  }
+  #loader .spin { width: 26px; height: 26px; margin-right: 12px; border: 2px solid rgba(255,255,255,.25);
+    border-top-color: rgba(255,255,255,.9); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #banner {
+    position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 8;
+    color: var(--ui); font: 500 12.5px system-ui, sans-serif; padding: 7px 14px; border-radius: 8px;
+    background: var(--ui-bg); backdrop-filter: blur(6px); max-width: 90vw; text-align: center;
+  }
+  #banner b { color: #fff; }
+  .hidden { opacity: 0 !important; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="vignette"></div>
+
+  <button id="left" class="ctrl" aria-label="Step left">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button id="right" class="ctrl" aria-label="Step right">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+
+  <div id="hint">Hold ◂ ▸ or arrow keys to walk the wall</div>
+  <div id="loader"><span class="spin"></span><span>Loading gallery…</span></div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+  /* =========================================================================
+     GALLERY WALL — standalone WebGL page
+     Drop this file anywhere on your site. Edit CONFIG below to match paths.
+     ========================================================================= */
+  const CONFIG = {
+    // ---- paths (relative to where this HTML file lives) -------------------
+    galleryDir:   'files/img/gallery/',           // folder holding the artwork
+    manifest:     'files/img/gallery/manifest.json', // list of images (see generator)
+    wallTexture:  'files/art/wall.png',           // the wall surface
+    floorTexture: 'files/art/floor.png',          // the floor surface
+
+    // ---- wall surface -----------------------------------------------------
+    wallTileWidth:  3.0,   // world-units one copy of wall.png spans horizontally
+    wallTileHeight: 3.0,   // world-units one copy of wall.png spans vertically
+    wallHeight:     13,    // total wall plane height (kept tall so no top edge shows)
+    wallCenterY:    4.6,   // vertical center of the wall plane
+    floorTileWidth: 3.0,   // world-units one copy of floor.png spans (along the wall)
+    floorTileDepth: 3.0,   // world-units one copy of floor.png spans (toward you)
+
+    // ---- viewpoint --------------------------------------------------------
+    cameraZ:   2.7,        // how far back you stand (bigger = further from wall)
+    eyeY:      1.55,       // eye height
+    hangCenterY: 1.62,     // vertical center the art hangs around
+    floorClearance: 0.4,   // minimum gap kept between the lowest art and the floor
+    fov:       54,
+
+    // ---- movement / side-step feel ---------------------------------------
+    moveSpeed: 3.1,        // top walking speed (units/sec)
+    accel:     4.0,        // how quickly you reach top speed / stop
+    maxYaw:    0.17,       // radians the head turns toward travel (~10°)
+    yawEase:   5.0,        // how quickly the glance eases in/out
+    bob:       0.016,      // head-bob amplitude while walking (0 = off)
+
+    // ---- hang / layout ----------------------------------------------------
+    gap:        0.78,      // horizontal space between columns (units)
+    soloH:     [2.05, 2.95], // solo artwork height range (units)
+    stackH:    [1.22, 1.62], // each artwork height range when stacked
+    stackGap:   0.24,      // vertical gap between a stacked pair
+    stackProb:  0.5,       // 0.5 = even mix of solo vs stacked pairs
+    maxColW:    6.2,       // cap a column's width (preserves aspect, shrinks height)
+    recentWindow: 8,       // never reuse an image within this many placements
+
+    // ---- frames -----------------------------------------------------------
+    frame:       false,
+    frameColor:  0x161616,
+    frameBorder: 0.055,
+
+    // ---- atmosphere -------------------------------------------------------
+    bgColor:    0x101012,
+    floorColor: 0x0c0c0e,
+    fogNear:    16,
+    fogFar:     44,
+
+    // ---- streaming window (memory) ---------------------------------------
+    genAhead: 28,          // generate columns this far ahead of you
+    showRange: 22,         // build meshes within this distance of you
+    disposeRange: 30,      // free meshes beyond this distance
+    forget: 62,            // forget column definitions beyond this (regenerate fresh later)
+  };
+
+  (function () {
+    'use strict';
+    const THREE = window.THREE;
+    const stage = document.getElementById('stage');
+    const loaderEl = document.getElementById('loader');
+    const hintEl = document.getElementById('hint');
+
+    // ----- renderer / scene -------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    stage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(CONFIG.bgColor);
+    scene.fog = new THREE.Fog(CONFIG.bgColor, CONFIG.fogNear, CONFIG.fogFar);
+
+    const camera = new THREE.PerspectiveCamera(CONFIG.fov, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, CONFIG.eyeY, CONFIG.cameraZ);
+    camera.rotation.order = 'YXZ';
+
+    const texLoader = new THREE.TextureLoader();
+
+    // ----- wall + floor (follow the camera, texture offset keeps them world-fixed) ----
+    const WALL_W = 100;
+    let wallMat, wall, floorMat, floor;
+    function makeFallbackWall() {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const x = c.getContext('2d');
+      x.fillStyle = '#3a3a40'; x.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 9000; i++) {
+        const v = 0.5 + Math.random() * 0.5; x.fillStyle = `rgba(${20*v|0},${20*v|0},${24*v|0},0.06)`;
+        x.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+      }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+    }
+    function buildWall(tex) {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(WALL_W / CONFIG.wallTileWidth, CONFIG.wallHeight / CONFIG.wallTileHeight);
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1;
+      wallMat = new THREE.MeshBasicMaterial({ map: tex });
+      wall = new THREE.Mesh(new THREE.PlaneGeometry(WALL_W, CONFIG.wallHeight), wallMat);
+      wall.position.set(0, CONFIG.wallCenterY, 0);
+      scene.add(wall);
+    }
+    function makeFallbackFloor() {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const x = c.getContext('2d');
+      x.fillStyle = '#141417'; x.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 6000; i++) {
+        const v = Math.random(); x.fillStyle = `rgba(${30*v|0},${30*v|0},${34*v|0},0.05)`;
+        x.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+      }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+    }
+    const FLOOR_D = 70;
+    function buildFloor(tex) {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(WALL_W / CONFIG.floorTileWidth, FLOOR_D / CONFIG.floorTileDepth);
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1;
+      floorMat = new THREE.MeshBasicMaterial({ map: tex });
+      floor = new THREE.Mesh(new THREE.PlaneGeometry(WALL_W, FLOOR_D), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(0, 0, 18);
+      scene.add(floor);
+    }
+    texLoader.load(CONFIG.wallTexture, (t) => { t.colorSpace = THREE.SRGBColorSpace; buildWall(t); },
+      undefined, () => { buildWall(makeFallbackWall()); });
+    texLoader.load(CONFIG.floorTexture, (t) => { t.colorSpace = THREE.SRGBColorSpace; buildFloor(t); },
+      undefined, () => { buildFloor(makeFallbackFloor()); });
+
+    // ----- random picker: reshuffling bag, no reuse within recentWindow -----
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    function makePicker(items, windowSize) {
+      const recent = []; let bag = [];
+      const cap = Math.min(windowSize, Math.max(0, items.length - 1));
+      const refill = () => { bag = shuffle(items.slice()); };
+      return function pick() {
+        if (items.length === 1) return items[0];
+        if (bag.length === 0) refill();
+        let idx = bag.findIndex((it) => recent.indexOf(it) === -1);
+        if (idx === -1) { refill(); idx = bag.findIndex((it) => recent.indexOf(it) === -1); if (idx === -1) idx = 0; }
+        const it = bag.splice(idx, 1)[0];
+        recent.push(it); if (recent.length > cap) recent.shift();
+        return it;
+      };
+    }
+
+    // ----- texture cache (lazy, shared) -------------------------------------
+    const texCache = new Map();
+    function getTexture(item) {
+      if (item._tex) return { tex: item._tex, loaded: true, cbs: [] }; // placeholders
+      let rec = texCache.get(item.fullsrc);
+      if (rec) return rec;
+      rec = { tex: null, loaded: false, error: false, cbs: [] };
+      rec.tex = texLoader.load(item.fullsrc,
+        () => { rec.loaded = true; rec.cbs.forEach((f) => f()); rec.cbs.length = 0; },
+        undefined,
+        () => { rec.error = true; });
+      rec.tex.colorSpace = THREE.SRGBColorSpace;
+      texCache.set(item.fullsrc, rec);
+      return rec;
+    }
+
+    // ----- layout engine: single ordered array of columns -------------------
+    let items = [];
+    let pick = null;
+    const r = (min, max) => min + Math.random() * (max - min);
+    const slots = [];     // ordered left -> right by center
+    let ready = false;
+
+    // keep the lowest piece in a column a set distance above the floor
+    function liftAboveFloor(layout) {
+      let minB = Infinity;
+      for (const it of layout) minB = Math.min(minB, it.y - it.h / 2);
+      if (minB < CONFIG.floorClearance) { const dy = CONFIG.floorClearance - minB; for (const it of layout) it.y += dy; }
+      return layout;
+    }
+
+    function planColumn() {
+      const stacked = Math.random() < CONFIG.stackProb && items.length > 1;
+      if (stacked) {
+        const a = pick(), b = pick();
+        let h0 = r(CONFIG.stackH[0], CONFIG.stackH[1]);
+        let h1 = r(CONFIG.stackH[0], CONFIG.stackH[1]);
+        let w0 = Math.max(0.2, h0 * (a.w / a.h));
+        let w1 = Math.max(0.2, h1 * (b.w / b.h));
+        // cap width (preserve aspect by reducing height)
+        if (w0 > CONFIG.maxColW) { const k = CONFIG.maxColW / w0; w0 = CONFIG.maxColW; h0 *= k; }
+        if (w1 > CONFIG.maxColW) { const k = CONFIG.maxColW / w1; w1 = CONFIG.maxColW; h1 *= k; }
+        const pairH = h0 + CONFIG.stackGap + h1;
+        const cy = CONFIG.hangCenterY;
+        const layout = [
+          { item: a, w: w0, h: h0, y: cy + (pairH / 2 - h0 / 2) },
+          { item: b, w: w1, h: h1, y: cy - (pairH / 2 - h1 / 2) },
+        ];
+        return { width: Math.max(w0, w1), layout: liftAboveFloor(layout) };
+      } else {
+        const a = pick();
+        let h = r(CONFIG.soloH[0], CONFIG.soloH[1]);
+        let w = Math.max(0.2, h * (a.w / a.h));
+        if (w > CONFIG.maxColW) { const k = CONFIG.maxColW / w; w = CONFIG.maxColW; h *= k; }
+        return { width: w, layout: liftAboveFloor([{ item: a, w, h, y: CONFIG.hangCenterY }]) };
+      }
+    }
+    function makeSlot(center) { const c = planColumn(); return { center, width: c.width, layout: c.layout, built: false, group: null }; }
+    const leftEdge = () => slots.length ? slots[0].center - slots[0].width / 2 : 0;
+    const rightEdge = () => slots.length ? slots[slots.length - 1].center + slots[slots.length - 1].width / 2 : 0;
+
+    function ensureSlots(camX) {
+      if (slots.length === 0) slots.push(makeSlot(0));
+      let guard = 0;
+      while (rightEdge() < camX + CONFIG.genAhead && guard++ < 400) {
+        const c = planColumn();
+        const center = rightEdge() + CONFIG.gap + c.width / 2;
+        slots.push({ center, width: c.width, layout: c.layout, built: false, group: null });
+      }
+      guard = 0;
+      while (leftEdge() > camX - CONFIG.genAhead && guard++ < 400) {
+        const c = planColumn();
+        const center = leftEdge() - CONFIG.gap - c.width / 2;
+        slots.unshift({ center, width: c.width, layout: c.layout, built: false, group: null });
+      }
+      // forget far definitions (they will regenerate fresh if revisited)
+      while (slots.length && (camX - slots[0].center) > CONFIG.forget) { disposeSlot(slots[0]); slots.shift(); }
+      while (slots.length && (slots[slots.length - 1].center - camX) > CONFIG.forget) { disposeSlot(slots[slots.length - 1]); slots.pop(); }
+    }
+
+    const ART_Z = 0.09, FRAME_Z = 0.06;
+    function buildSlot(slot) {
+      const g = new THREE.Group();
+      g.position.x = slot.center;
+      for (const it of slot.layout) {
+        if (CONFIG.frame) {
+          const fb = CONFIG.frameBorder;
+          const fm = new THREE.Mesh(
+            new THREE.PlaneGeometry(it.w + fb * 2, it.h + fb * 2),
+            new THREE.MeshBasicMaterial({ color: CONFIG.frameColor })
+          );
+          fm.position.set(0, it.y, FRAME_Z);
+          g.add(fm);
+        }
+        const rec = getTexture(it.item);
+        const mat = new THREE.MeshBasicMaterial({ map: rec.tex, transparent: true, opacity: rec.loaded ? 1 : 0 });
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(it.w, it.h), mat);
+        mesh.position.set(0, it.y, ART_Z);
+        g.add(mesh);
+        if (!rec.loaded && rec.cbs) rec.cbs.push(() => { mat.opacity = 1; });
+      }
+      scene.add(g);
+      slot.group = g; slot.built = true;
+    }
+    function disposeSlot(slot) {
+      if (!slot.group) return;
+      slot.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+      scene.remove(slot.group);
+      slot.group = null; slot.built = false;
+    }
+    function manageMeshes(camX) {
+      for (const s of slots) {
+        const d = Math.abs(s.center - camX);
+        if (d < CONFIG.showRange) { if (!s.built) buildSlot(s); }
+        else if (d > CONFIG.disposeRange) { if (s.built) disposeSlot(s); }
+      }
+    }
+
+    // ----- input: left / right hold -----------------------------------------
+    const held = { lBtn: false, rBtn: false, lKey: false, rKey: false };
+    const dir = () => ((held.rBtn || held.rKey) ? 1 : 0) - ((held.lBtn || held.lKey) ? 1 : 0);
+    const leftBtn = document.getElementById('left');
+    const rightBtn = document.getElementById('right');
+    function bind(el, prop) {
+      const on = (e) => { e.preventDefault(); held[prop] = true; el.classList.add('active'); hideHint(); };
+      const off = () => { held[prop] = false; el.classList.remove('active'); };
+      el.addEventListener('pointerdown', on);
+      el.addEventListener('pointerup', off);
+      el.addEventListener('pointerleave', off);
+      el.addEventListener('pointercancel', off);
+    }
+    bind(leftBtn, 'lBtn'); bind(rightBtn, 'rBtn');
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.key === 'ArrowLeft') { held.lKey = true; leftBtn.classList.add('active'); hideHint(); }
+      if (e.key === 'ArrowRight') { held.rKey = true; rightBtn.classList.add('active'); hideHint(); }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft') { held.lKey = false; leftBtn.classList.remove('active'); }
+      if (e.key === 'ArrowRight') { held.rKey = false; rightBtn.classList.remove('active'); }
+    });
+    let hintHidden = false;
+    function hideHint() { if (hintHidden) return; hintHidden = true; hintEl.classList.add('hidden'); setTimeout(() => hintEl.classList.add('gone'), 1100); }
+
+    // ----- main loop --------------------------------------------------------
+    let camX = 0, vel = 0, yaw = 0, bobPhase = 0, last = performance.now();
+    function frame(now) {
+      let dt = (now - last) / 1000; last = now;
+      if (dt > 0.05) dt = 0.05; // clamp after tab switches
+
+      const target = dir() * CONFIG.moveSpeed;
+      vel += (target - vel) * Math.min(1, CONFIG.accel * dt);
+      if (Math.abs(vel) < 0.0008 && target === 0) vel = 0;
+      camX += vel * dt;
+
+      // glance toward direction of travel, eased
+      const targetYaw = -(vel / CONFIG.moveSpeed) * CONFIG.maxYaw;
+      yaw += (targetYaw - yaw) * Math.min(1, CONFIG.yawEase * dt);
+
+      // gentle head-bob while moving
+      const speedFrac = Math.abs(vel) / CONFIG.moveSpeed;
+      bobPhase += dt * (4 + 7 * speedFrac);
+      const camY = CONFIG.eyeY + Math.sin(bobPhase) * CONFIG.bob * speedFrac;
+
+      camera.position.set(camX, camY, CONFIG.cameraZ);
+      camera.rotation.y = yaw;
+
+      if (ready) { ensureSlots(camX); manageMeshes(camX); }
+      if (wall) { wall.position.x = camX; wallMat.map.offset.x = camX / CONFIG.wallTileWidth; }
+      if (floor) { floor.position.x = camX; if (floorMat && floorMat.map) floorMat.map.offset.x = camX / CONFIG.floorTileWidth; }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ----- placeholders (preview when no manifest) --------------------------
+    function makePlaceholders(n) {
+      const out = [];
+      const ratios = [[3,4],[4,3],[1,1],[2,3],[3,2],[16,9],[4,5],[5,7],[7,5]];
+      for (let i = 0; i < n; i++) {
+        const [rw, rh] = ratios[i % ratios.length];
+        const base = 480;
+        const w = rw >= rh ? base : Math.round(base * rw / rh);
+        const h = rh >= rw ? base : Math.round(base * rh / rw);
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const x = c.getContext('2d');
+        const hue = (i * 47) % 360;
+        const g = x.createLinearGradient(0, 0, w, h);
+        g.addColorStop(0, `hsl(${hue} 42% 34%)`); g.addColorStop(1, `hsl(${(hue + 38) % 360} 46% 17%)`);
+        x.fillStyle = g; x.fillRect(0, 0, w, h);
+        x.strokeStyle = 'rgba(255,255,255,0.14)'; x.lineWidth = 6; x.strokeRect(8, 8, w - 16, h - 16);
+        x.fillStyle = 'rgba(255,255,255,0.85)';
+        x.font = `bold ${Math.round(Math.min(w, h) * 0.26)}px system-ui, sans-serif`;
+        x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillText(String(i + 1), w / 2, h / 2);
+        const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+        out.push({ fullsrc: 'placeholder-' + i, w, h, _tex: tex });
+      }
+      return out;
+    }
+
+    // ----- manifest loading -------------------------------------------------
+    function normalize(data) {
+      let arr = Array.isArray(data) ? data : (data && Array.isArray(data.images) ? data.images : []);
+      const need = [];
+      const out = arr.map((e) => {
+        if (typeof e === 'string') { const o = { fullsrc: CONFIG.galleryDir + e, w: 0, h: 0 }; need.push(o); return o; }
+        const name = e.src || e.file || e.name || e.path || '';
+        const o = { fullsrc: /^https?:|^\//.test(name) ? name : CONFIG.galleryDir + name,
+                    w: +e.w || +e.width || 0, h: +e.h || +e.height || 0 };
+        if (!o.w || !o.h) need.push(o);
+        return o;
+      }).filter((o) => o.fullsrc);
+      return { out, need };
+    }
+    function fillDims(list) {
+      return Promise.all(list.map((o) => new Promise((res) => {
+        const img = new Image();
+        img.onload = () => { o.w = img.naturalWidth || 1; o.h = img.naturalHeight || 1; res(); };
+        img.onerror = () => { o.w = o.w || 3; o.h = o.h || 4; res(); };
+        img.src = o.fullsrc;
+      })));
+    }
+    function showBanner(html) {
+      const b = document.createElement('div'); b.id = 'banner'; b.innerHTML = html;
+      document.body.appendChild(b); setTimeout(() => { b.classList.add('hidden'); }, 6000);
+    }
+    function finishLoader() { loaderEl.classList.add('hidden'); setTimeout(() => loaderEl.classList.add('gone'), 700); }
+
+    async function start() {
+      try {
+        const res = await fetch(CONFIG.manifest, { cache: 'no-cache' });
+        if (!res.ok) throw new Error('no manifest');
+        const data = await res.json();
+        const { out, need } = normalize(data);
+        if (!out.length) throw new Error('empty manifest');
+        if (need.length) await fillDims(need);
+        items = out;
+      } catch (err) {
+        items = makePlaceholders(24);
+        showBanner('Preview mode — <b>' + CONFIG.manifest + '</b> not found. Showing placeholders. Run the generator and add your art.');
+      }
+      pick = makePicker(items, CONFIG.recentWindow);
+      ensureSlots(0);
+      manageMeshes(0);
+      ready = true;
+      finishLoader();
+    }
+
+    requestAnimationFrame(frame);
+    start();
+  })();
+  </script>
+</body>
+</html>
