@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>houston</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #fff;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    video {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      
+      
+      object-fit: fill;
+      background: #fff;
+    }
+
+    #prompt {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      background: transparent;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    #prompt.hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <video id="video" preload="metadata" playsinline>
+    <source src="houston.mp4" type="video/mp4">
+  </video>
+
+  <div id="prompt">Click to start</div>
+
+  <script>
+    const video = document.getElementById("video");
+    const prompt = document.getElementById("prompt");
+
+    async function playVideo() {
+      if (video.ended) {
+        video.currentTime = 0;
+      }
+
+      try {
+        await video.play();
+        prompt.classList.add("hidden");
+      } catch (error) {
+        prompt.textContent = "Click to start";
+        prompt.classList.remove("hidden");
+      }
+    }
+
+    function toggleVideo() {
+      if (video.paused || video.ended) {
+        playVideo();
+      } else {
+        video.pause();
+      }
+    }
+
+    document.addEventListener("click", toggleVideo);
+
+    document.addEventListener("keydown", event => {
+      if (event.code === "Space" || event.code === "Enter") {
+        event.preventDefault();
+        toggleVideo();
+      }
+    });
+
+    video.addEventListener("ended", () => {
+      prompt.textContent = "Click to replay";
+      prompt.classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
