@@ -323,8 +323,11 @@
         const vidWindow = document.getElementById("vidWindow");
         const vidImg = document.getElementById("vidImg");
         const vidClose = document.getElementById("vidClose");
-        // Forward cursor position to parent so the laptop scene can free-look
-        // without requiring a held mouse button.
+        // The screen deliberately does NOT forward cursor position to the
+        // parent. Once the cursor is in here you're using the desktop, and the
+        // camera must stay frozen — no look messages, no world drift under the
+        // icons you're aiming at. We only tell the parent that the cursor has
+        // arrived, so it can halt the camera on the spot.
         function _inParent() {
           try {
             return window.parent && window.parent !== window;
@@ -332,15 +335,31 @@
             return false;
           }
         }
+        let _cursorAnnounced = false;
+        function _tellParentCursorEntered() {
+          if (_cursorAnnounced || !_inParent()) return;
+          _cursorAnnounced = true;
+          try {
+            window.parent.postMessage({ type: "laptop-screen-enter" }, "*");
+          } catch (e) {}
+        }
+        document.addEventListener("pointerenter", _tellParentCursorEntered, true);
+        document.addEventListener("pointerover", _tellParentCursorEntered, true);
+        document.addEventListener("pointermove", _tellParentCursorEntered, true);
+        document.addEventListener("mousemove", _tellParentCursorEntered, true);
+        // Re-arm so the next entry re-freezes after the cursor has been back out
+        // in the room (where it is allowed to move the camera again).
         document.addEventListener(
-          "pointermove",
-          (e) => {
-            if (!_inParent()) return;
-            const w = window.innerWidth || 1;
-            const h = window.innerHeight || 1;
-            const x = Math.max(-1, Math.min(1, (e.clientX - w / 2) / (w / 2)));
-            const y = Math.max(-1, Math.min(1, (h / 2 - e.clientY) / (h / 2)));
-            window.parent.postMessage({ type: "laptop-look", x, y }, "*");
+          "pointerleave",
+          () => {
+            _cursorAnnounced = false;
+          },
+          true,
+        );
+        document.addEventListener(
+          "mouseleave",
+          () => {
+            _cursorAnnounced = false;
           },
           true,
         );

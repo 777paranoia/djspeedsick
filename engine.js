@@ -1029,6 +1029,11 @@ function ensureLaptopIframe() {
     (f.src = laptopIframeSrc),
     (f.style.cssText =
       "position:fixed;border:0;background:#000;display:none;opacity:0;z-index:50;pointer-events:none;transition:opacity 160ms ease-out;"),
+    // The parent sees exactly one event as the cursor crosses onto the iframe —
+    // after that the iframe owns the pointer and no mousemove reaches us. That
+    // one event is where the camera has to die.
+    f.addEventListener("mouseenter", freezeLaptopLook),
+    f.addEventListener("pointerenter", freezeLaptopLook),
     document.body.appendChild(f),
     (laptopIframe = f),
     f
@@ -1521,17 +1526,46 @@ function checkPOVThreshold(synthMx) {
 const FREE_LOOK_MX = 1.1,
   FREE_LOOK_MY = 0.45;
 
+// The laptop screen is a dead zone for camera look. Once the cursor is over
+// the screen rect the user is driving the desktop UI, not the head — any
+// look input there would slide the world out from under the thing they're
+// clicking. The iframe already swallows pointer events, this is the guard for
+// the frames where it hasn't been laid out (or sized) yet.
+let __laptopLookFrozen = !1;
+
+// Kill the camera where it stands: target := current, so the ease in render()
+// has zero distance left to cover.
+function freezeLaptopLook() {
+  if (__laptopLookFrozen) return;
+  ((__laptopLookFrozen = !0),
+    (mx = cx),
+    (my = cy),
+    (window.mx = mx),
+    (window.my = my));
+}
+
+function __cursorOverLaptopScreen(x, y) {
+  if ("laptop" !== activePOV) return !1;
+  if (!laptopIframe || "block" !== laptopIframe.style.display) return !1;
+  const r = laptopIframe.getBoundingClientRect();
+  return (
+    r.width > 0 &&
+    r.height > 0 &&
+    x >= r.left &&
+    x <= r.right &&
+    y >= r.top &&
+    y <= r.bottom
+  );
+}
+
 (window.addEventListener("message", function (e) {
   const t = e && e.data;
   if (!t) return;
-  if ("laptop-look" === t.type && "laptop" === activePOV) {
-    var lx = "number" == typeof t.x ? t.x : 0,
-      ly = "number" == typeof t.y ? t.y : 0;
-    mx = Math.max(-FREE_LOOK_MX, Math.min(FREE_LOOK_MX, lx * FREE_LOOK_MX));
-    my = Math.max(-FREE_LOOK_MY, Math.min(FREE_LOOK_MY, ly * FREE_LOOK_MY));
-    window.mx = mx;
-    window.my = my;
-  }
+  // "laptop-look" is retired: the screen must never move the camera. Kept as an
+  // explicit no-op so a stale cached desktop.html can't reanimate the old path.
+  if ("laptop-look" === t.type) return;
+  if ("laptop-screen-enter" === t.type && "laptop" === activePOV)
+    return void freezeLaptopLook();
 }),
   (window.isEngine1Dead = !1));
 
@@ -1547,9 +1581,17 @@ const unlockPointerAudio = () => {
   updateMouseLook = (e, t) => {
     // Cursor position drives mx/my directly, no click required.
     // Mouse-right/up produce positive look values; mouse-left/down negative.
-    // Skip when the laptop iframe owns the camera (it sends normalized look).
+    // Over the laptop screen the camera holds its last value — see
+    // __cursorOverLaptopScreen.
     if (!__directionalInputReady()) return;
-    if ("laptop" === activePOV) return;
+    if (__cursorOverLaptopScreen(e, t)) {
+      // Snap the look target onto where the camera actually is, so the 12%/frame
+      // ease at render() has nothing left to travel. Without this the view keeps
+      // gliding for ~half a second after the cursor crosses onto the screen.
+      freezeLaptopLook();
+      return;
+    }
+    __laptopLookFrozen = !1;
     var w = window.innerWidth || 1,
       h = window.innerHeight || 1,
       nx = (e - w / 2) / (w / 2),
