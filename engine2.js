@@ -1,3 +1,6 @@
+// Build marker — if this line is missing from the console the browser is
+// serving a cached engine2.js and none of the changes below are live.
+console.log("[Zone2] build z2dest-roll+mirrorflip");
 ((window.GLSL = window.GLSL || {}),
   (window.GLSL.modules = window.GLSL.modules || {}),
   (GLSL.modules.zone2_hallway = `
@@ -17,6 +20,9 @@ uniform float u_isWalking;
 uniform float u_trip;
 uniform float u_yawOffset;
 uniform float u_framedKitchen;
+uniform float u_northOpen;
+uniform float u_southOpen;
+uniform sampler2D u_southPortal;
 
 uniform sampler2D u_texFront;
 uniform sampler2D u_texBack;
@@ -184,7 +190,9 @@ void main() {
 
   traceHall(ro, rd, hallTex, tileUV, wallID, t, nPos);
 
-  if (wallID == 2.0 && hallTex.a < 0.999) {
+  // North wall. u_northOpen == 1 means blood dealt a north route: the fence is
+  // GONE, the whole wall is the route, nothing painted over it.
+  if (wallID == 2.0 && (u_northOpen > 0.5 || hallTex.a < 0.999)) {
     vec2 portalUV = u_framedKitchen > 0.5
       ? framedKitchenUV(tileUV)
       : tileUV;
@@ -192,10 +200,21 @@ void main() {
 
     vec3 portalCol = texture2D(u_voidVid, portalUV).rgb;
 
-    float maskA = smoothstep(0.46, 0.66, hallTex.a);
+    float maskA = u_northOpen > 0.5
+      ? 0.0
+      : smoothstep(0.46, 0.66, hallTex.a);
     vec3 col = mix(portalCol, hallTex.rgb, maskA);
 
     gl_FragColor = vec4(col, 1.0);
+    return;
+  }
+
+  // South wall. u_southOpen == 1 means blood dealt the elevator: the plate is
+  // gone and the space-elevator platform fills that end of the hallway.
+  if (wallID == 3.0 && u_southOpen > 0.5) {
+    vec2 sUV = tileUV;
+    sUV.y = 1.0 - sUV.y;
+    gl_FragColor = vec4(texture2D(u_southPortal, sUV).rgb, 1.0);
     return;
   }
 
@@ -252,6 +271,20 @@ void main() {
     uniform sampler2D u_tex;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
+        gl_FragColor = texture2D(u_tex, uv);
+    }
+    `),
+  // Same blit, but horizontally mirrored. Used for the bathroom mirror so the
+  // reflected bedroom actually reads as a reflection. Hardcoded rather than a
+  // uniform flag on z2_seq_hole so there is no uniform-location dependency.
+  GLSL.modules.z2_seq_hole_mirrored ||
+    (GLSL.modules.z2_seq_hole_mirrored = `
+    precision mediump float;
+    uniform vec2 u_resolution;
+    uniform sampler2D u_tex;
+    void main() {
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        uv.x = 1.0 - uv.x;
         gl_FragColor = texture2D(u_tex, uv);
     }
     `),
@@ -643,6 +676,10 @@ class Zone2RoomMode {
       gl.drawArrays(gl.TRIANGLES, 0, 3));
   }
   destroy() {
+    try {
+      const hud = document.getElementById("z2-hud");
+      hud && hud.parentNode && hud.parentNode.removeChild(hud);
+    } catch (e) {}
     (gl.deleteTexture(this.tex),
       gl.deleteTexture(this.bcTexGL),
       gl.deleteProgram(this.prog),
@@ -753,6 +790,8 @@ class Zone2Engine {
         trip: gl.getUniformLocation(this.prog, "u_trip"),
         yawOffset: gl.getUniformLocation(this.prog, "u_yawOffset"),
         framedKitchen: gl.getUniformLocation(this.prog, "u_framedKitchen"),
+        northOpen: gl.getUniformLocation(this.prog, "u_northOpen"),
+        southOpen: gl.getUniformLocation(this.prog, "u_southOpen"),
       }),
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texFront"), 0),
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_texBack"), 1),
@@ -766,6 +805,7 @@ class Zone2Engine {
         IS_MOBILE ? 7 : 8,
       ),
       gl.uniform1i(gl.getUniformLocation(this.prog, "u_voidVid"), 6),
+      gl.uniform1i(gl.getUniformLocation(this.prog, "u_southPortal"), 9),
       (this.texFront = loadStaticTex(
         "files/img/rooms/z2/hallway/FORWARD-MASK.png",
       )),
@@ -873,6 +913,21 @@ class Zone2Engine {
         compile(gl.FRAGMENT_SHADER, GLSL.modules.z2_seq_hole),
       ),
       gl.linkProgram(this.holeProg),
+      (this.mirrorBlitProg = gl.createProgram()),
+      gl.attachShader(
+        this.mirrorBlitProg,
+        compile(gl.VERTEX_SHADER, GLSL.vert),
+      ),
+      gl.attachShader(
+        this.mirrorBlitProg,
+        compile(gl.FRAGMENT_SHADER, GLSL.modules.z2_seq_hole_mirrored),
+      ),
+      gl.linkProgram(this.mirrorBlitProg),
+      gl.getProgramParameter(this.mirrorBlitProg, gl.LINK_STATUS) ||
+        console.error(
+          "[Zone2] mirror blit program failed to link:",
+          gl.getProgramInfoLog(this.mirrorBlitProg),
+        ),
       (this.solidProg = gl.createProgram()),
       gl.attachShader(this.solidProg, compile(gl.VERTEX_SHADER, GLSL.vert)),
       gl.attachShader(
@@ -890,6 +945,8 @@ class Zone2Engine {
       (this.rightHoleFBO = this.makeFBO()),
       (this.rightHolePostFBO = this.makeFBO()),
       (this.forwardPortalFBO = this.makeFBO()),
+      (this.southPortalFBO = this.makeFBO()),
+      (this.spaceElevatorProg = this._buildModuleProgram("space_elevator")),
       (this.blankMask = gl.createTexture()),
       gl.bindTexture(gl.TEXTURE_2D, this.blankMask),
       gl.texImage2D(
@@ -947,6 +1004,10 @@ class Zone2Engine {
         "modes/mode5.js",
         "modes/mode6.js",
         "modes/mode7.js",
+        // Not in the ambient rotation — pinned by the blood roll so the north
+        // end shows the route waiting there instead of a random city.
+        "modes/mode2.js",
+        "modes/mode9.js",
       ]),
       (this.forwardPortalModeKeys = [
         "bh",
@@ -954,11 +1015,13 @@ class Zone2Engine {
         "earth",
         "deadcity",
         "goreville",
+        "fractal",
+        "plane",
       ]),
-      (this.forwardPortalModes = [3, 5, 6, 7, 8]),
-      (this.currentForwardPortalModeIndex = Math.floor(
-        Math.random() * this.forwardPortalModes.length,
-      )),
+      (this.forwardPortalModes = [3, 5, 6, 7, 8, 2, 9]),
+      // Ambient rotation is the first 5 only. "fractal" and "plane" are
+      // reserved for the blood roll and never come up at random.
+      (this.currentForwardPortalModeIndex = Math.floor(Math.random() * 5)),
       (this.forwardPortalActiveMode = null),
       (this.forwardPortalCleanFX = !0),
       "undefined" != typeof ActiveMode &&
@@ -979,10 +1042,14 @@ class Zone2Engine {
       (this.redStartTime = -1),
       (this.readyForZone3 = !1),
       (this.zone3Route = "z3"),
-      (this.z4RouteStep = 0),
-      (this.z4RouteActive = !1),
-      (this.cabinTunnelRouteActive = !1),
-      (this.cabinTunnelRouteStep = 0),
+      // Routes dealt at the blood transition — one per end, both live.
+      // N (right from the mirror): "cabin" | "blackhole"
+      // S (left  from the mirror): "elevator" | "theater"
+      // null until blood engages.
+      (this.bloodRouteN = null),
+      (this.bloodRouteS = null),
+      (this.bloodDealt = null),
+      (this.z3Landing = null),
       (this.cabinTunnelTransitionStarted = !1),
       (this.theaterBedroomHandoffStarted = !1),
       (this.z4LeftBlinkCount = 0),
@@ -1161,15 +1228,16 @@ class Zone2Engine {
   _hallucinationLevelForScene() {
     return 2;
   }
-  _blitTex(e, t, i) {
-    (gl.useProgram(this.holeProg),
+  _blitTex(e, t, i, flipX) {
+    const prog = flipX ? this.mirrorBlitProg : this.holeProg;
+    (gl.useProgram(prog),
       gl.disable(gl.BLEND),
       gl.activeTexture(gl.TEXTURE0),
       gl.bindTexture(gl.TEXTURE_2D, e),
-      gl.uniform1i(gl.getUniformLocation(this.holeProg, "u_tex"), 0),
-      gl.uniform2f(gl.getUniformLocation(this.holeProg, "u_resolution"), t, i),
+      gl.uniform1i(gl.getUniformLocation(prog, "u_tex"), 0),
+      gl.uniform2f(gl.getUniformLocation(prog, "u_resolution"), t, i),
       gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
-    const o = gl.getAttribLocation(this.holeProg, "p");
+    const o = gl.getAttribLocation(prog, "p");
     (gl.enableVertexAttribArray(o),
       gl.vertexAttribPointer(o, 2, gl.FLOAT, !1, 0, 0),
       gl.drawArrays(gl.TRIANGLES, 0, 3));
@@ -1223,7 +1291,8 @@ class Zone2Engine {
           (this.cy = 0),
           (this.povSwitchTime = e),
           "S" === this.facing &&
-            "theater_ready" === this.seqState &&
+            ("theater_ready" === this.seqState ||
+              "theater" === this.bloodRouteS) &&
             this._beginTheaterHandoffSeamless(this.slideDir)));
     } else if ("black" === this.slideState)
       t >= __blackHold &&
@@ -1407,149 +1476,153 @@ class Zone2Engine {
       if (turnLeft || t <= -1.24) {
         var dir = turnLeft ? "L" : "R",
           slideDir = turnLeft ? 1 : -1,
+          prevFacing = this.facing,
           newFacing = this._nextFacing(this.facing, dir);
         if (newFacing !== this.facing) {
           ((this.facing = newFacing),
             (this.hallwayYawTarget = this._yawForFacing(newFacing)));
           var newPOV = this._povForFacing(newFacing);
-          (this.beginSlide(newPOV, slideDir),
-            (this.povSwitchTime = e),
-            "W" === newFacing ||
-              this.z4RouteActive ||
-              ("hole" !== this.seqState && "red" !== this.seqState) ||
-              ((this.seqState = "blood"),
-              this.leftRoom && (this.leftRoom.tex = this.texBathroomBlood),
-              (this.redStartTime = -1)),
-            "E" === newFacing ||
-              this.z4RouteActive ||
-              ("N" === newFacing && "bedroom_2" === this.seqState) ||
-              ("theater_ready" === this.seqState && "S" === newFacing) ||
-              ("bedroom_2" !== this.seqState &&
-                "theater_ready" !== this.seqState &&
-                "z3b_turbulence" !== this.seqState &&
-                "z3b_red" !== this.seqState &&
-                "theater_bedroom_turbulence" !== this.seqState &&
-                "theater_bedroom_red" !== this.seqState) ||
-              ((this.seqState = "bedroom_visited"),
-              (this.rightBlinkCount = 0),
-              (this.z3bTurbulenceStart = -1),
-              (this.__z2BlackholePathActive = !1)));
-          var z4Consumed = !1;
-          if ("blood" === this.seqState || this.z4RouteActive) {
-            var step = this.z4RouteStep;
-            if (step < 3) {
-              var expect = [
-                {
-                  dir: "L",
-                  to: "S",
-                },
-                {
-                  dir: "L",
-                  to: "E",
-                },
-                {
-                  dir: "R",
-                  to: "S",
-                },
-              ][step];
-              (console.log(
-                "[Z4Route] step=" +
-                  step +
-                  " dir=" +
-                  dir +
-                  " newFacing=" +
-                  newFacing +
-                  " expect=" +
-                  JSON.stringify(expect) +
-                  " seqState=" +
-                  this.seqState +
-                  " z4Active=" +
-                  this.z4RouteActive,
-              ),
-                expect && newFacing === expect.to && dir === expect.dir
-                  ? ((this.z4RouteStep = step + 1),
-                    (this.z4RouteActive = !0),
-                    (z4Consumed = !0),
-                    console.log(
-                      "[Z4Route] MATCH -> step now " + this.z4RouteStep,
-                    ))
-                  : this.z4RouteStep > 0 &&
-                    (console.log("[Z4Route] RESET — wrong turn"),
-                    (this.z4RouteStep = 0),
-                    (this.z4RouteActive = !1)));
-            } else
-              3 === step &&
-                ("R" === dir && "W" === newFacing
-                  ? ((this.seqState = "z4_bathroom"),
-                    (this.z4LeftBlinkCount = 0),
-                    (this.cabinTunnelRouteStep = 0),
-                    (this.cabinTunnelRouteActive = !1),
-                    (this.z4RouteStep = 4),
-                    (z4Consumed = !0),
-                    console.log("[Z4Route] COMPLETE -> z4_bathroom"))
-                  : "L" === dir && "E" === newFacing
-                    ? ((this.seqState = "bedroom_2"),
-                      (this.zone3Route = "theater"),
-                      (this.rightBlinkCount = 0),
-                      (this.z3bTurbulenceStart = -1),
-                      (this.redStartTime = -1),
-                      (this.cabinTunnelRouteStep = 0),
-                      (this.cabinTunnelRouteActive = !1),
-                      (this.z4RouteStep = 0),
-                      (this.z4RouteActive = !1),
-                      (this.theaterBedroomHandoffStarted = !1),
-                      this._resetZone2BlackholePath &&
-                        this._resetZone2BlackholePath(),
-                      (z4Consumed = !0),
-                      console.log(
-                        "[TheaterRoute] COMPLETE -> bedroom two-blink sequence",
-                      ))
-                  : (console.log("[Z4Route] RESET — wrong final turn"),
-                    (this.z4RouteStep = 0),
-                    (this.z4RouteActive = !1)));
-          } else
-            console.log(
-              "[Z4Route] SKIPPED — seqState=" +
-                this.seqState +
-              " z4Active=" +
-                this.z4RouteActive,
-            );
-          z4Consumed ||
-            ("E" === newFacing && "blood" === this.seqState
-              ? ((this.seqState = "bedroom_visited"),
-                (this.zone3Route = "z3"),
-                (this.cabinTunnelRouteStep = 0),
-                (this.cabinTunnelRouteActive = !1))
-              : "W" === newFacing && "bedroom_visited" === this.seqState
-                ? ((this.seqState = "hole"),
-                  (this.zone3Route = "z3"),
-                  (this.cabinTunnelRouteStep = 0),
-                  (this.cabinTunnelRouteActive = !1),
-                  this.leftRoom && (this.leftRoom.tex = this.texBathroomHole),
-                  (this.mode9_T_hole = performance.now()))
-                : "E" === newFacing &&
-                  "bedroom_visited" === this.seqState
-                  ? ((this.seqState = "bedroom_2"),
-                    (this.zone3Route = "z3b"),
-                    (this.cabinTunnelRouteStep = 0),
-                    (this.cabinTunnelRouteActive = !1),
-                    (this.rightBlinkCount = 0),
-                    (this.z3bTurbulenceStart = -1),
-                    (this.redStartTime = -1),
-                    (this.z4RouteActive = !1),
-                    (this.z4RouteStep = 0),
-                    this._resetZone2BlackholePath &&
-                      this._resetZone2BlackholePath())
-                  : "N" === newFacing &&
-                    "bedroom_2" === this.seqState &&
-                    "theater" !== this.zone3Route &&
-                    ((this.readyForZone3 = !0), (this.zone3Route = "z3b")));
+          (this.beginSlide(newPOV, slideDir), (this.povSwitchTime = e));
         }
       }
     }
   }
+  // ── Blood-mode route roll ────────────────────────────────────────────────
+  // NO turn sequences. ONE of four is dealt the moment the mirror's second
+  // blink turns the bathroom bloody — either/or, never both ends:
+  //   LEFT  (face S): elevator platform | theater tunnel
+  //   RIGHT (face N): cabin             | black hole
+  // The end that wasn't dealt stays plain hallway with no way out, and its
+  // portal is blanked so nothing projects behind it.
+  static get BLOOD_ROUTES() {
+    return [
+      ["N", "cabin"],
+      ["N", "blackhole"],
+      ["S", "elevator"],
+      ["S", "theater"],
+    ];
+  }
+  // Single entry point into blood mode. Every path that reaches blood must go
+  // through here, or you land in blood with no routes dealt and both turns do
+  // nothing.
+  _enterBloodMode() {
+    return (
+      this.leftRoom && (this.leftRoom.tex = this.texBathroomBlood),
+      (this.seqState = "blood"),
+      this.bloodDealt || this._rollHallDestination(),
+      !0
+    );
+  }
+  _rollHallDestination() {
+    const deal = Zone2Engine.BLOOD_ROUTES[Math.floor(Math.random() * 4)],
+      side = deal[0],
+      route = deal[1];
+    ((this.bloodRouteN = "N" === side ? route : null),
+      (this.bloodRouteS = "S" === side ? route : null),
+      (this.bloodDealt = route),
+      (this.readyForZone3 = !1),
+      (window.__bloodRouteN = this.bloodRouteN),
+      (window.__bloodRouteS = this.bloodRouteS));
+    // ONLY the dealt end changes. A south deal leaves the north end exactly as
+    // it was — fence with the ambient modes rotating behind it.
+    this.bloodRouteN &&
+      this._setForwardPortalMode(
+        "blackhole" === this.bloodRouteN ? "bh" : "plane",
+      );
+    // Everything is in place the moment the bathroom turns red — including
+    // where Zone 3 opens. Nothing is worked out later.
+    this.z3Landing =
+      "cabin" === route
+        ? { activePOV: "center", centerPhase: "cabin", cabinState: "forward", camZOffset: 0.25 }
+        : "blackhole" === route
+          ? { activePOV: "center", centerPhase: "void", voidStart: !0, camZOffset: 0 }
+          : null;
+    console.log("[BloodRoute] dealt " + route + " at the " + side + " end");
+    return route;
+  }
+  // TEMPORARY on-screen readout. Delete _z2Hud and its call in render() once
+  // the routes are confirmed working.
+  _z2Hud() {
+    let el = document.getElementById("z2-hud");
+    if (!el) {
+      if (!document.body) return;
+      ((el = document.createElement("div")),
+        (el.id = "z2-hud"),
+        (el.style.cssText =
+          "position:fixed;left:8px;top:8px;z-index:2147483647;font:12px/1.4 monospace;" +
+          "color:#0f0;background:rgba(0,0,0,.8);border:1px solid #0f0;padding:6px 9px;" +
+          "white-space:pre;pointer-events:none;"),
+        document.body.appendChild(el));
+    }
+    const portal = this.bloodRouteN
+        ? this.bloodRouteN + " — fence gone, wall fully open"
+        : "fence + mode " +
+          (this.forwardPortalActiveMode
+            ? this.forwardPortalModes[this.currentForwardPortalModeIndex]
+            : "-"),
+      northLimit = this.bloodRouteN
+        ? this.INTERSECTION_Z + 0.8
+        : this.INTERSECTION_Z,
+      walkHeld = !!(window.z2SpaceHeld || window.z2TouchHeld);
+    el.textContent =
+      "Z2  build z2dest-roll+mirrorflip\n" +
+      "seq    " + this.seqState + "\n" +
+      "pov    " + this.activePOV + "   facing " + this.facing + "\n" +
+      "DEALT  " + (this.bloodDealt || "— nothing dealt —") + "\n" +
+      "       N:" + (this.bloodRouteN || "-") + "  S:" + (this.bloodRouteS || "-") + "\n" +
+      "north  " + portal + "\n" +
+      "facing " +
+        ("N" === this.facing
+          ? this.bloodRouteN
+            ? "NO FENCE — open to " + this.bloodRouteN
+            : "FORWARD-MASK.png (fence)"
+          : "S" === this.facing
+            ? "elevator" === this.bloodRouteS
+              ? "NO PLATE — space elevator platform"
+              : "BACK.png (plate)"
+            : "side wall / room") +
+        "\n" +
+      "camZ   " + (+this.camZ).toFixed(2) + " / " + northLimit.toFixed(2) +
+      "   walk " + walkHeld + "\n" +
+      "route  " + this.zone3Route +
+      "   ready " + !!this.readyForZone3 + "   exit " + !!this.z2ExitStarted;
+  }
+  // Drop the forward-cutout mode so the north end falls back to the plain void
+  // texture. Nothing to look at, nothing to walk into.
+  _clearForwardPortalMode() {
+    try {
+      this.forwardPortalActiveMode && this.forwardPortalActiveMode.destroy();
+    } catch (err) {}
+    return ((this.forwardPortalActiveMode = null), !0);
+  }
+  _bloodRouteForFacing(f) {
+    return "N" === f ? this.bloodRouteN : "S" === f ? this.bloodRouteS : null;
+  }
+  _setForwardPortalMode(key) {
+    const idx = this.forwardPortalModeKeys
+      ? this.forwardPortalModeKeys.indexOf(key)
+      : -1;
+    if (idx < 0 || "undefined" == typeof ActiveMode) return !1;
+    if (
+      this.currentForwardPortalModeIndex === idx &&
+      this.forwardPortalActiveMode
+    )
+      return !0;
+    try {
+      this.forwardPortalActiveMode && this.forwardPortalActiveMode.destroy();
+    } catch (err) {}
+    return (
+      (this.currentForwardPortalModeIndex = idx),
+      (this.forwardPortalActiveMode = new ActiveMode(
+        this.forwardPortalModes[idx],
+      )),
+      (this.forwardPortalActiveMode.maskTex = this.noWindowTex),
+      !0
+    );
+  }
   render(e, t, i, o, n, l, r) {
     if (this.isDead) return;
+    this._z2Hud();
     this.z2Trip = this._hallucinationTripForLevel(
       this._hallucinationLevelForScene(),
     );
@@ -1562,12 +1635,31 @@ class Zone2Engine {
         "z3b" === this.zone3Route
           ? "z3b"
           : "z3";
+      // What the north end was showing is what you land in. Zone 3 opens at
+      // activePOV "left" by default, which is the Z3 BATHROOM — walking into
+      // the black hole or the cabin and arriving in a bathroom is wrong.
+      // Jump straight to the thing, same landings the z3cabin / z3bvoid debug
+      // buttons use. Nothing in between.
+      // The landing was decided back at the blood transition. Apply it
+      // SYNCHRONOUSLY — startZone3 builds currentZone3 on the spot, so any
+      // delay here lets Zone 3 paint its default opening (the bathroom) for a
+      // frame or two before it snaps.
+      const landing = this.z3Landing,
+        applyLanding = function () {
+          const z3 = window.currentZone3;
+          if (!z3 || !landing) return;
+          ((z3.activePOV = landing.activePOV),
+            (z3.centerPhase = landing.centerPhase),
+            landing.cabinState && (z3.cabinState = landing.cabinState),
+            landing.voidStart && (z3.voidStart = performance.now()),
+            (z3.camZ = z3.HALL_END_Z + (landing.camZOffset || 0)));
+        };
       return (
         this.destroy(),
         void ("function" == typeof window.startZone3
-          ? window.startZone3(e)
+          ? (window.startZone3(e), applyLanding())
           : "undefined" != typeof Zone3Engine &&
-            (window.currentZone3 = new Zone3Engine(e)))
+            ((window.currentZone3 = new Zone3Engine(e)), applyLanding()))
       );
     }
     let s = e - this.lastRenderTime;
@@ -1656,22 +1748,30 @@ class Zone2Engine {
             this.modeSwapped ||
               ((this.modeSwapped = !0),
               this.windowActiveMode && this.windowActiveMode.destroy(),
-              this.forwardPortalActiveMode &&
-                this.forwardPortalActiveMode.destroy(),
+              // The north-end portal stops cycling once a roll has pinned it
+              // (black hole -> "bh", cabin -> "fractal"). Ambient rotation is
+              // the first 5 entries only.
+              (this.__portalPinned = !!this.bloodRouteN),
+              this.__portalPinned ||
+                (this.forwardPortalActiveMode &&
+                  this.forwardPortalActiveMode.destroy()),
               (this.currentWindowModeIndex =
                 (this.currentWindowModeIndex + 1) % this.windowModes.length),
-              (this.currentForwardPortalModeIndex =
-                (this.currentForwardPortalModeIndex + 1) %
-                this.forwardPortalModes.length),
+              this.__portalPinned ||
+                (this.currentForwardPortalModeIndex =
+                  (this.currentForwardPortalModeIndex + 1) % 5),
               "undefined" != typeof ActiveMode &&
                 ((this.windowActiveMode = new ActiveMode(
                   this.windowModes[this.currentWindowModeIndex],
                 )),
                 (this.windowActiveMode.maskTex = this.noWindowTex),
-                (this.forwardPortalActiveMode = new ActiveMode(
-                  this.forwardPortalModes[this.currentForwardPortalModeIndex],
-                )),
-                (this.forwardPortalActiveMode.maskTex = this.noWindowTex)),
+                this.__portalPinned ||
+                  ((this.forwardPortalActiveMode = new ActiveMode(
+                    this.forwardPortalModes[
+                      this.currentForwardPortalModeIndex
+                    ],
+                  )),
+                  (this.forwardPortalActiveMode.maskTex = this.noWindowTex))),
               (this.z2ModeSeed = 100 * Math.random()),
               (this.z2Trip = this._hallucinationTripForLevel(
                 this._hallucinationLevelForScene(),
@@ -1698,11 +1798,10 @@ class Zone2Engine {
                   (this.z4AltBathroomTurnEnterStart = 0),
                   (this.__z4AltBathroomTurnLanding = !1),
                   (this.__z4AltBathroomTurnMotionDone = !1),
-                  (this.z4RouteActive = !1),
-                  (this.cabinTunnelRouteActive = !1),
-                  (this.cabinTunnelRouteStep = 0),
+                  (this.bloodRouteN = null),
+                  (this.bloodRouteS = null),
+                  (this.bloodDealt = null),
                   (this.theaterBedroomHandoffStarted = !1),
-                  (this.z4RouteStep = 0),
                   (this.z4LeftBlinkCount = 0),
                   (this.zone3Route = "z3"),
                   (this.__z4RouteDisabledUntil = performance.now() + 12e3))),
@@ -1710,11 +1809,7 @@ class Zone2Engine {
                 "left" === this.activePOV &&
                 "initial" === this.seqState &&
                 (this.leftBlinkCount++,
-                this.leftBlinkCount >= 2 &&
-                  (this.leftRoom && (this.leftRoom.tex = this.texBathroomBlood),
-                  (this.seqState = "blood"),
-                  (this.cabinTunnelRouteStep = 0),
-                  (this.cabinTunnelRouteActive = !1))),
+                this.leftBlinkCount >= 2 && this._enterBloodMode()),
               "right" === this.activePOV &&
                 "bedroom_2" === this.seqState &&
                 (this.rightBlinkCount++,
@@ -1731,9 +1826,8 @@ class Zone2Engine {
                   (this.leftRoom &&
                     (this.leftRoom.tex = this.texBathroomNormal),
                   (this.seqState = "z4_ready"),
-                  (this.cabinTunnelRouteStep = 0),
-                  (this.cabinTunnelRouteActive = !1),
-                  (this.zone3Route = "z4"))));
+                  (this.zone3Route = "z4"),
+                  (this.bloodRouteS = "elevator"))));
     }
     ((this.lastCvsW === u && this.lastCvsH === f) ||
       (this.windowFBO &&
@@ -1944,7 +2038,7 @@ class Zone2Engine {
         }
       } else {
         if (
-          (this._blitTex(this.mirrorFBO.tex, u, f),
+          (this._blitTex(this.mirrorFBO.tex, u, f, 1),
           gl.enable(gl.BLEND),
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA),
           this.leftRoom.render(
@@ -2056,21 +2150,43 @@ class Zone2Engine {
       var _f = this.facing,
         _seqActive = "initial" !== this.seqState;
       const southLimit = this.START_Z;
-      (("N" === _f && !this.intersectionReached) || "S" === _f) &&
+      // Once blood is dealt BOTH ends are live. The north end opens up past the
+      // intersection so you can walk into whatever the north roll gave you;
+      // before blood it stays capped at the intersection like it always was.
+      const northRouteLive = !!this.bloodRouteN;
+      const northLimit = northRouteLive
+        ? this.INTERSECTION_Z + 0.8
+        : this.INTERSECTION_Z;
+      (("N" === _f && this.camZ < northLimit) || "S" === _f) &&
         (window.z2SpaceHeld || window.z2TouchHeld) &&
         ((this.camZ += "S" === _f ? -0.04 : 0.04),
         (t = 1),
-        this.camZ >= this.INTERSECTION_Z &&
-          ((this.camZ = this.INTERSECTION_Z),
-          (this.intersectionReached = !0),
-          (t = 0)),
+        this.camZ >= this.INTERSECTION_Z && (this.intersectionReached = !0),
+        this.camZ >= northLimit &&
+          ((this.camZ = northLimit),
+          (t = 0),
+          northRouteLive &&
+            !this.readyForZone3 &&
+            ((this.readyForZone3 = !0),
+            (this.zone3Route =
+              "blackhole" === this.bloodRouteN ? "z3b" : "z3"),
+            console.log(
+              "[BloodRoute] committed N -> " +
+                this.bloodRouteN +
+                " (zone3Route " +
+                this.zone3Route +
+                ")",
+            ))),
         this.camZ <= southLimit && ((this.camZ = southLimit), (t = 0)),
         "S" === _f &&
           this.camZ < this.INTERSECTION_Z &&
           this.intersectionReached &&
           (this.intersectionReached = !1),
+        // South only lets you out when the deal landed there (or pre-blood,
+        // where walking south has always been the way back to Zone 1).
         !("S" === _f && this.camZ <= -1.9) ||
           this.z2ExitStarted ||
+          (this.bloodDealt && !this.bloodRouteS) ||
           ((this.z2ExitStarted = !0), (this.z2ExitTime = performance.now())));
       let i = Math.max(
         0,
@@ -2148,11 +2264,43 @@ class Zone2Engine {
       (this._blitTex(n, u, f),
         gl.enable(gl.BLEND),
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA));
-      const l = framedForwardWall
-          ? this.texFrontFrame
-          : this.texFront,
+      // Space elevator platform for the south end. Rendered into its own FBO
+      // only when the elevator is the dealt route. u_walk pulls the camera in
+      // as you walk south toward it.
+      const southOpen =
+        "elevator" === this.bloodRouteS && !!this.spaceElevatorProg;
+      if (southOpen) {
+        // Fixed framing — no dolly. This used to ramp with camZ, which zoomed
+        // the platform toward you while the hallway was already carrying you
+        // toward it. SOUTH_ELEVATOR_FRAMING is the knob: 0 is far off, 1 is
+        // standing on the deck.
+        const walk = 0.34;
+        (gl.bindFramebuffer(gl.FRAMEBUFFER, this.southPortalFBO.fbo),
+          gl.viewport(0, 0, u, f),
+          gl.disable(gl.BLEND),
+          gl.useProgram(this.spaceElevatorProg));
+        const P = this.spaceElevatorProg,
+          uRes = gl.getUniformLocation(P, "u_resolution"),
+          uTime = gl.getUniformLocation(P, "u_time"),
+          uWalk = gl.getUniformLocation(P, "u_walk"),
+          uMouse = gl.getUniformLocation(P, "u_mouse");
+        (uRes && gl.uniform2f(uRes, u, f),
+          uTime && gl.uniform1f(uTime, 0.001 * e),
+          uWalk && gl.uniform1f(uWalk, walk),
+          uMouse && gl.uniform2f(uMouse, this.cx, this.cy),
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
+        const aP = gl.getAttribLocation(P, "p");
+        (gl.enableVertexAttribArray(aP),
+          gl.vertexAttribPointer(aP, 2, gl.FLOAT, !1, 0, 0),
+          gl.drawArrays(gl.TRIANGLES, 0, 3),
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null),
+          gl.viewport(0, 0, u, f));
+      }
+      const l = framedForwardWall ? this.texFrontFrame : this.texFront,
         backTex =
-          "z4_ready" === this.seqState || "z4" === this.zone3Route
+          "z4_ready" === this.seqState ||
+          "z4" === this.zone3Route ||
+          "elevator" === this.bloodRouteS
             ? this.texBackDoor
             : this.texBack;
       (gl.useProgram(this.prog),
@@ -2190,6 +2338,14 @@ class Zone2Engine {
         gl.uniform1f(this.U.trip, this.z2Trip),
         gl.uniform1f(this.U.yawOffset, this.hallwayYaw),
         gl.uniform1f(this.U.framedKitchen, framedForwardWall ? 1 : 0),
+        this.U.northOpen &&
+          gl.uniform1f(this.U.northOpen, this.bloodRouteN ? 1 : 0),
+        this.U.southOpen && gl.uniform1f(this.U.southOpen, southOpen ? 1 : 0),
+        gl.activeTexture(gl.TEXTURE9),
+        gl.bindTexture(
+          gl.TEXTURE_2D,
+          southOpen ? this.southPortalFBO.tex : this.texVoidVid,
+        ),
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer));
       const r = gl.getAttribLocation(this.prog, "p");
       (gl.enableVertexAttribArray(r),
@@ -2224,7 +2380,17 @@ class Zone2Engine {
         window.currentZone2 = null;
         window.__zone2Governor = null;
         if ("z4" === self.zone3Route) window.__z4Route = !0;
-        if ("function" == typeof window.__returnFromZ2) {
+        // The "station" roll puts the space-elevator platform at the SOUTH end
+        // of the hallway, so walking out of it goes straight into Zone 4. It no
+        // longer detours through Zone 1 waiting for the apartment door to open.
+        if (
+          "elevator" === self.bloodRouteS &&
+          "function" == typeof window.startZone4
+        ) {
+          console.log("[BloodRoute] committed S -> elevator (Zone 4)");
+          window.isEngine1Dead = !0;
+          window.startZone4();
+        } else if ("function" == typeof window.__returnFromZ2) {
           window.__returnFromZ2();
         }
         setTimeout(function () {
@@ -2295,11 +2461,10 @@ class Zone2Engine {
           : this.camZ),
       (this.seqState = "z4_alt_bathroom_turn"),
       (this.zone3Route = "z3"),
-      (this.z4RouteActive = !1),
-      (this.cabinTunnelRouteActive = !1),
-      (this.cabinTunnelRouteStep = 0),
+      (this.bloodRouteN = null),
+      (this.bloodRouteS = null),
+      (this.bloodDealt = null),
       (this.theaterBedroomHandoffStarted = !1),
-      (this.z4RouteStep = 0),
       (this.z4LeftBlinkCount = 0),
       (this.leftBlinkCount = 0),
       (this.z4AltBathroomTurnBlinkCount = 0),
@@ -2388,6 +2553,11 @@ class Zone2Engine {
       gl.deleteTexture(this.texBottom),
       gl.deleteTexture(this.texVoidVid),
       gl.deleteProgram(this.holeProg),
+      this.mirrorBlitProg && gl.deleteProgram(this.mirrorBlitProg),
+      this.spaceElevatorProg && gl.deleteProgram(this.spaceElevatorProg),
+      this.southPortalFBO &&
+        (gl.deleteTexture(this.southPortalFBO.tex),
+        gl.deleteFramebuffer(this.southPortalFBO.fbo)),
       gl.deleteProgram(this.solidProg),
       this.blackHoleProg && gl.deleteProgram(this.blackHoleProg));
   }
@@ -2419,12 +2589,10 @@ window.startZone2 = function (opts) {
             : 1.65),
         (z2.seqState = "initial"),
         (z2.zone3Route = "z3"),
-        (z2.z4RouteActive = !1),
-        (z2.cabinTunnelRouteActive = !1),
-        (z2.cabinTunnelRouteStep = 0),
+        (z2.bloodRouteN = null),
+        (z2.bloodRouteS = null),
         (z2.cabinTunnelTransitionStarted = !1),
         (z2.theaterBedroomHandoffStarted = !1),
-        (z2.z4RouteStep = 0),
         (z2.z4LeftBlinkCount = 0),
         (z2.z4TransitionStarted = !1),
         (z2.z4RouteTriggered = !1),
@@ -2452,12 +2620,9 @@ window.startZone2 = function (opts) {
       (z2.camZ = z2.INTERSECTION_Z),
       (z2.seqState = "z4_ready"),
       (z2.zone3Route = "z4"),
-      (z2.z4RouteActive = !1),
-      (z2.cabinTunnelRouteActive = !1),
-      (z2.cabinTunnelRouteStep = 0),
+      (z2.bloodRouteS = "elevator"),
       (z2.cabinTunnelTransitionStarted = !1),
       (z2.theaterBedroomHandoffStarted = !1),
-      (z2.z4RouteStep = 4),
       (z2.z4LeftBlinkCount = 2),
       z2.setLeftRoomTexture && z2.setLeftRoomTexture("normal"));
   opts &&

@@ -297,13 +297,11 @@ window.makeUI = function () {
       (z2.z2ExitOverlay = null),
       (z2.z2ExitTime = 0),
       (z2.zone3Route = "z3"),
-      (z2.z4RouteActive = !1),
-      (z2.z4RouteStep = 0),
+      (z2.bloodRouteN = null),
+      (z2.bloodRouteS = null),
       (z2.z4LeftBlinkCount = 0),
       (z2.z4TransitionStarted = !1),
       (z2.z4RouteTriggered = !1),
-      (z2.cabinTunnelRouteActive = !1),
-      (z2.cabinTunnelRouteStep = 0),
       (z2.cabinTunnelTransitionStarted = !1),
       (z2.route3Active = !1),
       (z2.route3Step = 0),
@@ -331,6 +329,7 @@ window.makeUI = function () {
       (z2.cx = 0),
       (z2.cy = 0),
       (z2.seqState = "blood"),
+      "function" == typeof z2._rollHallDestination && z2._rollHallDestination(),
       (z2.leftBlinkCount = 2),
       (z2.z4AltBathroomTurnBlinkCount = 0),
       (z2.z4AltBathroomTurnEnterStart = 0),
@@ -516,8 +515,7 @@ window.makeUI = function () {
           (z2.intersectionReached = !0),
           (z2.camZ = z2.INTERSECTION_Z),
           (z2.seqState = "z4_bathroom"),
-          (z2.z4RouteActive = !0),
-          (z2.z4RouteStep = 4),
+          (z2.bloodRouteS = "elevator"),
           (z2.z4LeftBlinkCount = 0),
           (z2.zone3Route = "z4"),
           z2.setLeftRoomTexture
@@ -1044,12 +1042,10 @@ window.makeUI = function () {
             z2.activePOV +
             " face:" +
             (z2.facing || "?");
-          "blood" === z2.seqState &&
-            z2.leftBlinkCount >= 2 &&
-            !z2.z4RouteActive &&
-            (info += " routes:4");
-          z2.z4RouteStep > 0 && (info += " z4:" + z2.z4RouteStep);
-          "theater" === z2.zone3Route && (info += " theater");
+          z2.bloodRouteN || z2.bloodRouteS
+            ? (info +=
+                " N:" + (z2.bloodRouteN || "-") + " S:" + (z2.bloodRouteS || "-"))
+            : "blood" === z2.seqState && (info += " roll:pending");
           seqEl.innerText = info;
         } else seqEl.innerText = "engine1";
       } catch (e) {}

@@ -717,7 +717,11 @@
             bowlHalfWall = 3.9,
             tunnelHalfFloor = 1.65,
             tunnelHalfWall = 1.95,
-            throatFloorY = tunnelFloorY + 0.1,
+            // Flat through the throat. This used to be tunnelFloorY + 0.1,
+            // which put a step in the floor exactly where the tunnel opens
+            // into the bowl — you walked down into the tunnel and back up out
+            // of it. The throat now sits level with the tunnel floor.
+            throatFloorY = tunnelFloorY,
             floorSlabCol = centerLandingCol,
             floorUnderCol = [0.046, 0.048, 0.052],
             wallInnerCol = [0.02, 0.022, 0.027],
@@ -1268,7 +1272,11 @@
           return null;
         }
       })();
-      const texHallFront = makeStaticTexture("files/img/rooms/z2/hallway/FORWARD-MASK.png"),
+      // North end of the tunnel hallway is the framed KITCHEN — turn around
+      // from the tunnel and that is what you are looking at. FORWARD-FRAME is
+      // the frame with the aperture; KITCHEN.png fills it via u_framedKitchen.
+      const texHallFront = makeStaticTexture("files/img/rooms/z2/hallway/FORWARD-FRAME.png"),
+        texHallKitchen = makeStaticTexture("files/img/rooms/z2/hallway/KITCHEN.png"),
         texHallBack  = makeStaticTexture("files/img/rooms/z2/hallway/BACK.png"),
         texHallLeft  = makeStaticTexture("files/img/rooms/z2/hallway/LEFTWALL.png"),
         texHallRight = makeStaticTexture("files/img/rooms/z2/hallway/RIGHTWALL.png"),
@@ -1689,13 +1697,15 @@
         return mix(0, -1.45, smoothstep(0, 1, clamp(t / 0.22, 0, 1)));
       }
       function tunnelApproachEyeY(t, topLandingY) {
+        // DIP REMOVED — the camera no longer drops before the landing.
+        // The rise stays late on purpose: the tunnel is a fixed box only 5
+        // units tall (tunnelCeilY = tunnelFloorY + 5) and the eye sits at
+        // floor + 2.25, so climbing toward topLandingY any earlier walks the
+        // camera up through the tunnel ceiling. Level the whole way down the
+        // tunnel, then up once it opens into the bowl.
         const floorEyeY = theaterTunnelFloorY + 2.25,
-          dip =
-            0.38 *
-            smoothstep(0.56, 0.74, t) *
-            (1 - smoothstep(0.86, 1, t)),
           rise = smoothstep(0.68, 1, t);
-        return mix(floorEyeY, topLandingY, rise) - dip;
+        return mix(floorEyeY, topLandingY, rise);
       }
       function sampledApproachLength(topLandingY) {
         let total = 0,
@@ -2945,7 +2955,7 @@
             gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, texHallRight);
             gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, texHallTop);
             gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, texHallFloor);
-            gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, texHallBlank);
+            gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, texHallKitchen);
             gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, texHallBlank);
             gl.uniform2f(hallLoc.res, canvas.width, canvas.height);
             gl.uniform1f(hallLoc.time, 0.001 * now);
@@ -2959,7 +2969,7 @@
             gl.uniform1f(hallLoc.shake, 0);
             gl.uniform1f(hallLoc.isWalking, state.space ? 1 : 0);
             gl.uniform1f(hallLoc.trip, 0);
-            gl.uniform1f(hallLoc.framedKitchen, 0);
+            gl.uniform1f(hallLoc.framedKitchen, 1);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
             gl.disable(gl.BLEND);
             gl.enable(gl.DEPTH_TEST);
