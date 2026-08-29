@@ -299,6 +299,12 @@ window.makeUI = function () {
       (z2.zone3Route = "z3"),
       (z2.bloodRouteN = null),
       (z2.bloodRouteS = null),
+      // bloodDealt has to clear with the two route slots. _enterBloodMode guards
+      // the roll on `this.bloodDealt || this._rollHallDestination()`, so leaving
+      // a stale deal here means the next blood transition skips the roll entirely
+      // and lands with BOTH ends dead — no way out of the hallway.
+      (z2.bloodDealt = null),
+      "function" == typeof z2._releaseTheaterWarm && z2._releaseTheaterWarm(),
       (z2.z4LeftBlinkCount = 0),
       (z2.z4TransitionStarted = !1),
       (z2.z4RouteTriggered = !1),

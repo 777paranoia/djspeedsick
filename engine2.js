@@ -113,26 +113,47 @@ void traceHall(
   }
 }
 
+// Projects a view ray past the north face onto a plane PORTAL_DEPTH behind it,
+// so whatever is bound to u_voidVid reads as space BEYOND the opening instead of
+// paint on the opening. Only rays that actually hit the +Z face reach this, so
+// the cone is bounded by the hallway cross-section — a keyhole.
 vec2 farPortalUV(vec2 uv, vec2 mouse, float yawOffset, float camZ) {
   vec3 box = vec3(0.5625, 1.0, 3.5);
 
-  float z2PortalFarZ = 12.5;
-  vec2 z2PortalBackPlaneSize = vec2(2.6, 1.5);
+  // Both constants matter and they move together. PLANE_SCALE has to cover the
+  // widest keyhole cone or the edges clamp and smear the plane's border pixels
+  // across the opening — the old vec2(2.6, 1.5) clamped by 6x, which is why this
+  // read as a flat plate. DZ_MIN stops the cone blowing up as the camera walks
+  // into the wall (dz -> 0 sends the sampled extent to infinity).
+  const float PORTAL_DEPTH = 9.0;
+  const float DZ_MIN       = 0.9;
+  const float PLANE_SCALE  = 18.0;
 
-  vec3 ro = vec3(0.0, 0.0, camZ);
+  float dz = max(box.z - camZ, DZ_MIN);
+
+  vec3 ro = vec3(0.0, 0.0, box.z - dz);
   vec3 rd = normalize(vec3(uv.x, uv.y, 1.6));
 
   rd.yz *= rot(mouse.y * 0.8);
   rd.xz *= rot(mouse.x + yawOffset);
   rd = safeRay(rd);
 
-  float t = (z2PortalFarZ - ro.z) / rd.z;
+  float t = (dz + PORTAL_DEPTH) / rd.z;
   vec3 p = ro + rd * t;
 
+  // Uniform scale — the plane keeps the hallway cross-section's aspect, so the
+  // route is never stretched sideways the way vec2(2.6, 1.5) stretched it.
   vec2 outUV = vec2(
-    p.x / (box.x * z2PortalBackPlaneSize.x),
-   -p.y / (box.y * z2PortalBackPlaneSize.y)
+    p.x / (box.x * PLANE_SCALE),
+   -p.y / (box.y * PLANE_SCALE)
   ) * 0.5 + 0.5;
+
+  // No PLANE_SCALE covers the cone at full mouse-look pressed up against the
+  // opening, and CLAMP_TO_EDGE there streaks one row of border pixels across
+  // the corners — the exact smear that reads as a plate. Mirror-fold instead:
+  // out-of-range UVs come back as a reflected continuation of the route, which
+  // on abstract void/bh/plane content reads as more space, not a seam.
+  outUV = 1.0 - abs(1.0 - mod(outUV, 2.0));
 
   return outUV;
 }
@@ -193,10 +214,18 @@ void main() {
   // North wall. u_northOpen == 1 means blood dealt a north route: the fence is
   // GONE, the whole wall is the route, nothing painted over it.
   if (wallID == 2.0 && (u_northOpen > 0.5 || hallTex.a < 0.999)) {
-    vec2 portalUV = u_framedKitchen > 0.5
-      ? framedKitchenUV(tileUV)
-      : tileUV;
-    if (u_framedKitchen <= 0.5) portalUV.y = 1.0 - portalUV.y;
+    // A dealt north route is an OPENING, not a picture hung on the end wall.
+    // tileUV is the box face's own UV, so sampling with it pastes the route
+    // flat onto the +Z plate — it slides with the wall and holds still when you
+    // look around, which reads as a poster. farPortalUV re-casts the view ray
+    // out to a back plane past the end of the box, so the route sits BEHIND the
+    // opening: it parallaxes against the door frame and recedes as you walk.
+    // Only for the open case — the fence still needs face UVs so the
+    // FORWARD-MASK.png cutout lines up with its own alpha.
+    vec2 portalUV = u_northOpen > 0.5
+      ? farPortalUV(vec2(uv.x + liquidX, uv.y + liquidY), m, u_yawOffset, u_camZ)
+      : (u_framedKitchen > 0.5 ? framedKitchenUV(tileUV) : tileUV);
+    if (u_northOpen <= 0.5 && u_framedKitchen <= 0.5) portalUV.y = 1.0 - portalUV.y;
 
     vec3 portalCol = texture2D(u_voidVid, portalUV).rgb;
 
@@ -224,11 +253,17 @@ void main() {
     hallTex.a < 0.1 ||
     (hallTex.g > 0.4 && hallTex.r < 0.25 && hallTex.b < 0.25);
 
+  // The side-wall doorways. These were flat fill — u_texDoorLeft and
+  // u_texDoorRight are bound by the engine (units 7 and 8, the mirror and
+  // window renders) and were never once sampled, so every doorway rendered as
+  // a dead plate. Sample them. max() against the old flat colour keeps the
+  // plate only where nothing is bound, so a blank 1x1 does not go pure black.
   if (isCutout && wallID != 4.0) {
+    vec2 doorUV = vec2(tileUV.x, 1.0 - tileUV.y);
     if (wallID == 0.0) {
-      finalCol = vec3(0.04, 0.03, 0.03);
+      finalCol = max(texture2D(u_texDoorLeft, doorUV).rgb, vec3(0.04, 0.03, 0.03));
     } else if (wallID == 1.0) {
-      finalCol = vec3(0.03, 0.03, 0.05);
+      finalCol = max(texture2D(u_texDoorRight, doorUV).rgb, vec3(0.03, 0.03, 0.05));
     }
   }
 
@@ -771,6 +806,79 @@ function syncZ2ForwardHeld() {
   }),
   window.addEventListener("touchcancel", () => {
     window.z2TouchHeld = !1;
+  }));
+
+// ── DEBUG: hold a number key to force the blood route ──────────────────────
+// Hold it while you're looking into the bathroom, before the mirror's second
+// blink. Whatever is down when the blood transition fires wins the roll:
+//   1 elevator   2 tunnel (theater)   3 black hole   4 cabin
+// Release the key and the roll goes back to a fair 1-of-4. Nothing here runs
+// unless a key is actually held — this is an override, not a default.
+const Z2_FORCE_ROUTE_KEYS = {
+  Digit1: "elevator",
+  Digit2: "theater",
+  Digit3: "blackhole",
+  Digit4: "cabin",
+  Numpad1: "elevator",
+  Numpad2: "theater",
+  Numpad3: "blackhole",
+  Numpad4: "cabin",
+};
+const z2ForceRouteHeld = {};
+function z2ForceRouteCode(e) {
+  if (e.code && Z2_FORCE_ROUTE_KEYS[e.code]) return e.code;
+  // Fall back to e.key so a layout without Digit* codes still works.
+  return "1" === e.key || "2" === e.key || "3" === e.key || "4" === e.key
+    ? "Digit" + e.key
+    : null;
+}
+function syncZ2ForceRoute() {
+  // Last key pressed wins if several are down.
+  const codes = Object.keys(z2ForceRouteHeld).filter(
+    (c) => z2ForceRouteHeld[c],
+  );
+  window.__z2ForceRoute = codes.length
+    ? Z2_FORCE_ROUTE_KEYS[codes[codes.length - 1]]
+    : null;
+}
+// This listener is module-level, so it is live on every page engine2.js loads
+// into — the splash, engine1, the tutorial, everything. Without a gate, holding
+// a number anywhere on the site armed a global. Only listen when Zone 2 is
+// actually alive AND you are looking into the bathroom before the transformation,
+// which is the only moment the override can do anything anyway.
+function z2ForceRouteArmable() {
+  const z2 = window.currentZone2;
+  return !!(
+    z2 &&
+    !z2.isDead &&
+    "left" === z2.activePOV &&
+    "W" === z2.facing &&
+    "initial" === z2.seqState &&
+    !z2.bloodDealt
+  );
+}
+(window.addEventListener("keydown", (e) => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Never swallow a number someone is typing into a field (terminal.html, the
+  // debug panel inputs).
+  const el = document.activeElement,
+    tag = el && el.tagName;
+  if ("INPUT" === tag || "TEXTAREA" === tag || (el && el.isContentEditable))
+    return;
+  if (!z2ForceRouteArmable()) return;
+  const code = z2ForceRouteCode(e);
+  code &&
+    (delete z2ForceRouteHeld[code],
+    (z2ForceRouteHeld[code] = !0),
+    syncZ2ForceRoute());
+}),
+  window.addEventListener("keyup", (e) => {
+    const code = z2ForceRouteCode(e);
+    code && (delete z2ForceRouteHeld[code], syncZ2ForceRoute());
+  }),
+  window.addEventListener("blur", () => {
+    for (const k in z2ForceRouteHeld) delete z2ForceRouteHeld[k];
+    syncZ2ForceRoute();
   }));
 
 class Zone2Engine {
@@ -1514,9 +1622,15 @@ class Zone2Engine {
     );
   }
   _rollHallDestination() {
-    const deal = Zone2Engine.BLOOD_ROUTES[Math.floor(Math.random() * 4)],
+    // Debug override: whichever of 1/2/3/4 is held at this instant wins.
+    const forced = window.__z2ForceRoute || null,
+      deal = forced
+        ? Zone2Engine.BLOOD_ROUTES.filter((r) => r[1] === forced)[0] ||
+          Zone2Engine.BLOOD_ROUTES[Math.floor(Math.random() * 4)]
+        : Zone2Engine.BLOOD_ROUTES[Math.floor(Math.random() * 4)],
       side = deal[0],
       route = deal[1];
+    forced && console.log("[BloodRoute] FORCED by held key -> " + route);
     ((this.bloodRouteN = "N" === side ? route : null),
       (this.bloodRouteS = "S" === side ? route : null),
       (this.bloodDealt = route),
@@ -1525,9 +1639,14 @@ class Zone2Engine {
       (window.__bloodRouteS = this.bloodRouteS));
     // ONLY the dealt end changes. A south deal leaves the north end exactly as
     // it was — fence with the ambient modes rotating behind it.
+    // cabin pins "fractal", NOT "plane". mode9 / the oncoming plane is out of
+    // the hallway flow entirely — the cabin route no longer teases with it, and
+    // pinning it here put the plane at the north end every single cabin roll.
+    // The blink handler below has said "cabin -> fractal" the whole time; this
+    // line was the one that disagreed.
     this.bloodRouteN &&
       this._setForwardPortalMode(
-        "blackhole" === this.bloodRouteN ? "bh" : "plane",
+        "blackhole" === this.bloodRouteN ? "bh" : "fractal",
       );
     // Everything is in place the moment the bathroom turns red — including
     // where Zone 3 opens. Nothing is worked out later.
@@ -1537,13 +1656,104 @@ class Zone2Engine {
         : "blackhole" === route
           ? { activePOV: "center", centerPhase: "void", voidStart: !0, camZOffset: 0 }
           : null;
+    // The theater is the one route whose world lives in another engine, so it
+    // used to arrive completely cold: mode-theater built its screen videos and
+    // hallway textures inside the turn out of the bathroom, and that construction
+    // cost IS the stall. Warm it here instead, with the blood, exactly like the
+    // north portal and the elevator platform are armed here.
+    "theater" === route ? this._warmTheater() : this._releaseTheaterWarm();
     console.log("[BloodRoute] dealt " + route + " at the " + side + " end");
     return route;
   }
-  // TEMPORARY on-screen readout. Delete _z2Hud and its call in render() once
-  // the routes are confirmed working.
+  // Pre-buy everything mode-theater would otherwise fetch at handoff time. GL
+  // objects can't be made early (mode-theater takes over this same canvas), but
+  // the two mapped screen videos and the hallway plates are pure network/decode
+  // work and they are the expensive part. startModeTheater claims what's here.
+  _warmTheater() {
+    if (window.__theaterWarm) return null;
+    const list = (window.MAPPED_VIDEOS || []).slice();
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)),
+        tmp = list[i];
+      ((list[i] = list[j]), (list[j] = tmp));
+    }
+    const srcs = list.length
+      ? [
+          "files/mov/mapped/" + list[0],
+          "files/mov/mapped/" + list[1 % list.length],
+        ]
+      : ["files/mov/mapped/crywolf.mp4", "files/mov/mapped/grate.mp4"];
+    const videos = srcs.map(function (src) {
+      const v = document.createElement("video");
+      ((v.src = src),
+        (v.muted = !0),
+        (v.loop = !0),
+        (v.autoplay = !0),
+        (v.playsInline = !0),
+        (v.preload = "auto"),
+        v.setAttribute("playsinline", ""),
+        v.setAttribute("webkit-playsinline", ""),
+        window.__registerVideo
+          ? window.__registerVideo(v)
+          : ((window.__ALL_VIDEOS = window.__ALL_VIDEOS || []),
+            window.__ALL_VIDEOS.push(v)));
+      const p = v.play && v.play();
+      return (p && p.catch && p.catch(function () {}), v);
+    });
+    const images = [
+      "FORWARD-FRAME",
+      "KITCHEN",
+      "BACK",
+      "LEFTWALL",
+      "RIGHTWALL",
+      "TOP",
+      "GROUND",
+    ].map(function (n) {
+      const im = new Image();
+      return (
+        (im.crossOrigin = "anonymous"),
+        (im.src = "files/img/rooms/z2/hallway/" + n + ".png"),
+        im
+      );
+    });
+    ((window.__theaterWarm = { srcs: srcs, videos: videos, images: images }),
+      console.log("[BloodRoute] theater warmed with the blood", srcs));
+    return window.__theaterWarm;
+  }
+  // Drop an unclaimed warm bundle — a re-roll that lands somewhere other than
+  // the theater must not leave two mapped videos decoding in the background.
+  _releaseTheaterWarm() {
+    const warm = window.__theaterWarm;
+    if (!warm) return !1;
+    window.__theaterWarm = null;
+    (warm.videos || []).forEach(function (v) {
+      try {
+        (v.pause(), v.removeAttribute("src"), v.load());
+      } catch (e) {}
+      try {
+        v.parentNode && v.parentNode.removeChild(v);
+      } catch (e) {}
+      const all = window.__ALL_VIDEOS;
+      if (all) {
+        const i = all.indexOf(v);
+        i >= 0 && all.splice(i, 1);
+      }
+    });
+    return !0;
+  }
+  // Route readout. OFF unless this is a debug session — hold D on the splash
+  // screen, the same gate the debug-ui panel uses (site-ui.js `__debugAllowed`).
+  // It used to draw unconditionally, so every player got the green box.
   _z2Hud() {
+    const allowed =
+      "undefined" != typeof __debugAllowed
+        ? !!__debugAllowed
+        : !!window.__debugAllowed;
     let el = document.getElementById("z2-hud");
+    if (!allowed) {
+      (el && el.parentNode && el.parentNode.removeChild(el));
+      return;
+    }
     if (!el) {
       if (!document.body) return;
       ((el = document.createElement("div")),
@@ -1570,6 +1780,10 @@ class Zone2Engine {
       "pov    " + this.activePOV + "   facing " + this.facing + "\n" +
       "DEALT  " + (this.bloodDealt || "— nothing dealt —") + "\n" +
       "       N:" + (this.bloodRouteN || "-") + "  S:" + (this.bloodRouteS || "-") + "\n" +
+      "FORCE  " +
+        (window.__z2ForceRoute
+          ? "HOLDING -> " + window.__z2ForceRoute
+          : "- (hold 1 elev / 2 tunnel / 3 bh / 4 cabin)") + "\n" +
       "north  " + portal + "\n" +
       "facing " +
         ("N" === this.facing

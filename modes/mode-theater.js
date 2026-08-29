@@ -1383,27 +1383,42 @@
         const play = video.play && video.play();
         return (play && play.catch && play.catch(() => {}), video);
       }
-      const screenSources = (function () {
-          const list = (window.MAPPED_VIDEOS || []).slice();
-          for (let i = list.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1)),
-              tmp = list[i];
-            ((list[i] = list[j]), (list[j] = tmp));
-          }
-          if (!list.length)
-            return [
-              "files/mov/mapped/crywolf.mp4",
-              "files/mov/mapped/grate.mp4",
-            ];
-          const picked = [];
-          for (let i = 0; i < 2; i++)
-            picked.push("files/mov/mapped/" + list[i % list.length]);
-          return picked;
-        })(),
-        screenVideos = [
-          makeMappedVideo(screenSources[0]),
-          makeMappedVideo(screenSources[1]),
-        ],
+      // Zone 2 warms these at the blood transition when the theater is the
+      // dealt route (Zone2Engine._warmTheater), so by the time the turn out of
+      // the bathroom lands the mp4s are already buffered and playing. Claim them
+      // rather than starting two cold fetches inside the handoff.
+      const __warm =
+          window.__theaterWarm &&
+          window.__theaterWarm.videos &&
+          2 === window.__theaterWarm.videos.length
+            ? window.__theaterWarm
+            : null,
+        screenSources = __warm
+          ? __warm.srcs.slice()
+          : (function () {
+              const list = (window.MAPPED_VIDEOS || []).slice();
+              for (let i = list.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1)),
+                  tmp = list[i];
+                ((list[i] = list[j]), (list[j] = tmp));
+              }
+              if (!list.length)
+                return [
+                  "files/mov/mapped/crywolf.mp4",
+                  "files/mov/mapped/grate.mp4",
+                ];
+              const picked = [];
+              for (let i = 0; i < 2; i++)
+                picked.push("files/mov/mapped/" + list[i % list.length]);
+              return picked;
+            })(),
+        screenVideos = __warm
+          ? ((window.__theaterWarm = null),
+            __warm.videos.map(function (v) {
+              const p = v.play && v.play();
+              return (p && p.catch && p.catch(function () {}), v);
+            }))
+          : [makeMappedVideo(screenSources[0]), makeMappedVideo(screenSources[1])],
         screenTextures = screenVideos.map(() => {
           const tex = gl.createTexture();
           return (
