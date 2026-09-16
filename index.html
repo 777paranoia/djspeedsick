@@ -662,23 +662,11 @@ CW x1 + CCW x1<br>
     <script src="butterchurn.js"></script>
     <script src="butterchurnPresets.min.js"></script>
     <script>
-      function __loadBundleFallback() {
-        if (window.__bundleFallbackLoaded) return;
-        window.__bundleFallbackLoaded = true;
-        document.write(
-          '<script src="bundle-modes.js"><\/script><script src="bundle-core.js"><\/script>',
-        );
-      }
-      window.addEventListener(
-        "error",
-        function (event) {
-          var target = event.target;
-          if (!target || target.tagName !== "SCRIPT" || !target.src) return;
-          if (target.src.indexOf("bundle-") !== -1) return;
-          __loadBundleFallback();
-        },
-        true,
-      );
+      // GUTTED. bundle-modes.js / bundle-core.js do not exist in this repo,
+      // and this listener fired on ANY script load error -- a document.write()
+      // after load wipes the whole document. No fallback: if a script fails to
+      // load it fails loudly instead of quietly reloading a second engine.
+      void 0;
     </script>
     <script src="site-ui.js"></script>
     <script src="glsl-core.js"></script>

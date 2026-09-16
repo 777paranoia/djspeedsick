@@ -11,10 +11,18 @@ uniform mat4 proj;
 uniform float iTime;
 uniform int scrWidth;
 uniform int scrHeight;
+uniform float u_blink;   // 0 = eyes open, 1 = fully black. Same dip-to-black
+                         // blink as the engine (gl_FragColor *= 1.0 - u_blink).
 #define iResolution vec2(float(scrWidth), float(scrHeight))
 
-uniform vec3 boxPos;
-uniform vec3 boxPosTarget;
+// Roadside Slab City hut (~45-75 s down-road). slab.png is mapped to the
+// road-facing Z faces; the X/Y sides are light blue. Drive PAST it, let off
+// the gas, roll to a stop and two blinks cut to the alley (see JS trigger).
+//   boxA = (centerX, centerY, centerZ, enabled)
+//   boxB = (halfX, halfY, halfZ, textureReady)
+uniform sampler2D slabTex;
+uniform vec4 boxA;
+uniform vec4 boxB;
 
 // Tunnel-exit trench (plane-tunnel handoff). Disabled when trenchB.x < 0.5.
 //   trenchA = (mouthX, mouthZ, dirX, dirZ)  dir = unit heading the climber
@@ -510,6 +518,37 @@ vec3 terrainColor(vec3 sp, vec3 rd, vec3 sunDir, float t){
   return col;
 }
 
+// Analytic axis-aligned box (slab method). Returns the near hit distance, the
+// hit face normal, and the face-local UV. Used for the roadside slab box so it
+// depth-tests cleanly against the raymarched terrain without an SDF march.
+bool hitBox(vec3 ro, vec3 rd, out float tHit, out vec3 nrm, out vec2 uv){
+  vec3 c = boxA.xyz;
+  vec3 h = max(boxB.xyz, vec3(1e-3));
+  vec3 inv = 1.0 / rd;
+  vec3 t0 = (c - h - ro) * inv;
+  vec3 t1 = (c + h - ro) * inv;
+  vec3 tsm = min(t0, t1);
+  vec3 tbg = max(t0, t1);
+  float tn = max(max(tsm.x, tsm.y), tsm.z);
+  float tf = min(min(tbg.x, tbg.y), tbg.z);
+  if(tn > tf || tf < 0.0) return false;
+  tHit = tn > 0.0 ? tn : tf;
+  vec3 p = ro + rd * tHit;
+  vec3 d = (p - c) / h;
+  vec3 ad = abs(d);
+  if(ad.x >= ad.y && ad.x >= ad.z){
+    nrm = vec3(d.x >= 0.0 ? 1.0 : -1.0, 0.0, 0.0);
+    uv = (p.zy - (c.zy - h.zy)) / (2.0 * h.zy);
+  } else if(ad.y >= ad.z){
+    nrm = vec3(0.0, d.y >= 0.0 ? 1.0 : -1.0, 0.0);
+    uv = (p.xz - (c.xz - h.xz)) / (2.0 * h.xz);
+  } else {
+    nrm = vec3(0.0, 0.0, d.z >= 0.0 ? 1.0 : -1.0);
+    uv = (p.xy - (c.xy - h.xy)) / (2.0 * h.xy);
+  }
+  return true;
+}
+
 vec3 TraceColor(vec3 ro, vec3 rd){
   vec3 sunDir = normalize(vec3(0.38, 0.58, -0.72));
   float t = traceTerrain(ro, rd);
@@ -566,6 +605,27 @@ vec3 TraceColor(vec3 ro, vec3 rd){
       col = mix(col, sky, mist * 0.58);
     }
   }
+  // Roadside Slab City hut: a chunky structure parked on the shoulder.
+  // slab.png on the Z faces (the one you drive straight at), light blue sides.
+  if(boxA.w > 0.5){
+    float tb; vec3 bn; vec2 buv;
+    if(hitBox(ro, rd, tb, bn, buv) && tb < t){
+      vec3 face;
+      if(abs(bn.z) > 0.5 && boxB.w > 0.5){
+        // Front (-Z) face is viewed from the -Z side, which mirrors world +X
+        // left-to-right; flip U there so slab.png reads the right way round.
+        float fu = bn.z < 0.0 ? (1.0 - buv.x) : buv.x;
+        face = texture(slabTex, vec2(fu, 1.0 - buv.y)).rgb;
+      } else {
+        face = vec3(0.50, 0.74, 0.95);            // light blue sides + top
+      }
+      float dif = max(dot(bn, sunDir), 0.0);
+      vec3 light = vec3(0.55, 0.58, 0.64) + vec3(0.85, 0.80, 0.66) * dif;
+      vec3 bcol = face * light;
+      col = mix(bcol, sky, smoothstep(0.0, 1.0, tb / FAR));
+      t = tb;                                     // box now owns the depth
+    }
+  }
   // Parked harley sprite quad (in front of whatever the terrain gave us).
   if(harleyA.w > 0.5){
     vec3 base = vec3(harleyA.x, harleyA.y, harleyA.z);
@@ -606,7 +666,7 @@ void mainImage(out vec4 fragColor, vec2 fragCoord){
   vec3 col = TraceColor(ro, rd);
   col = clamp(col, 0.0, 1.0);
   col = pow(col, vec3(1.0 / 2.2));
-  fragColor = vec4(col, 1.0);
+  fragColor = vec4(col * (1.0 - u_blink), 1.0);
 }
 
 void main(){
@@ -1019,6 +1079,10 @@ void main(){
       tubeA:     gl.getUniformLocation(program, "tubeA"),
       tubeB:     gl.getUniformLocation(program, "tubeB"),
       tubeC:     gl.getUniformLocation(program, "tubeC"),
+      slabTex:   gl.getUniformLocation(program, "slabTex"),
+      boxA:      gl.getUniformLocation(program, "boxA"),
+      boxB:      gl.getUniformLocation(program, "boxB"),
+      blink:     gl.getUniformLocation(program, "u_blink"),
     };
     var pu = {
       x:       gl.getUniformLocation(probeProgram, "u_x"),
@@ -1193,6 +1257,125 @@ void main(){
       harleyImg.src = "files/img/rooms/z4/harley.png";
     }
 
+    // ---- Roadside Slab City hut + two-blink teleport to the alley ---------
+    // The hut sits 45-75 s of throttle-held riding down-road (re-rolled every
+    // run; pass opts.slabSeconds to pin it). Drive PAST it, let off the gas,
+    // roll to a complete stop, and two blinks (the whole frame dips to black,
+    // same as the engine's blink) cut abruptly to mode-alley.
+    function rideDistOver(seconds) {
+      var v = 0, x = 0, dt = 1 / 120;
+      for (var tt = 0; tt < seconds; tt += dt) {
+        v = Math.min(RIDE_TOP, v + RIDE_ACCEL * dt);
+        x += v * dt;
+      }
+      return x;
+    }
+    var BOX_HALF = [1.7, 1.7, 1.7];           // ~3.4 m structure
+    var BOX_SHOULDER = 6.0;                   // metres off centerline, -X side
+    var SLAB_RIDE_SECS =
+      typeof opts.slabSeconds === "number" ? opts.slabSeconds : 45 + Math.random() * 30;
+    var boxZ = startZ + rideDistOver(SLAB_RIDE_SECS);
+    var boxX = 0, boxY = 0;
+    var slabGlTex = null;
+    var passedBox = false;
+    // Autonomous eye-blink ported from the engines (engine2/engine3): a blink
+    // every 4-12 s with a close-120 / hold-80 / open-120 ms curve, driving
+    // u_blink (fragColor *= 1 - rBlink). In the engines a per-state counter
+    // increments once per blink and fires a route transition at >= 2; here,
+    // after you stop PAST the hut, the next two blinks cut to the alley.
+    var rBlink = 0;             // 0 = eyes open, 1 = fully black -> u_blink
+    var blinking = false;
+    var blinkStart = 0;
+    var lastBlinkTime = 0;
+    var nextBlinkInterval = 4000 + 8000 * Math.random();
+    var blinkConsumed = false;  // count this blink once, at its black peak
+    var stopBlinkCount = 0;     // armed blinks counted since the stop
+    var fireTeleport = false;   // set at the 2nd armed blink's peak (black)
+    var teleported = false;
+
+    // Parked on the -X shoulder (rider's right when riding +Z), grounded,
+    // square to the world. The Z faces (front/back, the one you ride straight
+    // at) carry slab.png; the sides are light blue. boxA.w = 1 enables it; the
+    // texture loads async on unit 1 and flips boxB.w when it lands.
+    runProbe(roadCenterJS(boxZ), boxZ);
+    boxX = probeBuf[0] - BOX_SHOULDER;
+    runProbe(boxX, boxZ);
+    boxY = probeBuf[2] + BOX_HALF[1] - 0.30;     // sit on the sand, slight sink
+    gl.useProgram(program);
+    if (u.boxA) gl.uniform4f(u.boxA, boxX, boxY, boxZ, 1);
+    if (u.boxB) gl.uniform4f(u.boxB, BOX_HALF[0], BOX_HALF[1], BOX_HALF[2], 0);
+    if (u.slabTex) gl.uniform1i(u.slabTex, 1);
+    var slabImg = new Image();
+    slabImg.onload = function () {
+      if (destroyed) return;
+      slabGlTex = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, slabGlTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, slabImg);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.useProgram(program);
+      if (u.boxB) gl.uniform4f(u.boxB, BOX_HALF[0], BOX_HALF[1], BOX_HALF[2], 1);
+    };
+    slabImg.onerror = function () {
+      console.warn("[mode-desert-road] slab.png failed to load");
+    };
+    slabImg.src = "files/img/rooms/z4/desert/slab.png";
+
+    // --- Autonomous blink + two-blink teleport -----------------------------
+    // Mirrors the engines' blink: a random 4-12 s timer with a close-120 /
+    // hold-80 / open-120 ms curve (one blink ~320 ms), applied through u_blink.
+    // While "armed" (stopped past the hut, off the gas) each blink is counted
+    // once at its black peak; the second one teleports to the alley while the
+    // frame is fully black, so the swap is masked. clock = sim-time ms, so it
+    // pauses cleanly with the scene.
+    function blinkArmed() {
+      return phase === PHASE_RIDE && passedBox &&
+             !rideThrottleHeld() && rideSpeed <= 0.02;
+    }
+    function updateBlink(clock) {
+      if (!blinking && clock - lastBlinkTime > nextBlinkInterval) {
+        blinking = true;
+        blinkStart = clock;
+        lastBlinkTime = clock;
+        nextBlinkInterval = 4000 + 8000 * Math.random();
+        blinkConsumed = false;
+      }
+      rBlink = 0;
+      if (!blinking) return;
+      var t = clock - blinkStart;
+      if (t < 120) {
+        rBlink = t / 120;                       // closing
+      } else if (t < 200) {
+        rBlink = 1;                             // fully shut (black peak)
+        if (!blinkConsumed) {
+          blinkConsumed = true;
+          if (blinkArmed()) {
+            stopBlinkCount++;
+            if (stopBlinkCount >= 2) fireTeleport = true;  // cut while black
+          }
+        }
+      } else if (t < 320) {
+        rBlink = 1 - (t - 200) / 120;           // opening
+      } else {
+        rBlink = 0;
+        blinking = false;
+        blinkConsumed = false;
+      }
+    }
+    function goToAlley() {
+      // startModeAlley() runs stopCompetingScenes(), which destroys THIS desert
+      // scene and boots the alley at its parked beginning on the shared #c
+      // canvas. Fired on a fully-black frame, so the swap is seamless.
+      if (typeof window.startModeAlley === "function") {
+        window.startModeAlley();
+      } else if (typeof window.__alleyDebugGoto === "function") {
+        window.__alleyDebugGoto("parked");
+      }
+    }
+
     // Turn pivot: 90° clockwise from -X to +Z (right turn from the walker POV).
     //   yaw = -π/2 → fwd = (sin(-π/2), 0, cos(-π/2)) = (-1, 0, 0)   (−X)
     //   yaw =   0  → fwd = (sin(  0  ), 0, cos(  0  )) = ( 0, 0, 1)  (+Z)
@@ -1204,16 +1387,14 @@ void main(){
     var keys = Object.create(null);
     window.__modeDesertRoadNav = { forward: false, back: false, left: false, right: false };
     function forwardKey(code) {
-      return code === "Space" || code === "ArrowUp" || code === "KeyW" || code === "KeyK";
+      return code === "Space" || code === "ArrowUp" || code === "KeyW";
     }
     function turnAliasKey(code) {
       return (
         code === "ArrowLeft" ||
         code === "ArrowRight" ||
         code === "KeyA" ||
-        code === "KeyD" ||
-        code === "KeyH" ||
-        code === "KeyL"
+        code === "KeyD"
       );
     }
     function onKeyDown(e) {
@@ -1244,7 +1425,7 @@ void main(){
     canvas.addEventListener("touchcancel", onTouchEnd);
 
     function walkHeld() {
-      return !paused && !!(keys.Space || keys.KeyW || keys.KeyK || keys.ArrowUp || touchHeld);
+      return !paused && !!(keys.Space || keys.KeyW || keys.ArrowUp || touchHeld);
     }
     function rideThrottleHeld() {
       return !paused && !!(keys.ArrowUp || touchHeld);
@@ -1341,6 +1522,9 @@ void main(){
         "user-select:none;-webkit-user-drag:none;display:block;" +
         "width:" + Math.round(Math.min(w * 0.82, 1320)) + "px;" +
         "height:auto;max-width:none;transform-origin:50% 100%;" +
+        // Eyelids close over the handlebars too: same dip-to-black the shader
+        // applies to the frame (fragColor *= 1 - u_blink).
+        "filter:brightness(" + (1 - rBlink).toFixed(3) + ");" +
         "transform:translate3d(calc(-50% + " + shiftX.toFixed(1) + "px),0,0);";
     }
 
@@ -1410,6 +1594,7 @@ void main(){
             rideSpeed = Math.max(0, rideSpeed - (brakeHeld ? RIDE_BRAKE : RIDE_DRAG) * dt);
           }
           camZ += rideSpeed * dt;
+          if (!passedBox && camZ > boxZ + 1.0) passedBox = true;
         } else if (held) {
           camZ += WALK_SPEED * dt;
         }
@@ -1449,6 +1634,12 @@ void main(){
           [dc.x + dsy * dcp, dc.y + dsp, dc.z + dcy * dcp], [0, 1, 0]);
       }
 
+      // Blink runs always (ambient, like every engine). The teleport counter
+      // only accrues while stopped past the hut; any throttle/motion resets it,
+      // so you must come to a complete stop and wait out two blinks.
+      if (!blinkArmed()) stopBlinkCount = 0;
+      updateBlink(simTime * 1000);
+
       driveBikeOverlay();
 
       // Render.
@@ -1460,11 +1651,23 @@ void main(){
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, harleyGlTex);
       }
+      if (slabGlTex) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, slabGlTex);
+      }
       gl.uniformMatrix4fv(u.view, false, view);
       if (u.iTime)     gl.uniform1f(u.iTime,     simTime);
       if (u.scrWidth)  gl.uniform1i(u.scrWidth,  canvas.width);
       if (u.scrHeight) gl.uniform1i(u.scrHeight, canvas.height);
+      if (u.blink)     gl.uniform1f(u.blink,     rBlink);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      // Teleport AFTER drawing this fully-black frame, so the cut is masked.
+      if (fireTeleport && !teleported) {
+        teleported = true;
+        goToAlley();            // destroys this scene; stop here, touch no gl
+        return;
+      }
 
       rafId = requestAnimationFrame(frame);
     }
@@ -1563,6 +1766,7 @@ void main(){
         try { gl.deleteFramebuffer(probeFbo); } catch (e) {}
         try { gl.deleteTexture(probeTex); } catch (e) {}
         try { if (harleyGlTex) gl.deleteTexture(harleyGlTex); } catch (e) {}
+        try { if (slabGlTex) gl.deleteTexture(slabGlTex); } catch (e) {}
         if (bikeOverlayEl) bikeOverlayEl.style.display = "none";
       },
     };

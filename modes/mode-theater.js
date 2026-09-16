@@ -1468,7 +1468,6 @@
           Space: !!(options && options.walkHeld),
           ArrowUp: !1,
           KeyW: !1,
-          KeyK: !1,
         },
         walkPointerId: null,
         carryWalk: !!(options && options.touchHeld),
@@ -1563,16 +1562,14 @@
         return (
           event &&
           ("ArrowLeft" === event.code ||
-            "KeyA" === event.code ||
-            "KeyH" === event.code)
+            "KeyA" === event.code)
         );
       }
       function theaterRightKey(event) {
         return (
           event &&
           ("ArrowRight" === event.code ||
-            "KeyD" === event.code ||
-            "KeyL" === event.code)
+            "KeyD" === event.code)
         );
       }
       function theaterForwardKey(event) {
@@ -1583,7 +1580,6 @@
           state.forwardKeys.Space ||
           state.forwardKeys.ArrowUp ||
           state.forwardKeys.KeyW ||
-          state.forwardKeys.KeyK ||
           !!state.carryWalk ||
           "number" == typeof state.walkPointerId;
       }
@@ -1896,13 +1892,11 @@
             Space: !!state.forwardKeys.Space,
             ArrowUp: !!state.forwardKeys.ArrowUp,
             KeyW: !!state.forwardKeys.KeyW,
-            KeyK: !!state.forwardKeys.KeyK,
           },
           walkHeld = !!(
             handoffForwardKeys.Space ||
             handoffForwardKeys.ArrowUp ||
-            handoffForwardKeys.KeyW ||
-            handoffForwardKeys.KeyK
+            handoffForwardKeys.KeyW
           ),
           theaterScene = window.__modeTheaterScene;
         let tornDown = !1,

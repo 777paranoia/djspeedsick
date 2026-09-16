@@ -835,7 +835,6 @@ const z3ForwardKeys = {
   Space: !1,
   ArrowUp: !1,
   KeyW: !1,
-  KeyK: !1,
 };
 
 function getZ3ForwardCode(t) {
@@ -848,7 +847,6 @@ function isZ3ForwardKey(t) {
     ("Space" === t.code ||
       "ArrowUp" === t.code ||
       "KeyW" === t.code ||
-      "KeyK" === t.code ||
       " " === t.key ||
       "Spacebar" === t.key)
   );
@@ -858,8 +856,7 @@ function syncZ3ForwardHeld() {
   z3SpaceHeld = !!(
     z3ForwardKeys.Space ||
     z3ForwardKeys.ArrowUp ||
-    z3ForwardKeys.KeyW ||
-    z3ForwardKeys.KeyK
+    z3ForwardKeys.KeyW
   );
 }
 
@@ -971,6 +968,8 @@ class Zone3Engine {
       (this.bhSpeed = 0),
       (this.HALL_START_Z = -3.4),
       (this.HALL_END_Z = 3.5),
+      (this.BH_SUCTION_MIN_MS = 45e3),
+      (this.BH_SUCTION_MAX_MS = 9e4),
       (this.EXIT_ROW_Z = 12),
       (this.COCKPIT_Z = 21),
       (this.camZ = this.HALL_START_Z),
@@ -1018,6 +1017,8 @@ class Zone3Engine {
       (this.bhEscapeBlinkCount = 0),
       (this.bhEscapePhase = "none"),
       (this.bhEscapeStart = 0),
+      (this.bhSuctionAt = 0),
+      (this.bhSuctionVoidStart = -1),
       this._resetBlackholeStart(),
       this._initAudio(),
       this.isZ4BRoute &&
@@ -1399,7 +1400,9 @@ class Zone3Engine {
   }
   _resetBlackholeStart() {
     const t = -260;
-    ((this.blackholeSeed = 1e4 * Math.random()),
+    ((this.bhSuctionAt = 0),
+      (this.bhSuctionVoidStart = -1),
+      (this.blackholeSeed = 1e4 * Math.random()),
       (this.bhCamPos.x = this._bhPathCenterX(t)),
       (this.bhCamPos.y = this._bhPathCenterY(t) + 3.85),
       (this.bhCamPos.z = t),
@@ -1420,11 +1423,51 @@ class Zone3Engine {
         o = e > 0 ? t / (255 * e) : 0;
       }
     } catch (t) {}
+    // Portal mode: this pass is the view through the north opening, so it has
+    // to be rendered with the corridor's lens, not its own. The corridor
+    // samples voidFBO at raw gl_FragCoord, so nothing it does to its own uv
+    // reaches this pass -- we have to reproduce the scalar parts of the
+    // centerProg uv pipeline here and hand them over:
+    //   uv *= u_zoom
+    //   uv *= 1 + mt*0.003 + snap*0.015   (mt = z3ModeTime*z3IsOOB,
+    //                                      snap = surge^2 * 8 * z3IsOOB)
+    //   uv += shake                       (latShake = suctionShake * 5)
+    // The per-pixel fbm warp and the glitch scanline stay corridor-only; they
+    // are grain, not lens, and do not affect where the void points.
+    const portal = this.isAltRoute && "hallway" === this.centerPhase,
+      bhT = 0.001 * n,
+      oob = this.z3IsOOB || 0,
+      mt = (this.z3ModeTime || 0) * oob,
+      sd = this.z3ModeSeed || 0,
+      surgeRaw =
+        (Math.sin(mt * 0.4 + sd) +
+          Math.sin(mt * 0.9 + sd * 2) +
+          Math.sin(mt * 1.5 + sd * 3)) /
+        3,
+      surgeT = Math.max(0, Math.min(1, (surgeRaw - 0.8) / 0.2)),
+      surge = surgeT * surgeT * (3 - 2 * surgeT),
+      snap = surge * surge * 8 * oob,
+      uvScale = (this.zoom || 1) * (1 + 0.003 * mt + 0.015 * snap),
+      latShake = 5 * (this.suctionShake || 0);
     (gl.useProgram(t),
       gl.uniform2f(gl.getUniformLocation(t, "u_resolution"), e, i),
       gl.uniform1f(gl.getUniformLocation(t, "u_time"), 0.001 * n),
+      gl.uniform1f(gl.getUniformLocation(t, "u_portal"), portal ? 1 : 0),
+      gl.uniform1f(
+        gl.getUniformLocation(t, "u_uvScale"),
+        portal ? uvScale : 1,
+      ),
+      gl.uniform2f(
+        gl.getUniformLocation(t, "u_uvOffset"),
+        portal ? Math.sin(40 * bhT) * 0.012 * latShake : 0,
+        portal ? Math.cos(25 * bhT) * 0.012 * latShake : 0,
+      ),
       gl.uniform1f(gl.getUniformLocation(t, "u_yaw"), this.bhYaw || 0),
       gl.uniform1f(gl.getUniformLocation(t, "u_pitch"), this.bhPitch || 0),
+      // Through the north opening this pass is a portal, not a scene: it has to
+      // use the corridor's own ray cone or it pans at its own rate. Full-screen
+      // phases (void / escape / fall) keep the wide walking lens.
+      gl.uniform1f(gl.getUniformLocation(t, "u_fovK"), portal ? 1.6 : 1),
       gl.uniform3f(
         gl.getUniformLocation(t, "u_camPos"),
         this.bhCamPos.x,
@@ -1494,11 +1537,7 @@ class Zone3Engine {
     // Called by the global arrow-key handler in engine.js. Drives the same
     // POV/door_look transitions that the old mouse-threshold path used to,
     // but only on arrow press.
-    this.checkPOVThreshold(
-      window.lastNow || performance.now(),
-      synthMx,
-      !0,
-    );
+    this.checkPOVThreshold(window.lastNow || performance.now(), synthMx, !0);
   }
   checkPOVThreshold(t, e, fromArrow) {
     // Mouse-look can no longer drive zone3 POV slides or door_look.
@@ -1591,8 +1630,18 @@ class Zone3Engine {
       n = 0.034 * e;
     if ("hallway" === this.centerPhase) {
       if (this.isAltRoute) {
-        const t = 0.24 * (this.cx || 0),
-          i = 0.11 * (this.cy || 0) - 0.05,
+        // The void beyond the north opening is a PORTAL, so its camera has to
+        // be the hallway camera -- exactly, every frame, no damping. The
+        // corridor builds its rays as
+        //   yaw = u_yawOffset + cx * 0.42 ; pitch = -cy * 0.26
+        // and rotates a +Z forward vector; camForward() here rotates a -Z one,
+        // so the same angle turns this camera the OTHER way (see
+        // mouse-look axis convention). Negate both. The old damped
+        // 0.24*cx / 0.11*cy-0.05 was a slower, wrong-signed pan, which is what
+        // made the void look locked to the screen instead of sitting still in
+        // the world while you looked around.
+        const t = -((this.yawOffset || 0) + 0.42 * (this.cx || 0)),
+          i = 0.26 * (this.cy || 0),
           n = Math.max(
             0,
             Math.min(
@@ -1601,8 +1650,8 @@ class Zone3Engine {
                 (this.HALL_END_Z - this.HALL_START_Z),
             ),
           );
-        ((this.bhYaw += (t - this.bhYaw) * Math.min(1, 0.1 * e)),
-          (this.bhPitch += (i - this.bhPitch) * Math.min(1, 0.1 * e)),
+        ((this.bhYaw = t),
+          (this.bhPitch = i),
           (this.bhCamPos.z = 120 - 50 * n),
           (this.bhCamPos.x = this._bhPathCenterX(this.bhCamPos.z)),
           (this.bhCamPos.y = this._bhPathCenterY(this.bhCamPos.z) + 3.2),
@@ -1674,6 +1723,18 @@ class Zone3Engine {
               (this.cy = 0));
           this.z3IsOOB = 1;
         } else {
+          (this.bhSuctionVoidStart !== (this.voidStart || 0) &&
+            ((this.bhSuctionVoidStart = this.voidStart || 0),
+            (this.bhSuctionAt =
+              (this.voidStart || t) +
+              this.BH_SUCTION_MIN_MS +
+              Math.random() *
+                (this.BH_SUCTION_MAX_MS - this.BH_SUCTION_MIN_MS))),
+            this.bhSuctionAt &&
+              t >= this.bhSuctionAt &&
+              ((this.bhEscapePhase = "rising"),
+              (this.bhEscapeStart = t),
+              (this.bhSuctionAt = 0)));
           (i ? 1.2 * e : 0) > 0
             ? ((this.bhCamPos.z -= (e / 60) * 18),
               (this.bhCamPos.z = Math.max(this.bhCamPos.z, -3050)),

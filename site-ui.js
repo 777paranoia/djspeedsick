@@ -44,26 +44,20 @@ function updateIntelligence() {
 function toggleConky() {
   const e = document.getElementById("conky-sidebar"),
     t = document.querySelectorAll(".ticker-wrap");
-  (window.currentZone3 &&
-    window.currentZone3.isAltRoute &&
-    "void" === window.currentZone3.centerPhase &&
-    "none" === window.currentZone3.bhEscapePhase &&
-    ((window.currentZone3.bhEscapePhase = "rising"),
-    (window.currentZone3.bhEscapeStart = performance.now())),
-    "none" === e.style.display || "" === e.style.display
-      ? ((e.style.display = "block"),
-        t.forEach((e) => (e.style.display = "block")),
-        updateSystemParams(),
-        updateIntelligence(),
-        setTimeout(function () {
-          e.style.transformOrigin = "top left";
-          var t = 0.5 * window.innerHeight,
-            n = e.scrollHeight;
-          e.style.transform = n > t ? "scale(" + (t / n).toFixed(3) + ")" : "";
-        }, 150))
-      : ((e.style.display = "none"),
-        (e.style.transform = ""),
-        t.forEach((e) => (e.style.display = "none"))));
+  "none" === e.style.display || "" === e.style.display
+    ? ((e.style.display = "block"),
+      t.forEach((e) => (e.style.display = "block")),
+      updateSystemParams(),
+      updateIntelligence(),
+      setTimeout(function () {
+        e.style.transformOrigin = "top left";
+        var t = 0.5 * window.innerHeight,
+          n = e.scrollHeight;
+        e.style.transform = n > t ? "scale(" + (t / n).toFixed(3) + ")" : "";
+      }, 150))
+    : ((e.style.display = "none"),
+      (e.style.transform = ""),
+      t.forEach((e) => (e.style.display = "none")));
 }
 function toggleAbout() {
   const e = document.getElementById("aboutOverlay");
@@ -250,7 +244,46 @@ const startSplashDrag = (e) => {
   window.addEventListener("touchmove", doSplashDrag, { passive: !1 }),
   window.addEventListener("touchend", endSplashDrag));
 var __dHeld = !1,
+  // Hold Z + 2 while clicking ENTER on the splash to boot straight into the
+  // start of Zone 2 instead of the Z1 wake sequence. Same shape as the D-hold
+  // debug-panel gate above, and they compose: D + Z + 2 boots Zone 2 with the
+  // debug panel open.
+  __zHeld = !1,
+  __twoHeld = !1,
   __debugAllowed = !1;
+
+function __isZKey(e) {
+  return "KeyZ" === e.code || "z" === e.key || "Z" === e.key;
+}
+
+function __isTwoKey(e) {
+  return "Digit2" === e.code || "Numpad2" === e.code || "2" === e.key;
+}
+
+// Kill engine 1 and stand Zone 2 up at its own defaults: camZ = START_Z,
+// facing N, activePOV "center", seqState "initial" -- the south end of the
+// hallway, nothing dealt. Zone2Engine's constructor already lands there, so
+// nothing needs forcing; startZone2's governor takes over once engine 1 is
+// flagged dead.
+function __bootDirectToZone2(tries) {
+  tries = tries || 0;
+  if ("function" != typeof window.startZone2) {
+    if (tries > 40) return void console.warn("[debug] Z+2: startZone2 never loaded");
+    return void setTimeout(function () {
+      __bootDirectToZone2(tries + 1);
+    }, 50);
+  }
+  ((window.isEngine1Dead = !0),
+    (window.startWakeSequence = !1),
+    // Engine 1 never wakes on this path, and __initialCameraInputReady is what
+    // engine.js's directional guard waits for. Set it or every arrow/WASD press
+    // gets stopImmediatePropagation'd and you stand still.
+    (window.__initialCameraInputReady = !0),
+    (window.mx = 0),
+    (window.my = 0),
+    window.startZone2(),
+    console.log("[debug] Z+2 held at ENTER -> booted at the start of Zone 2"));
+}
 ((window.showTransientCenterOverlay = function (e, t, n) {
   var i = String(e || "").indexOf("ctrls.png") >= 0;
   ((t = t || (i ? 4200 : 1800)), (n = n || (i ? 1800 : 1350)));
@@ -309,10 +342,14 @@ var __dHeld = !1,
     }, t)));
 }),
   window.addEventListener("keydown", (e) => {
-    ("d" !== e.key && "D" !== e.key) || (__dHeld = !0);
+    (("d" !== e.key && "D" !== e.key) || (__dHeld = !0),
+      __isZKey(e) && (__zHeld = !0),
+      __isTwoKey(e) && (__twoHeld = !0));
   }),
   window.addEventListener("keyup", (e) => {
-    ("d" !== e.key && "D" !== e.key) || (__dHeld = !1);
+    (("d" !== e.key && "D" !== e.key) || (__dHeld = !1),
+      __isZKey(e) && (__zHeld = !1),
+      __isTwoKey(e) && (__twoHeld = !1));
   }));
 let _entered = !1;
 function startMainSiteAudio() {
@@ -443,6 +480,7 @@ function startMainSiteAudio() {
       "function" == typeof window.makeUI && window.makeUI()),
     (document.getElementById("splash-screen").style.display = "none"));
   const e = document.getElementById("background-container");
+  const __z2Boot = __zHeld && __twoHeld;
   (e && (e.style.display = "none"),
     (window._siteEntered = !0),
     setTimeout(function () {
@@ -454,7 +492,10 @@ function startMainSiteAudio() {
         );
     }, 120),
     startMainSiteAudio(),
-    window.startTestSequence || (window.startWakeSequence = !0),
+    // Z + 2 skips the Z1 wake entirely and starts in the Zone 2 hallway.
+    __z2Boot
+      ? __bootDirectToZone2()
+      : window.startTestSequence || (window.startWakeSequence = !0),
     setTimeout(function () {
       "function" == typeof initBrainMonitor && initBrainMonitor();
     }, 120),

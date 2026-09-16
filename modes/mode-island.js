@@ -182,7 +182,6 @@
           Space: !1,
           ArrowUp: !1,
           KeyW: !1,
-          KeyK: !1,
         },
         z4bIslandLevelSpaceHeld = !1,
         z4bIslandLevelProgram = null,
@@ -201,8 +200,7 @@
               (z4bIslandLevelSpaceHeld =
                 z4bIslandLevelForwardKeys.Space ||
                 z4bIslandLevelForwardKeys.ArrowUp ||
-                z4bIslandLevelForwardKeys.KeyW ||
-                z4bIslandLevelForwardKeys.KeyK),
+                z4bIslandLevelForwardKeys.KeyW),
               e.preventDefault && e.preventDefault());
           },
           !0,
@@ -216,8 +214,7 @@
               (z4bIslandLevelSpaceHeld =
                 z4bIslandLevelForwardKeys.Space ||
                 z4bIslandLevelForwardKeys.ArrowUp ||
-                z4bIslandLevelForwardKeys.KeyW ||
-                z4bIslandLevelForwardKeys.KeyK),
+                z4bIslandLevelForwardKeys.KeyW),
               !0 === window.__z4bIslandActive &&
                 e.preventDefault &&
                 e.preventDefault());
@@ -1615,8 +1612,7 @@
       if (
         "Space" === e.code ||
         "ArrowUp" === e.code ||
-        "KeyW" === e.code ||
-        "KeyK" === e.code
+        "KeyW" === e.code
       )
         return e.code;
       return " " === e.key || "Spacebar" === e.key ? "Space" : "";

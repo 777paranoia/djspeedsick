@@ -5,7 +5,6 @@
     Space: !!window.z4SpaceHeld,
     ArrowUp: !1,
     KeyW: !1,
-    KeyK: !1,
   };
   function isZ4ForwardKey(e) {
     return !!(e && e.code in z4ForwardKeys);
@@ -14,20 +13,19 @@
     z4SpaceHeld =
       z4ForwardKeys.Space ||
       z4ForwardKeys.ArrowUp ||
-      z4ForwardKeys.KeyW ||
-      z4ForwardKeys.KeyK;
+      z4ForwardKeys.KeyW;
     window.z4SpaceHeld = z4SpaceHeld;
   }
   function isZ4LeftTurnKey(e) {
     return (
       e &&
-      ("ArrowLeft" === e.code || "KeyA" === e.code || "KeyH" === e.code)
+      ("ArrowLeft" === e.code || "KeyA" === e.code)
     );
   }
   function isZ4RightTurnKey(e) {
     return (
       e &&
-      ("ArrowRight" === e.code || "KeyD" === e.code || "KeyL" === e.code)
+      ("ArrowRight" === e.code || "KeyD" === e.code)
     );
   }
   function checkZ4Touch(ev) {
@@ -2255,12 +2253,6 @@
       );
     }
     _checkStationTurnThreshold(now) {
-      // Mouse-look no longer drives station or annex-room turns — those
-      // are arrow-key only now (engine4 keydown handler sets
-      // window.__z4TurnRequested / __z4AnnexTurnRequested directly, and the
-      // ring/annex phase code in _updatePhase consumes them). We only clear
-      // the latch fields when a turn animation completes; do NOT clear the
-      // pending request from cx position or fresh arrow presses get clobbered.
       if (this.turnAnimating) return;
       if (!window.__z4TurnRequested) this.turnInputLatch = 0;
       if (!window.__z4AnnexTurnRequested) this.annexTurnInputLatch = 0;
@@ -2549,10 +2541,6 @@
           lookFade = 1 - rawT * rawT * (3 - 2 * rawT);
         ((lookX *= lookFade), (lookY *= lookFade));
       }
-      // In bay/hallway and the auto-motion transition phases between hallway
-      // and ring, any residual lookX/lookY from a prior mouse position reads
-      // as a stuck turn — the camera path is on rails, so leftover mouse-look
-      // just rotates the view weirdly. Force zero for these phases.
       if (
         "bay" === this.phase ||
         "hallway" === this.phase ||

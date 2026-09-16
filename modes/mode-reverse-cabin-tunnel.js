@@ -544,8 +544,7 @@ void main(){
         ? !!carriedForwardKeys.Space
         : !!(opts.spaceHeld || opts.walkHeld),
       ArrowUp: !!(carriedForwardKeys && carriedForwardKeys.ArrowUp),
-      KeyW: !!(carriedForwardKeys && carriedForwardKeys.KeyW),
-      KeyK: !!(carriedForwardKeys && carriedForwardKeys.KeyK)
+      KeyW: !!(carriedForwardKeys && carriedForwardKeys.KeyW)
     };
     var state = {
       canvas: canvas,
@@ -563,8 +562,7 @@ void main(){
       space: !!(
         initialForwardKeys.Space ||
         initialForwardKeys.ArrowUp ||
-        initialForwardKeys.KeyW ||
-        initialForwardKeys.KeyK
+        initialForwardKeys.KeyW
       ),
       lastT: performance.now(),
       raf: 0
@@ -594,11 +592,11 @@ void main(){
 
     function forwardKey(e) {
       if (!e) return "";
-      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW" || e.code === "KeyK") return e.code;
+      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") return e.code;
       return e.key === " " || e.key === "Spacebar" ? "Space" : "";
     }
     function syncForward() {
-      state.space = !!(forwardKeys.Space || forwardKeys.ArrowUp || forwardKeys.KeyW || forwardKeys.KeyK);
+      state.space = !!(forwardKeys.Space || forwardKeys.ArrowUp || forwardKeys.KeyW);
     }
     function syncCabinTunnelNav() {
       root.__cabinTunnelNav = {

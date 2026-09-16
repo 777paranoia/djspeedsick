@@ -158,6 +158,64 @@ vec2 farPortalUV(vec2 uv, vec2 mouse, float yawOffset, float camZ) {
   return outUV;
 }
 
+// A dealt north route does NOT put the route on the end wall. It OPENS that end
+// into another length of the same hallway: same cross-section, same side walls,
+// ceiling and floor plates, running NORTH_LEG_LEN further north. The route sits
+// at the far end of THAT leg. So when you turn right out of the bloodied
+// bathroom you are looking down half a hallway, and the route starts in the
+// opening at the end of it -- which is how blackhole and cabin were wired
+// originally. farPortalUV above is the old single-plane treatment; it is only
+// still reachable if this leg is ever switched off.
+// t and nPos come back as if the leg were part of the same box, so the shared
+// fog / tint / floor-glow / vignette tail below treats it as one continuous
+// hallway instead of a lit diorama pasted on the end.
+vec3 traceNorthLeg(vec3 ro, vec3 rd, inout float t, inout vec3 nPosOut) {
+  const float NORTH_LEG_LEN = 3.2;
+
+  vec3 box = vec3(0.5625, 1.0, 3.5);
+  vec3 srd = safeRay(rd);
+
+  // Step the ray to the mouth (the old +Z face), then re-enter a continuation
+  // box that starts there.
+  float tMouth = (box.z - ro.z) / srd.z;
+  vec3 mouth = ro + srd * tMouth;
+
+  vec3 cbox = vec3(box.x, box.y, NORTH_LEG_LEN * 0.5);
+  vec3 cro = vec3(mouth.x, mouth.y, -cbox.z);
+
+  vec3 tPos = (cbox * sign(srd) - cro) / srd;
+  float hitT = min(min(tPos.x, tPos.y), tPos.z);
+  vec3 pos = cro + srd * hitT;
+  vec3 nPos = pos / cbox;
+  vec3 absPos = abs(nPos);
+
+  nPosOut = nPos;
+
+  // Far end of the leg: the opening the route starts in. Fogged far less than
+  // the walls, or the destination reads as just another dead end.
+  if (absPos.z >= absPos.x && absPos.z >= absPos.y && nPos.z > 0.0) {
+    t = tMouth + hitT * 0.2;
+    return texture2D(u_voidVid, vec2(nPos.x, nPos.y) * 0.5 + 0.5).rgb;
+  }
+
+  // Half-weight the leg's own distance into the fog. At full weight the shared
+  // exp(-t) crushes the whole stretch to black and you are back to staring at a
+  // dead end; at half it recedes and then opens up as you walk toward it.
+  t = tMouth + hitT * 0.5;
+
+  if (absPos.x > absPos.y && absPos.x > absPos.z) {
+    return (nPos.x > 0.0
+      ? texture2D(u_texRight, vec2(-nPos.z, -nPos.y) * 0.5 + 0.5)
+      : texture2D(u_texLeft, vec2(nPos.z, -nPos.y) * 0.5 + 0.5)).rgb;
+  }
+  if (absPos.y > absPos.x && absPos.y > absPos.z) {
+    return (nPos.y > 0.0
+      ? texture2D(u_texTop, vec2(nPos.x, -nPos.z) * 0.5 + 0.5)
+      : texture2D(u_texBottom, vec2(nPos.x, nPos.z) * 0.5 + 0.5)).rgb;
+  }
+  return texture2D(u_texBack, vec2(nPos.x, -nPos.y) * 0.5 + 0.5).rgb;
+}
+
 vec2 framedKitchenUV(vec2 frontUV) {
   vec2 apertureMin = vec2(0.1904, 0.1851);
   vec2 apertureMax = vec2(0.8130, 0.8126);
@@ -212,27 +270,20 @@ void main() {
   traceHall(ro, rd, hallTex, tileUV, wallID, t, nPos);
 
   // North wall. u_northOpen == 1 means blood dealt a north route: the fence is
-  // GONE, the whole wall is the route, nothing painted over it.
-  if (wallID == 2.0 && (u_northOpen > 0.5 || hallTex.a < 0.999)) {
-    // A dealt north route is an OPENING, not a picture hung on the end wall.
-    // tileUV is the box face's own UV, so sampling with it pastes the route
-    // flat onto the +Z plate — it slides with the wall and holds still when you
-    // look around, which reads as a poster. farPortalUV re-casts the view ray
-    // out to a back plane past the end of the box, so the route sits BEHIND the
-    // opening: it parallaxes against the door frame and recedes as you walk.
-    // Only for the open case — the fence still needs face UVs so the
-    // FORWARD-MASK.png cutout lines up with its own alpha.
-    vec2 portalUV = u_northOpen > 0.5
-      ? farPortalUV(vec2(uv.x + liquidX, uv.y + liquidY), m, u_yawOffset, u_camZ)
-      : (u_framedKitchen > 0.5 ? framedKitchenUV(tileUV) : tileUV);
-    if (u_northOpen <= 0.5 && u_framedKitchen <= 0.5) portalUV.y = 1.0 - portalUV.y;
+  // GONE and the end of the hall opens into the next stretch.
+  if (wallID == 2.0 && u_northOpen > 0.5) {
+    // Dealt north route: this face is the MOUTH of the next stretch of hallway,
+    // not a surface. Swap the leg in and fall through to the shared lighting
+    // tail so it is the same hallway, just longer.
+    hallTex = vec4(traceNorthLeg(ro, rd, t, nPos), 1.0);
+  } else if (wallID == 2.0 && hallTex.a < 0.999) {
+    // Fence still standing: face UVs, so the FORWARD-MASK.png cutout lines up
+    // with its own alpha.
+    vec2 portalUV = u_framedKitchen > 0.5 ? framedKitchenUV(tileUV) : tileUV;
+    if (u_framedKitchen <= 0.5) portalUV.y = 1.0 - portalUV.y;
 
     vec3 portalCol = texture2D(u_voidVid, portalUV).rgb;
-
-    float maskA = u_northOpen > 0.5
-      ? 0.0
-      : smoothstep(0.46, 0.66, hallTex.a);
-    vec3 col = mix(portalCol, hallTex.rgb, maskA);
+    vec3 col = mix(portalCol, hallTex.rgb, smoothstep(0.46, 0.66, hallTex.a));
 
     gl_FragColor = vec4(col, 1.0);
     return;
@@ -337,6 +388,24 @@ uniform float u_speed;
 uniform float u_seed;
 uniform float u_audio;
 uniform float u_trip;
+// Ray-cone width. 1.0 is the walking black-hole camera. The Z3 hallway builds
+// its rays as normalize(vec3(uv, 1.6)), so when this pass is the view THROUGH
+// the north opening it has to be 1.6 too -- at 1.0 the void is a much wider
+// lens than the corridor around it and pans at a different rate, which reads as
+// the far view being glued to the screen.
+uniform float u_fovK;
+// Portal mode. When this pass is the view THROUGH the Z3 north opening rather
+// than a scene in its own right, the ray has to be built the corridor's way:
+//   u_portal    -- flips camForward to the corridor's pitch-then-yaw order
+//   u_uvScale   -- the corridor's own screen-space zoom (u_zoom * surge zoom)
+//   u_uvOffset  -- the corridor's own screen-space shake
+// The corridor samples u_voidTex at raw gl_FragCoord, so NONE of its uv warp
+// reaches this pass on its own. Left unmatched, the void pans at a different
+// rate than the corridor around it, which is what reads as the far view being
+// glued to the screen instead of sitting still in the world.
+uniform float u_portal;
+uniform float u_uvScale;
+uniform vec2  u_uvOffset;
 uniform sampler2D u_texGround;
 
 const int   MARCH_STEPS = 96;
@@ -363,7 +432,14 @@ float noise3(vec3 p){
 }
 
 vec3 camForward(float yaw, float pitch){
-  vec3 f=vec3(0,0,-1); f.xz*=rot(yaw); f.yz*=rot(pitch); return normalize(f);
+  vec3 f=vec3(0,0,-1);
+  // The corridor rotates its ray pitch first (rd.yz*=rot then rd.xz*=rot).
+  // These are rotations about fixed WORLD axes, so composing them the other way
+  // round is not the same vector once both angles are nonzero -- portal mode
+  // has to match the corridor's order or the void drifts as you look around.
+  if(u_portal>0.5){ f.yz*=rot(pitch); f.xz*=rot(yaw);   }
+  else            { f.xz*=rot(yaw);   f.yz*=rot(pitch); }
+  return normalize(f);
 }
 vec3 camRight(vec3 fwd){ return normalize(cross(fwd,vec3(0,1,0))); }
 vec3 camUp(vec3 fwd, vec3 right){ return normalize(cross(right,fwd)); }
@@ -487,28 +563,37 @@ vec3 accretionGlow(vec3 p, float closestR){
 void main(){
   vec2 uv=(gl_FragCoord.xy-0.5*u_resolution.xy)/u_resolution.y;
 
-  float liqAmp = 0.10 * u_trip;
-  if(liqAmp > 0.001){
-    float tw=u_time*0.15;
-    vec2 q=vec2(noise3(vec3(uv*2.0, tw)), noise3(vec3(uv*2.0+vec2(tw,0.0), tw)));
-    float n3=noise3(vec3(uv*2.0+2.0*q+vec2(1.7,9.2), tw*0.6));
-    float n4=noise3(vec3(uv*2.0+2.0*q+vec2(8.3,2.8), tw*0.5));
-    uv += (vec2(n3,n4)-0.5) * liqAmp;
+  if(u_portal>0.5){
+    // Portal: wear the corridor's lens, not our own. Note the block below runs
+    // its surge zoom off raw u_time -- ungated seconds-since-load -- so it was
+    // widening this pass's FOV by ~0.3% per second forever while the corridor
+    // (mt = u_modeTime * u_isOOB) mostly sat at zero. That alone pulled the two
+    // views apart within a minute of walking.
+    uv = uv*u_uvScale + u_uvOffset;
+  } else {
+    float liqAmp = 0.10 * u_trip;
+    if(liqAmp > 0.001){
+      float tw=u_time*0.15;
+      vec2 q=vec2(noise3(vec3(uv*2.0, tw)), noise3(vec3(uv*2.0+vec2(tw,0.0), tw)));
+      float n3=noise3(vec3(uv*2.0+2.0*q+vec2(1.7,9.2), tw*0.6));
+      float n4=noise3(vec3(uv*2.0+2.0*q+vec2(8.3,2.8), tw*0.5));
+      uv += (vec2(n3,n4)-0.5) * liqAmp;
+    }
+
+    float mt=u_time;
+    float w1=sin(mt*0.4+u_seed); float w2=sin(mt*0.9+u_seed*2.0); float w3=sin(mt*1.5+u_seed*3.0);
+    float surge=smoothstep(0.8,1.0,(w1+w2+w3)/3.0);
+    float snap=pow(surge,2.0)*12.0;
+    uv*=1.0+mt*0.003+snap*0.015;
+
+    float gTick=floor(u_time*16.0);
+    if(step(0.979,hash1(gTick*133.77+u_seed))>0.0)
+      uv.x+=(hash1(floor(uv.y*mix(10.0,30.0,hash1(gTick*2.1)))+gTick)-0.5)*0.18*clamp(u_trip,0.0,1.5);
   }
-
-  float mt=u_time;
-  float w1=sin(mt*0.4+u_seed); float w2=sin(mt*0.9+u_seed*2.0); float w3=sin(mt*1.5+u_seed*3.0);
-  float surge=smoothstep(0.8,1.0,(w1+w2+w3)/3.0);
-  float snap=pow(surge,2.0)*12.0;
-  uv*=1.0+mt*0.003+snap*0.015;
-
-  float gTick=floor(u_time*16.0);
-  if(step(0.979,hash1(gTick*133.77+u_seed))>0.0)
-    uv.x+=(hash1(floor(uv.y*mix(10.0,30.0,hash1(gTick*2.1)))+gTick)-0.5)*0.18*clamp(u_trip,0.0,1.5);
 
   vec3 ro=u_camPos;
   vec3 fwd=camForward(u_yaw,u_pitch); vec3 right=camRight(fwd); vec3 up=camUp(fwd,right);
-  vec3 rd=normalize(fwd+right*uv.x+up*uv.y);
+  vec3 rd=normalize(fwd*max(u_fovK, 0.001)+right*uv.x+up*uv.y);
   vec3 col=vec3(0.0);
 
   float fracAngle=hash1(u_seed*7.7)*6.28;
@@ -646,13 +731,22 @@ class Zone2RoomMode {
       }));
   }
   render(e, t, i, o, n, l, r, s, a, h) {
+    // FAIL CLOSED. If this plate's program or photo is gone, draw NOTHING.
+    // Falling through left whatever the window/portal ActiveMode last bound on
+    // unit 0 -- for deadcity that is files/img/void/ruins01.png -- and the plate
+    // painted THAT across the whole bathroom. Bind null first so a bind that
+    // does not take samples black instead of somebody else's photo.
+    if (!this.prog || !this.tex || !gl.isTexture(this.tex)) return;
     if (
       (gl.useProgram(this.prog),
       gl.activeTexture(gl.TEXTURE0),
+      gl.bindTexture(gl.TEXTURE_2D, null),
       gl.bindTexture(gl.TEXTURE_2D, this.tex),
       null !== this.U.texEnv1 && gl.uniform1i(this.U.texEnv1, 0),
       n &&
+        gl.isTexture(n) &&
         (gl.activeTexture(gl.TEXTURE1),
+        gl.bindTexture(gl.TEXTURE_2D, null),
         gl.bindTexture(gl.TEXTURE_2D, n),
         null !== this.U.windowTex && gl.uniform1i(this.U.windowTex, 1),
         null !== this.U.texEnv2 && gl.uniform1i(this.U.texEnv2, 1),
@@ -660,7 +754,11 @@ class Zone2RoomMode {
         null !== this.U.texEnv4 && gl.uniform1i(this.U.texEnv4, 1)),
       null !== this.U.bcTex)
     ) {
-      if ((gl.activeTexture(gl.TEXTURE2), this.bcSourceTex))
+      if (
+        (gl.activeTexture(gl.TEXTURE2),
+        gl.bindTexture(gl.TEXTURE_2D, null),
+        this.bcSourceTex && gl.isTexture(this.bcSourceTex))
+      )
         gl.bindTexture(gl.TEXTURE_2D, this.bcSourceTex);
       else {
         gl.bindTexture(gl.TEXTURE_2D, this.bcTexGL);
@@ -746,7 +844,6 @@ function isZ2ForwardKey(e) {
     ("Space" === e.code ||
       "ArrowUp" === e.code ||
       "KeyW" === e.code ||
-      "KeyK" === e.code ||
       " " === e.key ||
       "Spacebar" === e.key)
   );
@@ -756,7 +853,6 @@ const z2ForwardKeys = {
   Space: !!window.z2SpaceHeld,
   ArrowUp: !1,
   KeyW: !1,
-  KeyK: !1,
 };
 
 function getZ2ForwardCode(e) {
@@ -767,8 +863,7 @@ function syncZ2ForwardHeld() {
   window.z2SpaceHeld = !!(
     z2ForwardKeys.Space ||
     z2ForwardKeys.ArrowUp ||
-    z2ForwardKeys.KeyW ||
-    z2ForwardKeys.KeyK
+    z2ForwardKeys.KeyW
   );
 }
 
@@ -1096,7 +1191,9 @@ class Zone2Engine {
         (this.mode9.maskTex = this.noWindowTex),
         (this.modeBH = new ActiveMode(3)),
         (this.modeBH.maskTex = this.noWindowTex)),
-      (this.windowModes = [1, 2, 5, 6, 7]),
+      // deadcity (7) is OUT. Its buildings are files/img/void/ruins01..06 and
+      // those images are never allowed on this screen again.
+      (this.windowModes = [1, 2, 5, 6]),
       (this.currentWindowModeIndex = Math.floor(
         Math.random() * this.windowModes.length,
       )),
@@ -1110,7 +1207,7 @@ class Zone2Engine {
         "modes/mode-bh.js",
         "modes/mode4.js",
         "modes/mode5.js",
-        "modes/mode6.js",
+        // modes/mode6.js (deadcity) removed -- see windowModes above.
         "modes/mode7.js",
         // Not in the ambient rotation — pinned by the blood roll so the north
         // end shows the route waiting there instead of a random city.
@@ -1121,15 +1218,14 @@ class Zone2Engine {
         "bh",
         "ocean",
         "earth",
-        "deadcity",
         "goreville",
         "fractal",
         "plane",
       ]),
-      (this.forwardPortalModes = [3, 5, 6, 7, 8, 2, 9]),
-      // Ambient rotation is the first 5 only. "fractal" and "plane" are
+      (this.forwardPortalModes = [3, 5, 6, 8, 2, 9]),
+      // Ambient rotation is the first 4 only. "fractal" and "plane" are
       // reserved for the blood roll and never come up at random.
-      (this.currentForwardPortalModeIndex = Math.floor(Math.random() * 5)),
+      (this.currentForwardPortalModeIndex = Math.floor(Math.random() * 4)),
       (this.forwardPortalActiveMode = null),
       (this.forwardPortalCleanFX = !0),
       "undefined" != typeof ActiveMode &&
@@ -1336,11 +1432,23 @@ class Zone2Engine {
   _hallucinationLevelForScene() {
     return 2;
   }
+  // Wipe every texture unit an ActiveMode touched. The engine-1 modes bind
+  // their own plates on units 0-8 (deadcity puts ruins01..06 there). Leaving
+  // those bound is what let a mode photo leak into a Zone 2 plate.
+  _clearTexUnits() {
+    for (let u = 0; u < 10; u++)
+      (gl.activeTexture(gl.TEXTURE0 + u), gl.bindTexture(gl.TEXTURE_2D, null));
+    gl.activeTexture(gl.TEXTURE0);
+  }
   _blitTex(e, t, i, flipX) {
+    // Same rule as the room plates: a dead FBO texture must not fall through to
+    // whatever a mode left on unit 0.
+    if (!e || !gl.isTexture(e)) return;
     const prog = flipX ? this.mirrorBlitProg : this.holeProg;
     (gl.useProgram(prog),
       gl.disable(gl.BLEND),
       gl.activeTexture(gl.TEXTURE0),
+      gl.bindTexture(gl.TEXTURE_2D, null),
       gl.bindTexture(gl.TEXTURE_2D, e),
       gl.uniform1i(gl.getUniformLocation(prog, "u_tex"), 0),
       gl.uniform2f(gl.getUniformLocation(prog, "u_resolution"), t, i),
@@ -1401,7 +1509,14 @@ class Zone2Engine {
           "S" === this.facing &&
             ("theater_ready" === this.seqState ||
               "theater" === this.bloodRouteS) &&
-            this._beginTheaterHandoffSeamless(this.slideDir)));
+            this._beginTheaterHandoffSeamless(this.slideDir),
+          // North routes hand off on the TURN, same as the theater does on the
+          // south turn. They used to make you walk to the north limit first and
+          // then flash red while Zone 2 was torn down -- see
+          // _beginZone3HandoffSeamless.
+          "N" === this.facing &&
+            this.bloodRouteN &&
+            this._beginZone3HandoffSeamless(this.slideDir)));
     } else if ("black" === this.slideState)
       t >= __blackHold &&
         ((this.slideOffset = -window.innerWidth * this.slideDir),
@@ -1429,6 +1544,78 @@ class Zone2Engine {
   }
   enableFramedKitchenForwardWall() {
     return ((this.__framedKitchenForwardWall = !0), !0);
+  }
+  // A dealt north route (cabin / blackhole) used to make you walk to the north
+  // limit, commit there, and watch a red overlay while Zone 2 was destroyed and
+  // Zone 3 built its intro hallway out of the SAME four plates Zone 2 was
+  // already drawing -- RIGHTWALL / LEFTWALL_B / TOP / GROUND. The flash was
+  // covering a swap between two identical corridors, and until it fired the
+  // north end was a dead leg with an ambient mode pasted in the opening.
+  // Alec: whatever happens when the red overlay comes should already have
+  // happened when the blood room changed over. So the hand-off is now part of
+  // the turn out of the bloodied bathroom -- it runs inside the slide's black
+  // hold, and Zone 3 opens with its red overlay already spent. No walk-commit,
+  // no flash: the corridor you turn into IS Zone 3's intro hallway.
+  _beginZone3HandoffSeamless(dir) {
+    if (this.z3TransitionStarted) return !1;
+    this.z3TransitionStarted = !0;
+    const route = "blackhole" === this.bloodRouteN ? "z3b" : "z3";
+    ((this.zone3Route = route),
+      (this.readyForZone3 = !1),
+      (window.z2SpaceHeld = !1),
+      (window.z2TouchHeld = !1),
+      // destroy() clears #c's transform and tickSlide's tail rewrites it from
+      // slideOffset. Zero it or the canvas is left parked a screen width off
+      // with nothing alive to slide it back.
+      (this.slideOffset = 0));
+    try {
+      this.destroy();
+    } catch (e) {}
+    ((window.currentZone2 = null),
+      (window.__zone2Governor = null),
+      (window.isEngine1Dead = !0));
+    if ("function" == typeof window.startZone3) window.startZone3(route);
+    else if ("undefined" != typeof Zone3Engine)
+      window.currentZone3 = new Zone3Engine(route);
+    const z3 = window.currentZone3;
+    if (!z3) return (console.error("[BloodRoute] Zone 3 failed to start"), !1);
+    // Straight down the intro hallway. Zone 3 opens facing its own side room by
+    // default -- "right" on the alt route, the hole-bathroom otherwise -- and
+    // turning out of one bathroom into another is exactly what this replaces.
+    ((z3.activePOV = "center"),
+      (z3.centerPhase = "hallway"),
+      (z3.camZ = z3.HALL_START_Z),
+      (z3.cx = 0),
+      (z3.cy = 0),
+      (z3.yawOffset = 0),
+      (z3.yawTarget = 0),
+      // The turn IS the transition now. Nothing to cover.
+      (z3.z3RedDone = !0),
+      (z3.z3RedStart = 0));
+    (console.log("[BloodRoute] committed N -> " + this.bloodRouteN + " on the turn (zone3Route " + route + ")"),
+      this._finishSlideOnCanvas(dir));
+    return !0;
+  }
+  // Zone 2 owned the slide and is gone before the slide-in half ever runs, so
+  // finish that half on the canvas directly. Two rAFs: the first parks #c off
+  // screen with transitions off, the second starts the ease back to zero.
+  _finishSlideOnCanvas(dir) {
+    const c = document.getElementById("c");
+    if (!c) return !1;
+    const off = (-dir * window.innerWidth).toFixed(1);
+    requestAnimationFrame(function () {
+      ((c.style.transition = "none"),
+        (c.style.transform = "translateX(" + off + "px)"));
+      requestAnimationFrame(function () {
+        ((c.style.transition =
+          "transform 340ms cubic-bezier(0.16, 0.84, 0.44, 1)"),
+          (c.style.transform = "translateX(0px)"));
+        setTimeout(function () {
+          ((c.style.transition = ""), (c.style.transform = ""));
+        }, 420);
+      });
+    });
+    return !0;
   }
   _beginTheaterHandoffSeamless(dir) {
     if (this.theaterBedroomHandoffStarted) return !1;
@@ -1650,12 +1837,20 @@ class Zone2Engine {
       );
     // Everything is in place the moment the bathroom turns red — including
     // where Zone 3 opens. Nothing is worked out later.
+    // BOTH north routes come in through Zone 3's own INTRO HALLWAY. Bathroom ->
+    // right turn -> you are looking down the intro hall, you walk it, and the
+    // hall itself delivers you: alt route -> the void at HALL_END_Z, cabin ->
+    // the cabin. Landing on the destination (centerPhase "void" / "cabin" at
+    // HALL_END_Z) is what skipped the entire approach.
+    // The ONLY thing that needs forcing is activePOV: Zone 3 opens facing its
+    // own side room by default ("right" on the alt route, "left" -- the Z3
+    // bathroom -- otherwise) and you are supposed to arrive facing down the
+    // hall. centerPhase "hallway" and camZ = HALL_START_Z are already Zone 3's
+    // constructor defaults, so leave them alone.
     this.z3Landing =
-      "cabin" === route
-        ? { activePOV: "center", centerPhase: "cabin", cabinState: "forward", camZOffset: 0.25 }
-        : "blackhole" === route
-          ? { activePOV: "center", centerPhase: "void", voidStart: !0, camZOffset: 0 }
-          : null;
+      "cabin" === route || "blackhole" === route
+        ? { activePOV: "center", centerPhase: "hallway", atHallStart: !0 }
+        : null;
     // The theater is the one route whose world lives in another engine, so it
     // used to arrive completely cold: mode-theater built its screen videos and
     // hallway textures inside the turn out of the bathroom, and that construction
@@ -1850,14 +2045,13 @@ class Zone2Engine {
           ? "z3b"
           : "z3";
       // What the north end was showing is what you land in. Zone 3 opens at
-      // activePOV "left" by default, which is the Z3 BATHROOM — walking into
-      // the black hole or the cabin and arriving in a bathroom is wrong.
-      // Jump straight to the thing, same landings the z3cabin / z3bvoid debug
-      // buttons use. Nothing in between.
-      // The landing was decided back at the blood transition. Apply it
-      // SYNCHRONOUSLY — startZone3 builds currentZone3 on the spot, so any
-      // delay here lets Zone 3 paint its default opening (the bathroom) for a
-      // frame or two before it snaps.
+      // Zone 3 opens facing its own side room by default — activePOV "left" is
+      // the Z3 BATHROOM, and arriving in another bathroom is wrong. Turn it to
+      // face down the intro hallway instead. Do NOT jump to the destination:
+      // the walk down that hall IS the intro to whichever route was dealt.
+      // Apply SYNCHRONOUSLY — startZone3 builds currentZone3 on the spot, so
+      // any delay lets Zone 3 paint its default opening for a frame or two
+      // before it snaps.
       const landing = this.z3Landing,
         applyLanding = function () {
           const z3 = window.currentZone3;
@@ -1866,7 +2060,15 @@ class Zone2Engine {
             (z3.centerPhase = landing.centerPhase),
             landing.cabinState && (z3.cabinState = landing.cabinState),
             landing.voidStart && (z3.voidStart = performance.now()),
-            (z3.camZ = z3.HALL_END_Z + (landing.camZOffset || 0)));
+            // No red here either. This is only the fallback path now -- the
+            // turn out of the bloodied bathroom normally hands off first, via
+            // _beginZone3HandoffSeamless -- but a red flash between two
+            // corridors built from the same plates is the seam Alec called out.
+            (z3.z3RedDone = !0),
+            (z3.z3RedStart = 0),
+            (z3.camZ = landing.atHallStart
+              ? z3.HALL_START_Z
+              : z3.HALL_END_Z + (landing.camZOffset || 0)));
         };
       return (
         this.destroy(),
@@ -1938,6 +2140,7 @@ class Zone2Engine {
       gl.clear(gl.COLOR_BUFFER_BIT);
       window.__tripAmount = this.z2Trip;
       this.modeBH.render(e, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed);
+      this._clearTexUnits();
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, u, f);
     }
@@ -1973,7 +2176,7 @@ class Zone2Engine {
                 (this.currentWindowModeIndex + 1) % this.windowModes.length),
               this.__portalPinned ||
                 (this.currentForwardPortalModeIndex =
-                  (this.currentForwardPortalModeIndex + 1) % 5),
+                  (this.currentForwardPortalModeIndex + 1) % 4),
               "undefined" != typeof ActiveMode &&
                 ((this.windowActiveMode = new ActiveMode(
                   this.windowModes[this.currentWindowModeIndex],
@@ -2141,6 +2344,7 @@ class Zone2Engine {
             1,
             this.z2ModeSeed,
           )),
+        this._clearTexUnits(),
         gl.bindFramebuffer(gl.FRAMEBUFFER, null),
         gl.viewport(0, 0, u, f)),
       "left" === this.activePOV && this.leftRoom)
@@ -2179,6 +2383,7 @@ class Zone2Engine {
             (t = e - this.mode9_T_hole + this.mode9_T_create),
             (window.__tripAmount = this.z2Trip),
             this.mode9.render(t, 0, 0, a, 0, 0, h, 1, this.z2ModeSeed),
+            this._clearTexUnits(),
             gl.bindFramebuffer(gl.FRAMEBUFFER, null),
             gl.viewport(0, 0, u, f),
             gl.useProgram(this.holeProg),
@@ -2453,6 +2658,7 @@ class Zone2Engine {
         } catch (err) {
           console.error("[Zone2] FORWARD-MASK portal render failed:", err);
         }
+        this._clearTexUnits();
         window.__tripAmount = z2ForwardPortalPrevTripAmount;
         try {
           null !== z2ForwardPortalPrevTripIntensity &&

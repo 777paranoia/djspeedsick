@@ -957,7 +957,10 @@ window.makeUI = function () {
             alley.x.toFixed(1) +
             " door:" +
             alley.doorOpen.toFixed(2);
-        } else if (window.__modeDesertRoadActive && window.__modeDesertRoadScene) {
+        } else if (
+          window.__modeDesertRoadActive &&
+          window.__modeDesertRoadScene
+        ) {
           const desert = window.__modeDesertRoadScene.getState();
           const desertPhase = {
             0: "approach",
@@ -1038,7 +1041,18 @@ window.makeUI = function () {
                   "(" +
                   z3.bhEscapeBlinkCount +
                   ")")
-              : z3.bhEscapeArmed && (info += " ARM:" + z3.bhEscapeBlinkCount),
+              : z3.bhEscapeArmed
+                ? (info += " ARM:" + z3.bhEscapeBlinkCount)
+                : "void" === z3.centerPhase &&
+                  z3.isAltRoute &&
+                  z3.bhSuctionAt &&
+                  (info +=
+                    " SUCK:" +
+                    Math.max(
+                      0,
+                      (z3.bhSuctionAt - performance.now()) / 1e3,
+                    ).toFixed(1) +
+                    "s"),
             (seqEl.innerText = info));
         } else if (z2) {
           let info =
@@ -1050,7 +1064,10 @@ window.makeUI = function () {
             (z2.facing || "?");
           z2.bloodRouteN || z2.bloodRouteS
             ? (info +=
-                " N:" + (z2.bloodRouteN || "-") + " S:" + (z2.bloodRouteS || "-"))
+                " N:" +
+                (z2.bloodRouteN || "-") +
+                " S:" +
+                (z2.bloodRouteS || "-"))
             : "blood" === z2.seqState && (info += " roll:pending");
           seqEl.innerText = info;
         } else seqEl.innerText = "engine1";

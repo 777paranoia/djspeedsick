@@ -856,8 +856,7 @@ void main() {
         !!event &&
         (event.code === "Space" ||
           event.code === "ArrowUp" ||
-          event.code === "KeyW" ||
-          event.code === "KeyK")
+          event.code === "KeyW")
       );
     }
 
@@ -865,8 +864,7 @@ void main() {
       return (
         !!event &&
         (event.code === "ArrowLeft" ||
-          event.code === "KeyA" ||
-          event.code === "KeyH")
+          event.code === "KeyA")
       );
     }
 
@@ -874,8 +872,7 @@ void main() {
       return (
         !!event &&
         (event.code === "ArrowRight" ||
-          event.code === "KeyD" ||
-          event.code === "KeyL")
+          event.code === "KeyD")
       );
     }
 
@@ -883,8 +880,7 @@ void main() {
       return (
         !!event &&
         (event.code === "ArrowDown" ||
-          event.code === "KeyS" ||
-          event.code === "KeyJ")
+          event.code === "KeyS")
       );
     }
 

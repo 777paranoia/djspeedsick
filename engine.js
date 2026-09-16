@@ -1649,7 +1649,25 @@ function initSideEngines() {
     doorEngine || (doorEngine = new ActiveMode(96)));
 }
 
+// HARD GATE for engine 1. window.isEngine1Dead is a plain global that half a
+// dozen files flip; one stray engine-1 frame while Zone 2/3/4 or the theater
+// owns the canvas paints a full-screen mode -- city, or deadcity with
+// files/img/void/ruins01..06 on its buildings -- straight over the room you are
+// actually standing in. A live zone engine now blocks engine 1 outright.
+function __zoneOwnsCanvas() {
+  const z2 = window.currentZone2,
+    z3 = window.currentZone3,
+    z4 = window.currentZone4;
+  return !!(
+    (z2 && !z2.isDead) ||
+    (z3 && !z3.isDead) ||
+    (z4 && !z4.isDead) ||
+    window.__modeTheaterActive
+  );
+}
+
 function render(e) {
+  if (window.isEngine1Dead || __zoneOwnsCanvas()) return;
   (window.butterchurnVisualizer && window.butterchurnVisualizer.render());
   let t = e - lastNow;
   (t > 250 || t <= 0) && (t = 33.33);
@@ -2033,7 +2051,7 @@ window.__wakeToLaptopFromTheater = function () {
 };
 
 var __e1SpaceHeld = !1;
-var __e1ForwardKeys = { Space: !1, ArrowUp: !1, KeyW: !1, KeyK: !1 };
+var __e1ForwardKeys = { Space: !1, ArrowUp: !1, KeyW: !1 };
 var __directionalKeysHeldBeforeReady = {};
 
 function __e1ForwardCode(ev) {
@@ -2048,8 +2066,7 @@ function __syncE1ForwardHeld() {
   __e1SpaceHeld = !!(
     __e1ForwardKeys.Space ||
     __e1ForwardKeys.ArrowUp ||
-    __e1ForwardKeys.KeyW ||
-    __e1ForwardKeys.KeyK
+    __e1ForwardKeys.KeyW
   );
 }
 
@@ -2070,14 +2087,11 @@ function __isDirectionalControlCode(code) {
     "Space" === code ||
     "ArrowUp" === code ||
     "KeyW" === code ||
-    "KeyK" === code ||
     "ArrowDown" === code ||
     "ArrowLeft" === code ||
     "KeyA" === code ||
-    "KeyH" === code ||
     "ArrowRight" === code ||
-    "KeyD" === code ||
-    "KeyL" === code
+    "KeyD" === code
   );
 }
 
@@ -2093,7 +2107,11 @@ function __directionalInputReady() {
     !!window.__modeTheaterActive ||
     !!window.__modeDesertRoadActive ||
     !!window.__cabinTunnelActive ||
-    !!window.__z4bIslandActive
+    !!window.__z4bIslandActive ||
+    // A live Zone 2/3/4 counts too. Without this, anything that reaches a zone
+    // without engine 1 waking first (the Z+2 splash boot) has every directional
+    // key swallowed by the guard below, and walking is dead.
+    ("function" == typeof __zoneOwnsCanvas && __zoneOwnsCanvas())
   );
 }
 
@@ -2136,9 +2154,9 @@ window.addEventListener("keyup", function (ev) {
   // ArrowRight → simulate mx<=-1.3 path (slide toward "right" neighbor).
   window.addEventListener("keydown", function (ev) {
     var leftKey =
-        "ArrowLeft" === ev.code || "KeyA" === ev.code || "KeyH" === ev.code,
+        "ArrowLeft" === ev.code || "KeyA" === ev.code,
       rightKey =
-        "ArrowRight" === ev.code || "KeyD" === ev.code || "KeyL" === ev.code;
+        "ArrowRight" === ev.code || "KeyD" === ev.code;
     if (!leftKey && !rightKey) return;
     ev.preventDefault();
     if (ev.repeat) return;
@@ -2218,9 +2236,9 @@ const TARGET_FPS = IS_MOBILE ? 20 : 30,
 let __lastFrameTime = 0;
 
 function __frameGovernor(e) {
-  window.isEngine1Dead ||
-    (e - __lastFrameTime >= FRAME_INTERVAL &&
-      ((__lastFrameTime = e), render(e)),
+  if (window.isEngine1Dead || __zoneOwnsCanvas()) return;
+  (e - __lastFrameTime >= FRAME_INTERVAL &&
+    ((__lastFrameTime = e), render(e)),
     requestAnimationFrame(__frameGovernor));
 }
 

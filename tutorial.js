@@ -777,7 +777,6 @@
           Space: !1,
           ArrowUp: !1,
           KeyW: !1,
-          KeyK: !1,
         }),
         (window.z2SpaceHeld = !1),
         (window.z2TouchHeld = !1),
@@ -924,21 +923,19 @@
         (window.z2SpaceHeld =
           this.forwardKeys.Space ||
           this.forwardKeys.ArrowUp ||
-          this.forwardKeys.KeyW ||
-          this.forwardKeys.KeyK));
+          this.forwardKeys.KeyW));
     }
     isLeftTurnKey(code) {
-      return "ArrowLeft" === code || "KeyA" === code || "KeyH" === code;
+      return "ArrowLeft" === code || "KeyA" === code;
     }
     isRightTurnKey(code) {
-      return "ArrowRight" === code || "KeyD" === code || "KeyL" === code;
+      return "ArrowRight" === code || "KeyD" === code;
     }
     isForwardKey(code) {
       return (
         "Space" === code ||
         "ArrowUp" === code ||
-        "KeyW" === code ||
-        "KeyK" === code
+        "KeyW" === code
       );
     }
     onKeyDown(e) {

@@ -516,13 +516,8 @@
     }
   }),
     (window.stopBrainMonitor = function () {
-      /* Detached from HUD toggle: brain scanner persists once initialized. */
     }));
 
-  // Movement-options API: paints the four directional bars around the scanner.
-  // Side mapping: forward→top, back→bottom (180°), left→left, right→right.
-  // Engines call this directly OR the per-frame poller below derives it from
-  // active engine state.
   var __dirBarSides = {
     forward: "top",
     back: "bottom",
@@ -565,12 +560,6 @@
         (opts.forward = !0);
       return opts;
     }
-    // Zone3 — per-phase mapping mirroring engine3 checkPOVThreshold gates:
-    //   hallway: forward (z3SpaceHeld walks); arrow only goes where the ring
-    //     allows. Normal route is a center↔left ring; alt route is center↔right.
-    //   cabin: forward/backward states walk with Space; exit-row arrows toggle
-    //     door_look, while crash/suction/entry states stay dark.
-    //   alt void: forward only before the escape/blink sequence takes over.
     if (window.currentZone3 && !window.currentZone3.isDead) {
       var z3 = window.currentZone3,
         z3phase = z3.centerPhase,
@@ -628,12 +617,6 @@
       }
       return opts;
     }
-    // Zone2 (hallway / station ring): use facing + intersectionReached.
-    // Pre-intersection N/S has L and R both producing a 180° turn → bottom only.
-    // Forward only walks while we're not pinned to the end of the hallway —
-    // mirror engine2's own gate: (N && !reached && camZ<INTERSECTION_Z) or
-    // (S && camZ>START_Z). Standing at the bathroom/bedroom intersection
-    // (N_A, camZ==INTERSECTION_Z) is a turn-only state.
     if (window.currentZone2 && !window.currentZone2.isDead) {
       var z2 = window.currentZone2,
         f = z2.facing,
@@ -662,16 +645,6 @@
             : 0;
       return opts;
     }
-    // Zone4 — per-phase mapping mirroring engine4 phase walkers + turn gates:
-    //   ascent / docking_shake / fog_in / fog_in_descent / descent /
-    //     descent_shake / fall / impact: automatic motion, no input.
-    //   bay / hallway / annex_hallway / annex_turn_in / annex_exit_door:
-    //     walk-forward only.
-    //   ring: path view can walk; side-window turns light L/R and 180 reversals
-    //     light bottom.
-    //   annex_room: path view walks while movement can change state; exact
-    //     single-side turns light L/R, 180 far-end turn lights bottom.
-    //   z4b_cabin: forward only during the user-walked forward cabin state.
     if (window.currentZone4 && !window.currentZone4.isDead) {
       var z4 = window.currentZone4,
         z4phase = z4.phase;
@@ -731,16 +704,8 @@
       ) {
         opts.forward = !0;
       }
-      // entering_ring / reverse_entering_ring / reverse_hallway / reverse_bay
-      // and fog_in_descent are AUTOMATIC motion (engine4 sets moveAmp=0.55
-      // independent of input). Showing the forward indicator during them
-      // reads as a stuck "hold space" prompt — leave all bars dark.
-      // automatic phases (ascent / descent / fog / shake / fall / impact)
-      // leave all bars dark — no user input is meaningful.
       return opts;
     }
-    // Standalone modes kill engine1 but can leave window.activePOV stale.
-    // Do not let stale Zone1 POV light the red L/R scanner bars.
     if (window.__modeAlleyActive) {
       var alleyNav = window.__modeAlleyNav || {};
       alleyNav.forward && (opts.forward = !0);
@@ -772,7 +737,6 @@
       return opts;
     }
     if (window.isEngine1Dead) return opts;
-    // Zone1 — engine.js POV ring. activePOV mirrored to window from engine.js.
     var e1 =
         "function" == typeof window.__getEngine1NavState
           ? window.__getEngine1NavState()
@@ -795,9 +759,6 @@
             "door" === pov
           ? ((opts.left = !0), (opts.right = !0))
           : 0;
-    // Forward = Space/Up/W/K does something useful from this POV.
-    //   "back" / "left" — always walk-forward (engine.js render gates).
-    //   "door" — only when __z4Route is armed (entry into the space elevator).
     ("back" === pov ||
       "left" === pov ||
       ("door" === pov && window.__z4Route)) &&
@@ -805,7 +766,6 @@
     return opts;
   }
 
-  // Poll every animation frame — cheap, and avoids invasive edits to engines.
   (function __pollMovementOptions() {
     try {
       window.setMovementOptions(__computeMovementOptions());
