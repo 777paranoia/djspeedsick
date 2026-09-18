@@ -247,10 +247,10 @@ void main() {
         }
 
         const BR_EYE_X = 8.875,
-          BR_HOLE_W = 0.861,
-          BR_HOLE_H = 1.536,
-          BR_SILL_Y = Y0 + 0.018,
-          BR_EYE_TO_WALL = 0.722,
+          BR_HOLE_W = 0.861055,
+          BR_HOLE_H = 1.536240,
+          BR_SILL_Y = Y0 + 0.018316,
+          BR_EYE_TO_WALL = 0.722102,
           BR_PLATE_SETBACK = 0.055,
           BR_X0 = 7.95,
           BR_X1 = X1 - 0.02,
@@ -269,18 +269,14 @@ void main() {
             plateZ = BR_SIDE_Z - BR_PLATE_SETBACK,
             pScale = Math.abs(plateZ) / Math.abs(BR_SIDE_Z),
             setback = 1 + 0.42 * (pScale - 1),
-            overscan = 1.01,
-            holeY0 = BR_SILL_Y,
-            holeY1 = BR_DOOR_TOP;
-          let plateY0 = eyeY + (holeY0 - eyeY) * setback,
-            plateY1 = eyeY + (holeY1 - eyeY) * setback;
+            overscan = 1.01;
+          let plateY0 = eyeY + (BR_SILL_Y - eyeY) * setback,
+            plateY1 = eyeY + (BR_DOOR_TOP - eyeY) * setback;
           const lift = 0.18 * (plateY1 - plateY0);
           ((plateY0 += lift), (plateY1 += lift));
           plateY0 -= 0.34 * (plateY1 - plateY0);
           const plateX0 = BR_EYE_X + (BR_DOOR_X0 - BR_EYE_X) * setback * overscan,
             plateX1 = BR_EYE_X + (BR_DOOR_X1 - BR_EYE_X) * setback * overscan,
-            vTop = 0.1,
-            vBottom = 1,
             q = [];
           pushQuad(
             q,
@@ -288,13 +284,66 @@ void main() {
             P(plateX0, plateY0, plateZ),
             P(plateX0, plateY1, plateZ),
             P(plateX1, plateY1, plateZ),
-            [1, vBottom],
-            [0, vBottom],
-            [0, vTop],
-            [1, vTop],
+            [1, 1],
+            [0, 1],
+            [0, 0.1],
+            [1, 0.1],
           );
           const mesh = self._makeMesh(q, TEX.spaceBathroom, [1, 1, 1], 1, !1);
-          ((mesh.greenKey = !0), meshes.push(mesh));
+          ((mesh.greenKey = !0),
+            (mesh.moaiBathroomPlate = !0),
+            meshes.push(mesh));
+        }
+        {
+          const zFar = WALL_L + 0.01,
+            zNear = BR_SIDE_Z - 0.01,
+            xS = BR_X0 + 0.01,
+            xN = BR_X1 - 0.01,
+            wallCol = [0.491, 0.49, 0.494],
+            farWallCol = [0.616, 0.61, 0.61],
+            seamCol = [0.35, 0.35, 0.36],
+            floorCol = [0.25, 0.24, 0.233],
+            floorSeamCol = [0.33, 0.32, 0.31],
+            ceilCol = [0.166, 0.16, 0.154],
+            stripCol = [2.6, 2.7, 2.9],
+            flat = (a, b, c, d, col) => addQuadUV(a, b, c, d, TEX.black, col, 0);
+          flat(P(xS, Y0, zNear), P(xS, Y0, zFar), P(xS, Y1, zFar), P(xS, Y1, zNear), wallCol);
+          flat(P(xN, Y0, zFar), P(xN, Y0, zNear), P(xN, Y1, zNear), P(xN, Y1, zFar), wallCol);
+          flat(P(xS, Y0, zFar), P(xN, Y0, zFar), P(xN, Y1, zFar), P(xS, Y1, zFar), farWallCol);
+          flat(P(BR_DOOR_X0, Y0, zNear), P(xS, Y0, zNear), P(xS, Y1, zNear), P(BR_DOOR_X0, Y1, zNear), wallCol);
+          flat(P(xN, Y0, zNear), P(BR_DOOR_X1, Y0, zNear), P(BR_DOOR_X1, Y1, zNear), P(xN, Y1, zNear), wallCol);
+          flat(P(BR_DOOR_X1, BR_DOOR_TOP, zNear), P(BR_DOOR_X0, BR_DOOR_TOP, zNear), P(BR_DOOR_X0, Y1, zNear), P(BR_DOOR_X1, Y1, zNear), wallCol);
+          flat(P(xS, Y0 + 0.014, zNear), P(xN, Y0 + 0.014, zNear), P(xN, Y0 + 0.014, zFar), P(xS, Y0 + 0.014, zFar), floorCol);
+          flat(P(xS, Y1 - 0.014, zFar), P(xN, Y1 - 0.014, zFar), P(xN, Y1 - 0.014, zNear), P(xS, Y1 - 0.014, zNear), ceilCol);
+          const seamS = (z, y0, y1, w) =>
+            flat(P(xS + 0.004, y0, z + w), P(xS + 0.004, y0, z - w), P(xS + 0.004, y1, z - w), P(xS + 0.004, y1, z + w), seamCol);
+          const seamN = (z, y0, y1, w) =>
+            flat(P(xN - 0.004, y0, z - w), P(xN - 0.004, y0, z + w), P(xN - 0.004, y1, z + w), P(xN - 0.004, y1, z - w), seamCol);
+          const bandS = (y, h) =>
+            flat(P(xS + 0.004, y, zNear), P(xS + 0.004, y, zFar), P(xS + 0.004, y + h, zFar), P(xS + 0.004, y + h, zNear), seamCol);
+          const bandN = (y, h) =>
+            flat(P(xN - 0.004, y, zFar), P(xN - 0.004, y, zNear), P(xN - 0.004, y + h, zNear), P(xN - 0.004, y + h, zFar), seamCol);
+          for (let z = zNear - 0.62; z > zFar + 0.1; z -= 0.62)
+            (seamS(z, Y0 + 0.12, Y0 + 2.3, 0.006), seamN(z, Y0 + 0.12, Y0 + 2.3, 0.006));
+          (bandS(Y0 + 1.25, 0.012), bandN(Y0 + 1.25, 0.012));
+          (bandS(Y0 + 2.3, 0.014), bandN(Y0 + 2.3, 0.014));
+          (bandS(Y0 + 0.1, 0.02), bandN(Y0 + 0.1, 0.02));
+          B(xS + 0.004, xS + 0.05, Y0 + 2.42, Y0 + 2.47, zFar + 0.08, zNear - 0.08, TEX.black, stripCol, 0);
+          for (const dx of [-0.62, 0.62])
+            flat(
+              P(BR_EYE_X + dx - 0.015, Y0 + 0.016, zNear),
+              P(BR_EYE_X + dx + 0.015, Y0 + 0.016, zNear),
+              P(BR_EYE_X + dx + 0.015, Y0 + 0.016, zFar),
+              P(BR_EYE_X + dx - 0.015, Y0 + 0.016, zFar),
+              floorSeamCol,
+            );
+          flat(
+            P(xS, Y0 + 0.016, zNear - 0.06),
+            P(xN, Y0 + 0.016, zNear - 0.06),
+            P(xN, Y0 + 0.016, zNear - 0.09),
+            P(xS, Y0 + 0.016, zNear - 0.09),
+            floorSeamCol,
+          );
         }
         wallFacingPosZ(
           BR_DOOR_X0,

@@ -1710,6 +1710,22 @@
           centerZone = this.annexRoomT >= 0.34 && this.annexRoomT <= 0.72,
           farZone = this.annexRoomT >= 0.965,
           entranceZone = this.annexRoomT <= 0.025;
+        if (moaiAnnexRouteNow) {
+          const nView = this.annexRoomView || "path",
+            nDir = this.annexRoomDir || 1,
+            nt = Math.max(0, Math.min(1, this.annexRoomT || 0)),
+            nX = 2.7 + (8.875 - 2.7) * (nt * nt * (3 - 2 * nt)),
+            cryo = nX >= 3.57 && nX <= 7.97,
+            control = nX >= 4.39 && nX <= 7.37,
+            top = nt >= 0.98;
+          ((this.moaiTurnZones = { cryo: cryo, control: control, top: top }),
+            (this.moaiNav =
+              "path" === nView
+                ? nDir >= 0
+                  ? { left: top || cryo, right: control }
+                  : { left: control, right: cryo }
+                : { left: !0, right: !0 }));
+        }
         if (
           (this.turnAnimating &&
             now - this.turnStart >= this.turnDuration &&
@@ -1757,29 +1773,37 @@
             toStageAngle = dirNow >= 0 ? 0.5 * Math.PI : 0.5 * -Math.PI,
             toPathAngle = dirNow >= 0 ? 0.5 * -Math.PI : 0.5 * Math.PI;
           if (moaiAnnexRouteNow) {
-            // Z2 hallway grammar, faithfully this time: the arrow key starts
-            // the canvas slide (out -> black hold -> in) and the view swaps
-            // during the black beat — no rendered 3D turn. Left toward the
-            // left wall gives the bathroom doorway when you're in front of
-            // it (T >= 0.78), otherwise the cryo column ('stage' view).
-            // From a wall view, right slides back facing onward, left slides
-            // back facing the way you came — same as Z2's W_A row.
             const roomView = this.annexRoomView || "path",
-              leftWallView = this.annexRoomT >= 0.78 ? "bathroom" : "stage";
+              zones = this.moaiTurnZones || {},
+              inCryo = !!zones.cryo,
+              inControl = !!zones.control,
+              atTop = !!zones.top;
             if (
               "idle" === this.moaiSlideState &&
               now - this.moaiPovSwitchTime > 600
             ) {
-              if ("bathroom" === roomView || "stage" === roomView)
+              if ("stage" === roomView || "bathroom" === roomView)
                 turnReq > 0
                   ? this._beginMoaiSlide(now, "path", 1, -1)
                   : turnReq < 0 && this._beginMoaiSlide(now, "path", -1, 1);
+              else if ("control" === roomView)
+                turnReq < 0
+                  ? this._beginMoaiSlide(now, "path", 1, 1)
+                  : turnReq > 0 && this._beginMoaiSlide(now, "path", -1, -1);
               else if (dirNow >= 0)
-                turnReq < 0 &&
-                  this._beginMoaiSlide(now, leftWallView, dirNow, 1);
+                turnReq < 0
+                  ? atTop
+                    ? this._beginMoaiSlide(now, "bathroom", dirNow, 1)
+                    : inCryo && this._beginMoaiSlide(now, "stage", dirNow, 1)
+                  : turnReq > 0 &&
+                    inControl &&
+                    this._beginMoaiSlide(now, "control", dirNow, -1);
               else
-                turnReq > 0 &&
-                  this._beginMoaiSlide(now, leftWallView, dirNow, -1);
+                turnReq > 0
+                  ? inCryo && this._beginMoaiSlide(now, "stage", dirNow, -1)
+                  : turnReq < 0 &&
+                    inControl &&
+                    this._beginMoaiSlide(now, "control", dirNow, 1);
             }
           } else
             ("stage" === (this.annexRoomView || "path")
@@ -2716,12 +2740,14 @@
             ? // Chamber starts right at the ring doorway (no hallway).
               ((localX = hallEntryX + (moaiRoomEndX - hallEntryX) * roomT),
               (localY = -0.02),
-              (localZ = 0.12 * Math.sin(roomT * Math.PI)),
+              (localZ = 0),
               (baseForward =
                 "stage" === (this.annexRoomView || "path") ||
                 "bathroom" === (this.annexRoomView || "path")
                   ? this._mul(activeFrame.tangent, -1)
-                  : this._mul(activeFrame.radial, this.annexRoomDir || 1)))
+                  : "control" === (this.annexRoomView || "path")
+                    ? activeFrame.tangent.slice()
+                    : this._mul(activeFrame.radial, this.annexRoomDir || 1)))
             : ((localX = stairEndX + (roomEndX - stairEndX) * roomT),
               (localY = -0.02 - annexDrop),
               altAnnexLocked
@@ -2766,8 +2792,11 @@
         lookY = this.cy,
         fwd = baseForward.slice();
       if (
-        ("function" == typeof this._isAltAnnexLocked &&
-          this._isAltAnnexLocked() &&
+        ((("function" == typeof this._isAltAnnexLocked &&
+          this._isAltAnnexLocked()) ||
+          ("annex_room" === this.phase &&
+            "function" == typeof this._isMoaiAnnexRoute &&
+            this._isMoaiAnnexRoute())) &&
           ((lookX = Math.max(-0.24, Math.min(0.24, lookX))),
           (lookY = Math.max(-0.15, Math.min(0.15, lookY)))),
         this.turnAnimating)
@@ -4014,6 +4043,8 @@
               "function" == typeof this._isMoaiAnnexRoute &&
               this._isMoaiAnnexRoute();
           if (mesh.annexMoaiOnly && !z4MoaiAnnexRouteNow) return !1;
+          if (mesh.moaiBathroomPlate && "bathroom" !== this.annexRoomView)
+            return !1;
           if (
             z4MoaiAnnexRouteNow &&
             (mesh.annexNormalOnly ||
@@ -4350,9 +4381,7 @@
                 Math.min(1, (impactElapsed - 800) / 1200),
               ));
         } else
-          this._isMoaiBathroomRoomView()
-            ? this._renderMoaiBathroomRoom(now)
-            : "z4b_cabin" === this.phase
+          "z4b_cabin" === this.phase
               ? (this._renderZ4BCabin(now), this._drawZ4BCrashOverlays(now))
               : (this._renderStation(now),
                 this._captureMoaiMirror(),

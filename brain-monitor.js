@@ -683,7 +683,14 @@
               ? aT < 1 && (opts.forward = !0)
               : aT < 0.965 && (opts.forward = !0);
         }
-        if (!locked && !z4.turnAnimating)
+        var moaiRoute =
+          "function" == typeof z4._isMoaiAnnexRoute && z4._isMoaiAnnexRoute();
+        if (moaiRoute) {
+          "idle" === (z4.moaiSlideState || "idle") &&
+            z4.moaiNav &&
+            (z4.moaiNav.left && (opts.left = !0),
+            z4.moaiNav.right && (opts.right = !0));
+        } else if (!locked && !z4.turnAnimating)
           if ("stage" === roomView && centerZone)
             __markTurnRequest(opts, roomDir >= 0 ? 1 : -1);
           else if ("path" === roomView) {
