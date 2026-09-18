@@ -1370,7 +1370,8 @@ void main(){
       // scene and boots the alley at its parked beginning on the shared #c
       // canvas. Fired on a fully-black frame, so the swap is seamless.
       if (typeof window.startModeAlley === "function") {
-        window.startModeAlley();
+        // blinkIn: the alley finishes this blink (black hold, then open).
+        window.startModeAlley({ blinkIn: true });
       } else if (typeof window.__alleyDebugGoto === "function") {
         window.__alleyDebugGoto("parked");
       }

@@ -196,6 +196,25 @@
         (this.altAnnexCounterClockwiseReady = !1),
         (this.altAnnexDoorOpen = !1),
         (this.altAnnexRouteActive = !1),
+        (this.moaiAnnexPatternStage = 0),
+        (this.moaiAnnexCcwTravel = 0),
+        (this.moaiAnnexCwTravel = 0),
+        (this.moaiAnnexCcwLapCount = 0),
+        (this.moaiAnnexCwLapCount = 0),
+        (this.moaiAnnexCounterClockwiseReady = !1),
+        (this.moaiAnnexClockwiseReady = !1),
+        (this.moaiAnnexDoorOpen = !1),
+        (this.moaiAnnexRouteActive = !1),
+        // Z2-style canvas slide for the moai-chamber looks (engine2
+        // beginSlide/tickSlide port): the view swap happens during the
+        // black hold, never as a rendered 3D turn.
+        (this.moaiSlideState = "idle"),
+        (this.moaiSlideStart = 0),
+        (this.moaiSlideOffset = 0),
+        (this.moaiSlideDir = 0),
+        (this.moaiSlidePendingView = null),
+        (this.moaiSlidePendingDir = 1),
+        (this.moaiPovSwitchTime = 0),
         (this.altAnnexZone2ReturnActive = !1),
         (this.altAnnexZone2Returned = !1),
         (this.annexAltBasementActive = !1),
@@ -339,9 +358,19 @@
           new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
           gl.STATIC_DRAW,
         ),
+        (this.moaiMirrorTex = this._makeSolidTexture(8, 10, 14, 255)),
         (this.stationTextures = this._initStationTextures()),
         (this.stationMeshes = []),
         this._buildStationMeshes(),
+        (this.moaiBathroomRoom =
+          "undefined" != typeof Zone2RoomMode &&
+          window.GLSL &&
+          (GLSL.modules.z4_space_br || GLSL.modules.z2_room_left)
+            ? new Zone2RoomMode(
+                GLSL.modules.z4_space_br ? "z4_space_br" : "z2_room_left",
+                "files/img/rooms/z4/SPACE-BR.png",
+              )
+            : null),
         (this.fogOverlay = this._getFogOverlay()),
         this._setFog(0, 0),
         gl.enable(gl.DEPTH_TEST),
@@ -625,6 +654,13 @@
           speaker1: loadStaticTex(base + "basement/SPEAKER-1.png"),
           speaker2: loadStaticTex(base + "basement/SPEAKER-2.png"),
           speaker3: loadStaticTex(base + "basement/SPEAKER-3.png"),
+          moaiFace1: loadStaticTex(base + "island/etc/MOAI-1.png"),
+          moaiFace2: loadStaticTex(base + "island/etc/MOAI-2.png"),
+          moaiFace3: loadStaticTex(base + "island/etc/MOAI-3.png"),
+          moaiSide: loadStaticTex(base + "island/etc/MOAI-SIDE.png"),
+          moaiBack: loadStaticTex(base + "island/etc/MOAI-BACK.png"),
+          spaceBathroom: loadStaticTex(base + "SPACE-BR.png"),
+          cryoFrost: this._makeSolidTexture(150, 200, 255, 60),
           cabinDoorClosed: loadStaticTex("files/img/rooms/z3/door-closed.png"),
           cabinDoorOpen: loadStaticTex("files/img/rooms/z3/door-open.png"),
           cabinCockpit: loadStaticTex("files/img/rooms/z3/cockpit.png"),
@@ -1262,8 +1298,19 @@
         (this.altAnnexCounterClockwiseReady = !1),
         (this.altAnnexDoorOpen = !1),
         (this.altAnnexRouteActive = !1),
+        (this.moaiAnnexPatternStage = 0),
+        (this.moaiAnnexCcwTravel = 0),
+        (this.moaiAnnexCwTravel = 0),
+        (this.moaiAnnexCcwLapCount = 0),
+        (this.moaiAnnexCwLapCount = 0),
+        (this.moaiAnnexCounterClockwiseReady = !1),
+        (this.moaiAnnexClockwiseReady = !1),
+        (this.moaiAnnexDoorOpen = !1),
+        (this.moaiAnnexRouteActive = !1),
         (this.annexAltBasementActive = !1),
         (this.annexBasementVariant = "normal"),
+        (this.annexLapRolled = !1),
+        (this.annexRolledVariant = null),
         this._publishAltAnnexState());
     }
     _publishAltAnnexState() {
@@ -1276,6 +1323,7 @@
         doorOpen: !!this.altAnnexDoorOpen,
         routeActive: !!this.altAnnexRouteActive,
         basementVariant: this.annexBasementVariant || "normal",
+        rolled: this.annexRolledVariant || null,
         cwProgress: Math.max(
           0,
           Math.min(1, (this.altAnnexCwTravel || 0) / (2 * Math.PI)),
@@ -1288,82 +1336,62 @@
         totalCCW: this.totalCounterClockwiseLapCount || 0,
         netCW: this.clockwiseLapCount || 0,
         netCCW: this.counterClockwiseLapCount || 0,
+        // Fourth option (ccw x1 then cw x1) -> Moai cryo chamber.
+        moaiStage: this.moaiAnnexPatternStage || 0,
+        moaiCcw: this.moaiAnnexCcwLapCount || 0,
+        moaiCw: this.moaiAnnexCwLapCount || 0,
+        moaiDoorOpen: !!this.moaiAnnexDoorOpen,
+        moaiRouteActive: !!this.moaiAnnexRouteActive,
+        moaiCcwProgress: Math.max(
+          0,
+          Math.min(1, (this.moaiAnnexCcwTravel || 0) / (2 * Math.PI)),
+        ),
+        moaiCwProgress: Math.max(
+          0,
+          Math.min(1, (this.moaiAnnexCwTravel || 0) / (2 * Math.PI)),
+        ),
       };
     }
-    _updateAltAnnexLapPattern(deltaU, now) {
+    _updateAnnexLapRoll(deltaU, now) {
       const TAU = 2 * Math.PI;
       if (!isFinite(deltaU) || Math.abs(deltaU) < 1e-6)
-        this._publishAltAnnexState();
-      else {
-        if (
-          (deltaU > 0
-            ? (this.totalClockwiseTravel += deltaU)
-            : (this.totalCounterClockwiseTravel += -deltaU),
-          (this.totalClockwiseLapCount = Math.floor(
-            this.totalClockwiseTravel / TAU,
-          )),
-          (this.totalCounterClockwiseLapCount = Math.floor(
-            this.totalCounterClockwiseTravel / TAU,
-          )),
-          this.altAnnexPatternStage >= 2)
-        )
-          return (
-            (this.altAnnexCwLapCount = 1),
-            (this.altAnnexCcwLapCount = 1),
-            (this.altAnnexClockwiseReady = !0),
-            (this.altAnnexCounterClockwiseReady = !0),
-            (this.altAnnexDoorOpen = !0),
-            void this._publishAltAnnexState()
-          );
-        (0 === this.altAnnexPatternStage
-          ? deltaU > 0
-            ? ((this.altAnnexCwTravel += deltaU),
-              (this.altAnnexCwLapCount = Math.floor(
-                this.altAnnexCwTravel / TAU,
-              )),
-              this.altAnnexCwLapCount >= 1 &&
-                ((this.altAnnexCwLapCount = 1),
-                (this.altAnnexClockwiseReady = !0),
-                (this.altAnnexPatternStage = 1),
-                (this.altAnnexCcwTravel = 0),
-                (this.altAnnexCcwLapCount = 0),
-                (!this.altAnnexLastLog || now - this.altAnnexLastLog > 700) &&
-                  (console.log(
-                    "[Zone4] ALT annex: clockwise lap complete. Reverse and complete one counterclockwise lap.",
-                  ),
-                  (this.altAnnexLastLog = now))))
-            : this.altAnnexClockwiseReady ||
-              ((this.altAnnexCwTravel = 0), (this.altAnnexCwLapCount = 0))
-          : 1 === this.altAnnexPatternStage &&
-            ((this.altAnnexCwLapCount = 1),
-            (this.altAnnexClockwiseReady = !0),
-            deltaU < 0 &&
-              ((this.altAnnexCcwTravel += -deltaU),
-              (this.altAnnexCcwLapCount = Math.floor(
-                this.altAnnexCcwTravel / TAU,
-              )),
-              this.altAnnexCcwLapCount >= 1 &&
-                ((this.altAnnexCcwLapCount = 1),
-                (this.altAnnexCounterClockwiseReady = !0),
-                (this.altAnnexPatternStage = 2),
-                (this.altAnnexDoorOpen = !0),
-                (!this.altAnnexLastLog || now - this.altAnnexLastLog > 700) &&
-                  (console.log(
-                    "[Zone4] ALT annex: one clockwise + one counterclockwise complete. Annex doorway is now open.",
-                  ),
-                  (this.altAnnexLastLog = now))))),
-          (this.altAnnexDoorOpen = !(
-            !this.altAnnexClockwiseReady || !this.altAnnexCounterClockwiseReady
-          )),
-          this._publishAltAnnexState());
+        return void this._publishAltAnnexState();
+      deltaU > 0
+        ? (this.totalClockwiseTravel += deltaU)
+        : (this.totalCounterClockwiseTravel += -deltaU);
+      ((this.totalClockwiseLapCount = Math.floor(
+        this.totalClockwiseTravel / TAU,
+      )),
+        (this.totalCounterClockwiseLapCount = Math.floor(
+          this.totalCounterClockwiseTravel / TAU,
+        )));
+      if (
+        !this.annexLapRolled &&
+        (this.clockwiseLapCount >= 1 || this.counterClockwiseLapCount >= 1)
+      ) {
+        const picks = ["normal", "alt", "moai"],
+          pick = picks[Math.floor(Math.random() * picks.length)];
+        ((this.annexLapRolled = !0),
+          (this.annexRolledVariant = pick),
+          (this.altAnnexDoorOpen = "alt" === pick),
+          (this.moaiAnnexDoorOpen = "moai" === pick),
+          (this.altAnnexClockwiseReady = "alt" === pick),
+          (this.altAnnexCounterClockwiseReady = "alt" === pick),
+          (this.moaiAnnexClockwiseReady = "moai" === pick),
+          (this.moaiAnnexCounterClockwiseReady = "moai" === pick),
+          console.log("[Zone4] lap complete -> annex roll:", pick));
       }
+      this._publishAltAnnexState();
     }
     _updateBlink(now) {
       const facingDjBooth =
         "annex_room" === this.phase &&
         "stage" === (this.annexRoomView || "path") &&
         !this.turnAnimating &&
-        !this.annexSequenceActive;
+        !this.annexSequenceActive &&
+        // Moai chamber has no DJ booth — facing the cryo wall must not arm
+        // the 2-blink stare sequence (its own stare-transport comes later).
+        !this._isMoaiAnnexRoute();
       if (
         (facingDjBooth ||
           this.annexSequenceActive ||
@@ -1553,12 +1581,15 @@
             this.clockwiseLapCount,
             this.counterClockwiseLapCount,
           )),
-          this._updateAltAnnexLapPattern(deltaU, now));
+          this._updateAnnexLapRoll(deltaU, now));
         if (this.clockwiseLapCount >= 1 && !this.clockwiseEscapeReady)
           ((this.clockwiseEscapeReady = !0),
             (this.clockwiseEscapeReadyAt = now));
-        var normalAnnexDoorOpen = this.counterClockwiseLapCount >= 1;
-        ((this.annexDoorOpen = normalAnnexDoorOpen || this.altAnnexDoorOpen),
+        var normalAnnexDoorOpen = "normal" === this.annexRolledVariant;
+        ((this.annexDoorOpen =
+          normalAnnexDoorOpen ||
+          this.altAnnexDoorOpen ||
+          this.moaiAnnexDoorOpen),
           this.lapCount >= 99 &&
             ((this.blackholeIntensity = 1), (this.blackholeVisible = !0)));
         var SECTION_ANGLE_LAP = (2 * Math.PI) / 16;
@@ -1581,10 +1612,14 @@
               (this.annexRoomView = "path"),
               (this.annexTurnInputLatch = 0),
               (this.altAnnexRouteActive = !!this.altAnnexDoorOpen),
+              (this.moaiAnnexRouteActive =
+                !this.altAnnexDoorOpen && !!this.moaiAnnexDoorOpen),
               (this.annexAltBasementActive = !!this.altAnnexRouteActive),
               (this.annexBasementVariant = this.annexAltBasementActive
                 ? "alt"
-                : "normal"),
+                : this.moaiAnnexRouteActive
+                  ? "moai"
+                  : "normal"),
               this._publishAltAnnexState(),
               console.log(
                 "[Zone4] annex entry variant:",
@@ -1615,14 +1650,33 @@
       } else if ("annex_turn_in" === this.phase)
         (moving && (this.annexTurnT = Math.min(1, this.annexTurnT + 0.95 * dt)),
           this.annexTurnT >= 1 &&
-            ((this.phase = "annex_hallway"),
-            (this.phaseStart = now),
-            (this.annexHallT = 0),
-            (this.cx = 0),
-            (this.cy = 0)),
+            (this._isMoaiAnnexRoute()
+              ? // No hallway on the moai route: the ring doors open straight
+                // into the chamber.
+                ((this.phase = "annex_room"),
+                (this.phaseStart = now),
+                (this.annexHallT = 1),
+                (this.annexRoomT = 0),
+                (this.annexRoomDir = 1),
+                (this.annexRoomView = "path"),
+                (this.annexTurnInputLatch = 0),
+                (this.cx = 0),
+                (this.cy = 0))
+              : ((this.phase = "annex_hallway"),
+                (this.phaseStart = now),
+                (this.annexHallT = 0),
+                (this.cx = 0),
+                (this.cy = 0))),
           (this.neuralIntensity = 3));
       else if ("annex_hallway" === this.phase)
-        (moving && (this.annexHallT = Math.min(1, this.annexHallT + 0.17 * dt)),
+        // Moai route: the hallway walk is level and ends at the doorway (no
+        // stair leg), so the T-rate rises to keep the same meters-per-second.
+        (moving &&
+          (this.annexHallT = Math.min(
+            1,
+            this.annexHallT +
+              (this._isMoaiAnnexRoute() ? 0.42 : 0.17) * dt,
+          )),
           this.annexHallT >= 1 &&
             ((this.phase = "annex_room"),
             (this.phaseStart = now),
@@ -1637,7 +1691,10 @@
             this._isAltAnnexLocked(),
           altAnnexRouteNow =
             "function" == typeof this._isAltAnnexRoute &&
-            this._isAltAnnexRoute();
+            this._isAltAnnexRoute(),
+          moaiAnnexRouteNow =
+            "function" == typeof this._isMoaiAnnexRoute &&
+            this._isMoaiAnnexRoute();
         altAnnexLocked &&
           ((this.annexRoomView = "path"),
           (this.annexRoomDir = 1),
@@ -1658,8 +1715,10 @@
             now - this.turnStart >= this.turnDuration &&
             ("annex_stage" === this.turnViewTo
               ? (this.annexRoomView = "stage")
-              : "annex_path" === this.turnViewTo &&
-                (this.annexRoomView = "path"),
+              : "annex_bathroom" === this.turnViewTo
+                ? (this.annexRoomView = "bathroom")
+                : "annex_path" === this.turnViewTo &&
+                  (this.annexRoomView = "path"),
             "number" == typeof this.turnDirectionTo &&
               (this.annexRoomDir = this.turnDirectionTo),
             (this.turnAnimating = !1),
@@ -1675,11 +1734,20 @@
           !this.turnAnimating &&
             entranceZone &&
             (this.annexRoomDir || 1) < 0 &&
+            "idle" === (this.moaiSlideState || "idle") &&
             ((this.annexRoomT = 0),
             (this.annexRoomView = "path"),
             (this.annexTurnInputLatch = 0),
             (window.__z4AnnexTurnRequested = 0),
-            this._startStationViewTurn(now, Math.PI, "annex_path", 1, null)),
+            moaiAnnexRouteNow
+              ? this._beginMoaiSlide(now, "path", 1, 1)
+              : this._startStationViewTurn(
+                  now,
+                  Math.PI,
+                  "annex_path",
+                  1,
+                  null,
+                )),
           turnReq && !this.turnAnimating)
         ) {
           window.__z4AnnexTurnRequested = 0;
@@ -1688,35 +1756,61 @@
             pathReq = dirNow >= 0 ? 1 : -1,
             toStageAngle = dirNow >= 0 ? 0.5 * Math.PI : 0.5 * -Math.PI,
             toPathAngle = dirNow >= 0 ? 0.5 * -Math.PI : 0.5 * Math.PI;
-          ("stage" === (this.annexRoomView || "path")
-            ? centerZone &&
-              turnReq === pathReq &&
-              this._startStationViewTurn(
-                now,
-                toPathAngle,
-                "annex_path",
-                dirNow,
-                null,
-              )
-            : altAnnexRouteNow || !farZone || this.annexSequenceActive
+          if (moaiAnnexRouteNow) {
+            // Z2 hallway grammar, faithfully this time: the arrow key starts
+            // the canvas slide (out -> black hold -> in) and the view swaps
+            // during the black beat — no rendered 3D turn. Left toward the
+            // left wall gives the bathroom doorway when you're in front of
+            // it (T >= 0.78), otherwise the cryo column ('stage' view).
+            // From a wall view, right slides back facing onward, left slides
+            // back facing the way you came — same as Z2's W_A row.
+            const roomView = this.annexRoomView || "path",
+              leftWallView = this.annexRoomT >= 0.78 ? "bathroom" : "stage";
+            if (
+              "idle" === this.moaiSlideState &&
+              now - this.moaiPovSwitchTime > 600
+            ) {
+              if ("bathroom" === roomView || "stage" === roomView)
+                turnReq > 0
+                  ? this._beginMoaiSlide(now, "path", 1, -1)
+                  : turnReq < 0 && this._beginMoaiSlide(now, "path", -1, 1);
+              else if (dirNow >= 0)
+                turnReq < 0 &&
+                  this._beginMoaiSlide(now, leftWallView, dirNow, 1);
+              else
+                turnReq > 0 &&
+                  this._beginMoaiSlide(now, leftWallView, dirNow, -1);
+            }
+          } else
+            ("stage" === (this.annexRoomView || "path")
               ? centerZone &&
-                turnReq === stageReq &&
+                turnReq === pathReq &&
                 this._startStationViewTurn(
                   now,
-                  toStageAngle,
-                  "annex_stage",
+                  toPathAngle,
+                  "annex_path",
                   dirNow,
                   null,
                 )
-              : ((this.annexRoomT = 1),
-                this._startStationViewTurn(
-                  now,
-                  turnReq * Math.PI,
-                  "annex_path",
-                  -1,
-                  null,
-                )),
-            (this.annexTurnInputLatch = 0));
+              : altAnnexRouteNow || !farZone || this.annexSequenceActive
+                ? centerZone &&
+                  turnReq === stageReq &&
+                  this._startStationViewTurn(
+                    now,
+                    toStageAngle,
+                    "annex_stage",
+                    dirNow,
+                    null,
+                  )
+                : ((this.annexRoomT = 1),
+                  this._startStationViewTurn(
+                    now,
+                    turnReq * Math.PI,
+                    "annex_path",
+                    -1,
+                    null,
+                  )));
+          this.annexTurnInputLatch = 0;
         } else
           !turnReq &&
             Math.abs(this.cx) < 0.48 &&
@@ -1742,10 +1836,15 @@
         if (
           moving &&
           !this.turnAnimating &&
+          "idle" === (this.moaiSlideState || "idle") &&
           "path" === (this.annexRoomView || "path")
         ) {
           const dir = this.annexRoomDir || 1,
-            roomSpeed = altAnnexRouteNow ? 0.16 : 0.13,
+            roomSpeed = this._isMoaiAnnexRoute()
+              ? 0.24 // short room (7.55 -> 11.6): keep the same walk pace
+              : altAnnexRouteNow
+                ? 0.16
+                : 0.13,
             roomMaxT = altAnnexRouteNow ? z4AltAnnexDoorStopT : 1;
           this.annexRoomT = Math.max(
             0,
@@ -2219,6 +2318,56 @@
           ? -1
           : 0;
     }
+    _beginMoaiSlide(now, view, dirTo, slideDir) {
+      "idle" === this.moaiSlideState &&
+        ((this.moaiSlidePendingView = view),
+        (this.moaiSlidePendingDir = "number" == typeof dirTo ? dirTo : 1),
+        (this.moaiSlideDir = slideDir),
+        (this.moaiSlideState = "out"),
+        (this.moaiSlideStart = now));
+    }
+    _tickMoaiSlide(now) {
+      if ("idle" === this.moaiSlideState) return;
+      const t = now - this.moaiSlideStart;
+      if ("out" === this.moaiSlideState) {
+        const i = Math.min(t / 340, 1);
+        ((this.moaiSlideOffset = i * i * window.innerWidth * this.moaiSlideDir),
+          i >= 1 &&
+            ((this.moaiSlideOffset = window.innerWidth * this.moaiSlideDir),
+            (this.moaiSlideState = "black"),
+            (this.moaiSlideStart = now),
+            // The swap, hidden in the black beat — Z2 tickSlide treatment.
+            (this.annexRoomView = this.moaiSlidePendingView),
+            (this.annexRoomDir = this.moaiSlidePendingDir),
+            (this.cx = 0),
+            (this.cy = 0),
+            "number" == typeof window.mx && (window.mx = 0),
+            "number" == typeof window.my && (window.my = 0),
+            window.dispatchEvent(new Event("mouseup")),
+            window.dispatchEvent(new Event("touchend")),
+            (this.moaiPovSwitchTime = now)));
+      } else if ("black" === this.moaiSlideState)
+        t >= 80 &&
+          ((this.moaiSlideOffset = -window.innerWidth * this.moaiSlideDir),
+          (this.moaiSlideState = "in"),
+          (this.moaiSlideStart = now));
+      else if ("in" === this.moaiSlideState) {
+        const e = Math.min(t / 340, 1),
+          i = 1 - (1 - e) * (1 - e);
+        ((this.moaiSlideOffset =
+          -window.innerWidth * this.moaiSlideDir * (1 - i)),
+          e >= 1 &&
+            ((this.moaiSlideOffset = 0),
+            (this.moaiSlideState = "idle"),
+            (this.moaiSlidePendingView = null)));
+      }
+      const c = document.getElementById("c");
+      c &&
+        (c.style.transform =
+          0 !== this.moaiSlideOffset
+            ? `translateX(${this.moaiSlideOffset.toFixed(1)}px)`
+            : "");
+    }
     _startStationViewTurn(now, angle, viewTo, directionTo, windowSideTo) {
       return (
         !this.turnAnimating &&
@@ -2241,6 +2390,78 @@
         "alt" !== this.annexBasementVariant &&
         !this.altAnnexRouteActive
       );
+    }
+    _isMoaiAnnexRoute() {
+      return !(
+        "moai" !== this.annexBasementVariant && !this.moaiAnnexRouteActive
+      );
+    }
+    _isMoaiBathroomRoomView() {
+      // Z2 hallway mechanic: facing the bathroom door shows the room as a
+      // full-screen POV (stock z2_room_left framing), exactly like the Z2
+      // hallway bathroom. The world-space plate behind the door hole covers
+      // the glimpse while walking past.
+      return !!(
+        this.moaiBathroomRoom &&
+        "annex_room" === this.phase &&
+        this._isMoaiAnnexRoute() &&
+        "bathroom" === (this.annexRoomView || "path") &&
+        !this.turnAnimating
+      );
+    }
+    _captureMoaiMirror() {
+      // While the canvas slides out toward the bathroom, keep copying the
+      // frame: the last one before the black hold (the chamber, seen from
+      // the doorway) is what the mirror reflects.
+      if (
+        !(
+          "out" === this.moaiSlideState &&
+          "bathroom" === this.moaiSlidePendingView &&
+          this.moaiMirrorTex
+        )
+      )
+        return;
+      try {
+        (gl.bindTexture(gl.TEXTURE_2D, this.moaiMirrorTex),
+          gl.copyTexImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGB,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+            0,
+          ),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR),
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR));
+      } catch (e) {}
+    }
+    _renderMoaiBathroomRoom(now) {
+      if (!this._isMoaiBathroomRoomView()) return;
+      // Z2 behaviour: leave bcSourceTex null so Zone2RoomMode re-uploads the
+      // live club canvas every frame. Pinning it to the captured chamber frame
+      // made the mirror a frozen screenshot that never moved.
+      this.moaiBathroomRoom && (this.moaiBathroomRoom.bcSourceTex = null);
+      (gl.bindFramebuffer(gl.FRAMEBUFFER, null),
+        gl.viewport(0, 0, canvas.width, canvas.height),
+        gl.disable(gl.DEPTH_TEST),
+        gl.clearColor(0, 0, 0, 1),
+        gl.clear(gl.COLOR_BUFFER_BIT),
+        this.moaiBathroomRoom.render(
+          now,
+          this.cx,
+          this.cy,
+          this.rBlink,
+          null,
+          0,
+          0,
+          0,
+          this.z4Trip,
+          this.z4ModeSeed,
+        ));
     }
     _isAltAnnexLocked() {
       return !(
@@ -2434,7 +2655,14 @@
             this._isAltAnnexLocked(),
           altAnnexRouteNow =
             "function" == typeof this._isAltAnnexRoute &&
-            this._isAltAnnexRoute();
+            this._isAltAnnexRoute(),
+          // Moai chamber: no stair descent — the doorway at the end of the
+          // annex hallway opens right into the room, which sits at hall
+          // level and is much smaller than the basement.
+          moaiRouteNow =
+            "function" == typeof this._isMoaiAnnexRoute &&
+            this._isMoaiAnnexRoute(),
+          moaiRoomEndX = 8.875; // stop dead-center on the bathroom doorway
         let localX = 0,
           localY = -0.02,
           localZ = 0;
@@ -2467,7 +2695,11 @@
           );
         } else if ("annex_hallway" === this.phase) {
           const rawT = Math.max(0, Math.min(1, this.annexHallT));
-          if (rawT < 0.38)
+          if (moaiRouteNow)
+            // Level walk the whole way — the door opens into the room.
+            ((localX = hallEntryX + (hallEndX - hallEntryX) * smooth(rawT)),
+              (localY = -0.02));
+          else if (rawT < 0.38)
             ((localX =
               hallEntryX + (hallEndX - hallEntryX) * smooth(rawT / 0.38)),
               (localY = -0.02));
@@ -2480,20 +2712,35 @@
           baseForward = activeFrame.radial.slice();
         } else if ("annex_room" === this.phase) {
           let roomT = smooth(this.annexRoomT);
-          ((localX = stairEndX + (roomEndX - stairEndX) * roomT),
-            (localY = -0.02 - annexDrop),
-            altAnnexLocked
-              ? ((localZ = 0), (baseForward = activeFrame.radial.slice()))
-              : ((localZ = altAnnexRouteNow
-                  ? 0
-                  : 0.18 * Math.sin(roomT * Math.PI)),
-                (baseForward =
-                  "stage" === (this.annexRoomView || "path")
-                    ? this._mul(activeFrame.tangent, -1)
-                    : this._mul(activeFrame.radial, this.annexRoomDir || 1))));
+          moaiRouteNow
+            ? // Chamber starts right at the ring doorway (no hallway).
+              ((localX = hallEntryX + (moaiRoomEndX - hallEntryX) * roomT),
+              (localY = -0.02),
+              (localZ = 0.12 * Math.sin(roomT * Math.PI)),
+              (baseForward =
+                "stage" === (this.annexRoomView || "path") ||
+                "bathroom" === (this.annexRoomView || "path")
+                  ? this._mul(activeFrame.tangent, -1)
+                  : this._mul(activeFrame.radial, this.annexRoomDir || 1)))
+            : ((localX = stairEndX + (roomEndX - stairEndX) * roomT),
+              (localY = -0.02 - annexDrop),
+              altAnnexLocked
+                ? ((localZ = 0), (baseForward = activeFrame.radial.slice()))
+                : ((localZ = altAnnexRouteNow
+                    ? 0
+                    : 0.18 * Math.sin(roomT * Math.PI)),
+                  (baseForward =
+                    "stage" === (this.annexRoomView || "path")
+                      ? this._mul(activeFrame.tangent, -1)
+                      : this._mul(
+                          activeFrame.radial,
+                          this.annexRoomDir || 1,
+                        ))));
         } else
-          ((localX = roomEndX + 1.72 * smooth(this.annexExitT)),
-            (localY = -0.02 - annexDrop),
+          ((localX = moaiRouteNow
+            ? moaiRoomEndX + 0.4 * smooth(this.annexExitT)
+            : roomEndX + 1.72 * smooth(this.annexExitT)),
+            (localY = moaiRouteNow ? -0.02 : -0.02 - annexDrop),
             (localZ = 0),
             (baseForward = activeFrame.radial.slice()));
         eye = this._add(
@@ -2764,12 +3011,43 @@
           annexExitLight[1],
           annexExitLight[2],
         );
-      const annexLights = this.annexLightWorld || [
+      let annexLights = this.annexLightWorld || [
           [0, 0, 0],
           [0, 0, 0],
           [0, 0, 0],
         ],
-        annexLight0 = gl.getUniformLocation(
+        annexLightColsOverride = null;
+      // Moai chamber: the club's red door/basement lights sit behind this
+      // route's far wall and bleed through as a red bloom. Replace them with
+      // cold cryo lighting inside the chamber.
+      if (
+        "function" == typeof this._isMoaiAnnexRoute &&
+        this._isMoaiAnnexRoute() &&
+        this.annexLightWorld
+      ) {
+        const f = this._stationFrame(
+            (this.annexSection + 0.5) * ((2 * Math.PI) / 16),
+          ),
+          at = (x, y, z) =>
+            this._add(
+              f.center,
+              this._add(
+                this._add(this._mul(f.radial, x), this._mul(f.tangent, z)),
+                [0, y, 0],
+              ),
+            );
+        annexLights = [
+          at(3.6, 1.05, -0.95), // in front of cryo 1: lights unit + room
+          at(7.0, 1.05, -0.95), // in front of cryo 3: lights unit + room
+          at(9.15, 0.5, -2.2), // warm bathroom interior
+        ];
+        annexLightColsOverride = [
+          [0.5, 0.95, 1.5], // cryo blue, room-filling
+          [0.5, 0.95, 1.5],
+          [1.1, 1.0, 0.8],
+        ];
+      }
+      const annexLight0 = gl.getUniformLocation(
           this.stationMeshProg,
           "u_annexLight0",
         ),
@@ -2802,11 +3080,12 @@
             annexLights[2][1],
             annexLights[2][2],
           ));
-      const annexLightCols = this.annexLightColorWorld || [
-          [0.62, 0.72, 0.88],
-          [1.3, 0.06, 0.03],
-          [1.3, 0.06, 0.03],
-        ],
+      const annexLightCols = annexLightColsOverride ||
+          this.annexLightColorWorld || [
+            [0.62, 0.72, 0.88],
+            [1.3, 0.06, 0.03],
+            [1.3, 0.06, 0.03],
+          ],
         annexLightCol0 = gl.getUniformLocation(
           this.stationMeshProg,
           "u_annexLightCol0",
@@ -3612,7 +3891,11 @@
         "annex_room" === this.phase ||
         "annex_exit_door" === this.phase;
       if (
-        ((this._annexLightingActive = inAnnexInterior),
+        // Moai chamber: standard station lighting, not the club's
+        // pools-of-darkness annex model — it can't light statues. The cryo
+        // mood comes from the glow geometry and blue accents.
+        ((this._annexLightingActive =
+          inAnnexInterior && !this._isMoaiAnnexRoute()),
         (this._annexStrobe = 0),
         (this._annexWhiteStrobe = 0),
         (this._annexRedWash = 0),
@@ -3725,8 +4008,21 @@
           )
             return !1;
           const z4AltAnnexRouteNow =
-            "function" == typeof this._isAltAnnexRoute &&
-            this._isAltAnnexRoute();
+              "function" == typeof this._isAltAnnexRoute &&
+              this._isAltAnnexRoute(),
+            z4MoaiAnnexRouteNow =
+              "function" == typeof this._isMoaiAnnexRoute &&
+              this._isMoaiAnnexRoute();
+          if (mesh.annexMoaiOnly && !z4MoaiAnnexRouteNow) return !1;
+          if (
+            z4MoaiAnnexRouteNow &&
+            (mesh.annexNormalOnly ||
+              mesh.annexAltOnly ||
+              mesh.annexStairwell ||
+              mesh.annexHallwayMesh ||
+              mesh.annexTopDoorBulb)
+          )
+            return !1;
           if (mesh.annexAltOnly && !z4AltAnnexRouteNow) return !1;
           if (mesh.annexNormalOnly && z4AltAnnexRouteNow) return !1;
           if (
@@ -3956,6 +4252,7 @@
         this._checkStationTurnThreshold(now),
         this._updateBlink(now),
         this._updatePhase(now, 0.001 * dt),
+        this._tickMoaiSlide(now),
         !this.isDead)
       ) {
         if (
@@ -4053,16 +4350,20 @@
                 Math.min(1, (impactElapsed - 800) / 1200),
               ));
         } else
-          "z4b_cabin" === this.phase
-            ? (this._renderZ4BCabin(now), this._drawZ4BCrashOverlays(now))
-            : (this._renderStation(now),
-              !this._altAnnexCleanView ||
-                ("annex_hallway" !== this.phase &&
-                  "annex_room" !== this.phase &&
-                  "annex_exit_door" !== this.phase) ||
-                this._drawAltAnnexFX(now));
+          this._isMoaiBathroomRoomView()
+            ? this._renderMoaiBathroomRoom(now)
+            : "z4b_cabin" === this.phase
+              ? (this._renderZ4BCabin(now), this._drawZ4BCrashOverlays(now))
+              : (this._renderStation(now),
+                this._captureMoaiMirror(),
+                !this._altAnnexCleanView ||
+                  ("annex_hallway" !== this.phase &&
+                    "annex_room" !== this.phase &&
+                    "annex_exit_door" !== this.phase) ||
+                  this._drawAltAnnexFX(now));
         if (
           !this._altAnnexCleanView &&
+          !this._isMoaiBathroomRoomView() &&
           ("annex_hallway" === this.phase ||
             "annex_room" === this.phase ||
             "annex_exit_door" === this.phase)
@@ -4149,6 +4450,11 @@
       }
     }
     destroy() {
+      if ("idle" !== this.moaiSlideState) {
+        const c = document.getElementById("c");
+        c && (c.style.transform = "");
+        ((this.moaiSlideState = "idle"), (this.moaiSlideOffset = 0));
+      }
       if (
         ((this.isDead = !0),
         this.fogOverlay && (this.fogOverlay.style.opacity = "0"),
@@ -4175,6 +4481,10 @@
           (this.altAnnexNffSource && this.altAnnexNffSource.disconnect(),
             this.altAnnexNffFilter && this.altAnnexNffFilter.disconnect(),
             this.altAnnexNffGain && this.altAnnexNffGain.disconnect());
+        } catch (e) {}
+      if (this.moaiBathroomRoom)
+        try {
+          (this.moaiBathroomRoom.destroy(), (this.moaiBathroomRoom = null));
         } catch (e) {}
       if (
         (this.elevatorProg && gl.deleteProgram(this.elevatorProg),

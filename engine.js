@@ -1984,6 +1984,88 @@ function render(e) {
   lastNow = e;
 }
 
+window.__enterApartmentFromAlley = function (opts) {
+  try {
+    const e = performance.now();
+    try {
+      window.__modeAlleyScene &&
+        window.__modeAlleyScene.destroy &&
+        window.__modeAlleyScene.destroy();
+    } catch (t) {}
+    try {
+      "function" == typeof window.stopModeAlley && window.stopModeAlley();
+    } catch (t) {}
+    // Mode-alley runs on its own WebGL2 canvas that replaced engine1's #c
+    // (a canvas with a live webgl1 context can't hand out webgl2). Swap
+    // engine1's canvas back into the DOM or the apartment renders offscreen.
+    try {
+      var __alleyCanvas = document.getElementById("c");
+      __alleyCanvas &&
+        __alleyCanvas !== canvas &&
+        __alleyCanvas.parentNode &&
+        __alleyCanvas.parentNode.replaceChild(canvas, __alleyCanvas);
+    } catch (t) {}
+    ((window.__modeAlleyScene = null),
+      (window.__modeAlleyActive = !1),
+      (window.isEngine1Dead = !1),
+      (phase = "open"),
+      (start = e),
+      (timer = e),
+      (blink = 0),
+      (flash = 0),
+      (shake = 0),
+      (mx = 0),
+      (my = 0),
+      (cx = 0),
+      (cy = 0),
+      (activePOV = "center"),
+      (window.activePOV = activePOV),
+      (slideState = "idle"),
+      (slideOffset = 0),
+      (pendingPOV = null),
+      (povSwitchTime = -9999));
+    try { currentEngine && currentEngine.destroy(); } catch (t) {}
+    try { leftEngine && leftEngine.destroy(); } catch (t) {}
+    try { rightEngine && rightEngine.destroy(); } catch (t) {}
+    try { backEngine && backEngine.destroy(); } catch (t) {}
+    try { doorEngine && doorEngine.destroy(); } catch (t) {}
+    try { laptopEngine && laptopEngine.destroy(); } catch (t) {}
+    ((currentEngine = null),
+      (leftEngine = null),
+      (rightEngine = null),
+      (backEngine = null),
+      (doorEngine = null),
+      (laptopEngine = null),
+      (currentEngine = new ActiveMode((mode = 1))),
+      initSideEngines(),
+      (__lastFrameTime = 0));
+    // Stepping out of the upper hallway into the rider's apartment — land on
+    // the right room (room_right) rather than the default centre POV.
+    if (opts && opts.pov === "right") {
+      ((activePOV = "right"), (window.activePOV = activePOV));
+    }
+    // The hallway faded to black before handing over — ease the apartment in
+    // from black rather than popping it at full brightness.
+    try {
+      var __fadeIn = document.getElementById("zone-fade-overlay");
+      if (!__fadeIn) {
+        __fadeIn = document.createElement("div");
+        __fadeIn.id = "zone-fade-overlay";
+        document.body.appendChild(__fadeIn);
+      }
+      __fadeIn.style.cssText =
+        "position:fixed;inset:0;background:black;opacity:1;pointer-events:none;z-index:99999;";
+      setTimeout(function () {
+        __fadeIn.style.transition = "opacity 1.4s ease-in-out";
+        __fadeIn.style.opacity = "0";
+      }, 300);
+    } catch (t) {}
+    requestAnimationFrame(__frameGovernor);
+  } catch (err) {
+    console.error("[__enterApartmentFromAlley]", err);
+  }
+};
+
 window.__wakeToLaptopFromTheater = function () {
   try {
     const e = performance.now();

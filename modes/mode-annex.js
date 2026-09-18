@@ -2228,8 +2228,15 @@
               [0.024, 0.03, 0.038],
               0,
             ));
-        })(),
-          addBayStyleHallway(2.47, hallX1, -1.05, 1.0384, 1.15));
+        })());
+        // The annex hallway proper. Tagged: the moai route has NO hallway —
+        // the ring doors open straight into the chamber, which occupies this
+        // span instead.
+        {
+          const annexHallwayStart = meshes.length;
+          addBayStyleHallway(2.47, hallX1, -1.05, 1.0384, 1.15);
+          markMeshes(annexHallwayStart, "annexHallwayMesh");
+        }
         const exteriorStart = meshes.length,
           oldAnnexX0 = hallX1;
         (addRoom(oldAnnexX0, 16.35, -1.05, 1.1984, -4.2, 4.2, !0, !0),
@@ -2357,12 +2364,12 @@
           ));
         for (let mi = topStairDoorGlowStart; mi < meshes.length; mi++)
           meshes[mi].annexTopDoorBulb = !0;
-        ((self.altAnnexTopDoorBulbWorld = pointLocal(
-          hallX1 + 0.115,
-          0.9334,
-          0,
-        )),
-          (function (xa, xb, topY0, topY1, botY0) {
+        self.altAnnexTopDoorBulbWorld = pointLocal(hallX1 + 0.115, 0.9334, 0);
+        // The descending stairwell to the basement. Tagged so the moai route
+        // can drop it wholesale — that variant's door opens straight into the
+        // chamber at hall level; no stairs exist there at all.
+        const stairwellStart = meshes.length;
+        ((function (xa, xb, topY0, topY1, botY0) {
             const z0 = -0.38,
               z1 = 0.38,
               dx = (xb - xa) / 18,
@@ -2464,6 +2471,7 @@
                 0.55,
               ));
           })(stairX0 + 0.12, stairX1, 0, 0, annexY0, annexY1));
+        markMeshes(stairwellStart, "annexStairwell");
         const normalAnnexRoomStart = meshes.length;
         addRoom(annexX0, annexX1, annexY0, annexY1, -3.55, 3.55, !0, !0);
         const normalBasementStart = meshes.length;
@@ -2805,6 +2813,30 @@
           annexDrop: 3.8,
           stairHalfW: 0.38,
         }),
+          window.Zone4MoaiAnnex &&
+          "function" == typeof window.Zone4MoaiAnnex.buildMoaiAnnexScene
+            ? window.Zone4MoaiAnnex.buildMoaiAnnexScene({
+                meshes: meshes,
+                TEX: TEX,
+                self: self,
+                gl: gl,
+                document: document,
+                Image: Image,
+                Math: Math,
+                console: console,
+                pushQuad: pushQuad,
+                pointLocal: pointLocal,
+                addBox: addBox,
+                markMeshes: markMeshes,
+                annexX0: annexX0,
+                annexX1: annexX1,
+                annexY0: annexY0,
+                annexY1: annexY1,
+                annexHalfW: 3.55,
+                annexDrop: 3.8,
+                stairHalfW: 0.38,
+              })
+            : console.error("Zone4MoaiAnnex.buildMoaiAnnexScene missing"),
           markMeshes(interiorStart, "annexInterior"));
       })());
   }));
